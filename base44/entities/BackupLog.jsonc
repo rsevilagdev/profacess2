@@ -1,0 +1,44 @@
+{
+  "name": "BackupLog",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": [
+        "manual",
+        "automatic"
+      ],
+      "default": "manual",
+      "description": "Tipo de backup"
+    },
+    "triggered_by": {
+      "type": "string",
+      "description": "Quem executou o backup"
+    },
+    "size_kb": {
+      "type": "number",
+      "description": "Tamanho do backup em KB"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "success",
+        "failed",
+        "in_progress"
+      ],
+      "default": "success",
+      "description": "Status do backup"
+    },
+    "details": {
+      "type": "string",
+      "description": "Detalhes do backup"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "ID da filial"
+    }
+  },
+  "required": [
+    "type"
+  ]
+}

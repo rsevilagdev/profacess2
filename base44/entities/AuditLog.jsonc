@@ -1,0 +1,60 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "user_name": {
+      "type": "string",
+      "description": "Nome do usu\u00e1rio que executou a a\u00e7\u00e3o"
+    },
+    "user_cpf": {
+      "type": "string",
+      "description": "CPF do usu\u00e1rio"
+    },
+    "action": {
+      "type": "string",
+      "description": "A\u00e7\u00e3o executada"
+    },
+    "details": {
+      "type": "string",
+      "description": "Detalhes da a\u00e7\u00e3o"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "login",
+        "driver",
+        "vehicle",
+        "search",
+        "user_management",
+        "branch",
+        "export",
+        "backup"
+      ],
+      "default": "login",
+      "description": "Categoria da a\u00e7\u00e3o"
+    },
+    "ip_address": {
+      "type": "string",
+      "description": "Endere\u00e7o IP"
+    },
+    "domain": {
+      "type": "string",
+      "description": "Dom\u00ednio de origem"
+    },
+    "device_info": {
+      "type": "string",
+      "description": "Informa\u00e7\u00f5es do dispositivo"
+    },
+    "branch_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "target_id": {
+      "type": "string",
+      "description": "ID do registro afetado"
+    }
+  },
+  "required": [
+    "action"
+  ]
+}
