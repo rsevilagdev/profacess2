@@ -1,0 +1,61 @@
+{
+  "name": "Liberacao",
+  "type": "object",
+  "properties": {
+    "numero_pedido": {
+      "type": "string",
+      "description": "N\u00famero do pedido"
+    },
+    "cliente": {
+      "type": "string",
+      "description": "Nome do cliente"
+    },
+    "cnpj_cliente": {
+      "type": "string",
+      "description": "CNPJ do cliente"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "valor": {
+      "type": "number",
+      "description": "Valor do pedido"
+    },
+    "motivo_bloqueio": {
+      "type": "string",
+      "description": "Motivo do bloqueio"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "liberado",
+        "rejeitado"
+      ],
+      "default": "pendente",
+      "description": "Status da libera\u00e7\u00e3o"
+    },
+    "observacao": {
+      "type": "string",
+      "description": "Observa\u00e7\u00e3o sobre a libera\u00e7\u00e3o"
+    },
+    "liberado_por": {
+      "type": "string",
+      "description": "Nome de quem liberou"
+    },
+    "data_liberacao": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora da libera\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "numero_pedido",
+    "cliente"
+  ]
+}

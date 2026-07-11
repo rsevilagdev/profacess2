@@ -1,0 +1,44 @@
+{
+  "name": "SolicitacaoAcesso",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do solicitante"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do solicitante"
+    },
+    "email": {
+      "type": "string",
+      "description": "Email do solicitante"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "Filial solicitada"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial solicitada"
+    },
+    "motivo": {
+      "type": "string",
+      "description": "Motivo da solicita\u00e7\u00e3o"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "pendente",
+        "aprovado",
+        "rejeitado"
+      ],
+      "default": "pendente",
+      "description": "Status da solicita\u00e7\u00e3o"
+    }
+  },
+  "required": [
+    "nome",
+    "cpf"
+  ]
+}

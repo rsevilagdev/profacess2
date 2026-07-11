@@ -6,52 +6,40 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
-// Add page imports here
+import { ProfarmaAuthProvider } from '@/lib/auth-context-profarma.jsx';
 
-const AuthenticatedApp = () => {
-  const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();
-
-  // Show loading spinner while checking app public settings or auth
-  if (isLoadingPublicSettings || isLoadingAuth) {
-    return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Handle authentication errors
-  if (authError) {
-    if (authError.type === 'user_not_registered') {
-      return <UserNotRegisteredError />;
-    } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
-    }
-  }
-
-  // Render the main app
-  return (
-    <Routes>
-      {/* Add your page Route elements here */}
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
-  );
-};
-
+import LoginProfarma from '@/pages/LoginProfarma';
+import SolicitarAcesso from '@/pages/SolicitarAcesso';
+import Dashboard from '@/pages/Dashboard';
+import Liberacoes from '@/pages/Liberacoes';
+import Colaboradores from '@/pages/Colaboradores';
+import Filiais from '@/pages/Filiais';
+import Solicitacoes from '@/pages/Solicitacoes';
+import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
-
   return (
     <AuthProvider>
-      <QueryClientProvider client={queryClientInstance}>
-        <Router>
-          <ScrollToTop />
-          <AuthenticatedApp />
-        </Router>
-        <Toaster />
-      </QueryClientProvider>
+      <ProfarmaAuthProvider>
+        <QueryClientProvider client={queryClientInstance}>
+          <Router>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<LoginProfarma />} />
+              <Route path="/solicitar-acesso" element={<SolicitarAcesso />} />
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/liberacoes" element={<Liberacoes />} />
+                <Route path="/colaboradores" element={<Colaboradores />} />
+                <Route path="/filiais" element={<Filiais />} />
+                <Route path="/solicitacoes" element={<Solicitacoes />} />
+              </Route>
+              <Route path="*" element={<PageNotFound />} />
+            </Routes>
+          </Router>
+          <Toaster />
+        </QueryClientProvider>
+      </ProfarmaAuthProvider>
     </AuthProvider>
   )
 }
