@@ -17,6 +17,26 @@ const ENTITIES = [
   { name: 'SolicitacaoAcesso', label: 'Solicitações de Acesso' },
 ];
 
+// Excel column mappings — match the imported spreadsheet format
+const COLUMN_MAPS = {
+  Driver: {
+    columns: [
+      { field: 'cpf', header: 'CPF' },
+      { field: 'nome', header: 'MOTORISTA' },
+      { field: 'status', header: 'EST. DE MOTORISTA' },
+    ],
+    statusMap: { 'ativo': 'VALIDADO', 'bloqueado': 'BLOQUEADO', 'pendente': 'PENDENTE' },
+  },
+  Vehicle: {
+    columns: [
+      { field: 'placa', header: 'PLACA' },
+      { field: 'modelo', header: 'MODELO' },
+      { field: 'status', header: 'EST. VEICULO' },
+    ],
+    statusMap: { 'ativo': 'VALIDADO', 'bloqueado': 'BLOQUEADO', 'manutencao': 'MANUTENCAO' },
+  },
+};
+
 export default function ExportarDados() {
   const { colaborador } = useProfarmaAuth();
   const [exporting, setExporting] = useState(false);
@@ -60,8 +80,20 @@ export default function ExportarDados() {
         const a = document.createElement('a'); a.href = url; a.download = `${selectedEntity}_${Date.now()}.json`; a.click();
         URL.revokeObjectURL(url);
       } else {
-        const headers = records.length > 0 ? Object.keys(records[0]) : [];
-        const csv = [headers.join(','), ...records.map(r => headers.map(h => `"${String(r[h] || '').replace(/"/g, '""')}"`).join(','))].join('\n');
+        const colMap = COLUMN_MAPS[selectedEntity];
+        let headers, rows;
+        if (colMap) {
+          headers = colMap.columns.map(c => c.header);
+          rows = records.map(r => colMap.columns.map(c => {
+            let val = r[c.field] || '';
+            if (c.field === 'status' && colMap.statusMap) val = colMap.statusMap[val] || val;
+            return `"${String(val).replace(/"/g, '""')}"`;
+          }).join(','));
+        } else {
+          headers = records.length > 0 ? Object.keys(records[0]) : [];
+          rows = records.map(r => headers.map(h => `"${String(r[h] || '').replace(/"/g, '""')}"`).join(','));
+        }
+        const csv = [headers.join(','), ...rows].join('\n');
         const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a'); a.href = url; a.download = `${selectedEntity}_${Date.now()}.csv`; a.click();
@@ -70,6 +102,23 @@ export default function ExportarDados() {
       await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action: `Exportação: ${selectedEntity}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
     } catch (e) {}
     setExporting(false);
+  };
+
+  const remapImportRecord = (record, entityName) => {
+    const colMap = COLUMN_MAPS[entityName];
+    if (!colMap) return record;
+    const remapped = {};
+    for (const col of colMap.columns) {
+      const val = record[col.header] ?? record[col.field] ?? '';
+      if (col.field === 'status' && colMap.statusMap) {
+        const inverse = Object.fromEntries(Object.entries(colMap.statusMap).map(([k, v]) => [v, k]));
+        remapped.status = inverse[val] || val || 'ativo';
+      } else {
+        remapped[col.field] = val;
+      }
+    }
+    // preserve any extra fields not in the map
+    return { ...record, ...remapped };
   };
 
   const handleImport = async (e) => {
@@ -104,7 +153,8 @@ export default function ExportarDados() {
       } else if (isExcel) {
         const schema = { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } } } };
         const result = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url, json_schema: schema });
-        const records = result.output?.data || result.output || [];
+        const rawRecords = result.output?.data || (Array.isArray(result.output) ? result.output : []);
+        const records = rawRecords.map(r => remapImportRecord(r, selectedEntity));
         if (records.length > 0 && base44.entities[selectedEntity]) {
           await base44.entities[selectedEntity].bulkCreate(records);
           setImportResult({ success: true, count: records.length });
@@ -114,7 +164,8 @@ export default function ExportarDados() {
       } else {
         const schema = { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } } } };
         const result = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url, json_schema: schema });
-        const records = result.output?.data || result.output || [];
+        const rawRecords = result.output?.data || (Array.isArray(result.output) ? result.output : []);
+        const records = rawRecords.map(r => remapImportRecord(r, selectedEntity));
         if (records.length > 0 && base44.entities[selectedEntity]) {
           await base44.entities[selectedEntity].bulkCreate(records);
           setImportResult({ success: true, count: records.length });
@@ -193,6 +244,52 @@ export default function ExportarDados() {
             <span className="text-sm">{importResult.success ? `${importResult.count} registros importados com sucesso!` : `Erro: ${importResult.error}`}</span>
           </div>
         )}
+      </div>
+
+      {/* Excel Template Reference */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <div className="flex items-center gap-3 mb-3">
+          <FileSpreadsheet className="h-5 w-5 text-primary" />
+          <div>
+            <h3 className="font-heading font-bold">Modelo de Planilha (Excel/CSV)</h3>
+            <p className="text-sm text-muted-foreground">Formato padrão para importação de Motoristas e Veículos</p>
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Aba: MOTORISTAS</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left px-3 py-2 font-medium">CPF</th>
+                  <th className="text-left px-3 py-2 font-medium">MOTORISTA</th>
+                  <th className="text-left px-3 py-2 font-medium">EST. DE MOTORISTA</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border"><td className="px-3 py-2">007.220.389-76</td><td className="px-3 py-2">Márcio Granella</td><td className="px-3 py-2">VALIDADO</td></tr>
+                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Aba: VEICULOS</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left px-3 py-2 font-medium">PLACA</th>
+                  <th className="text-left px-3 py-2 font-medium">MODELO</th>
+                  <th className="text-left px-3 py-2 font-medium">EST. VEICULO</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-border"><td className="px-3 py-2">AXM9F80</td><td className="px-3 py-2">TOCO</td><td className="px-3 py-2">VALIDADO</td></tr>
+                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground mt-3">Status aceitos: VALIDADO, BLOQUEADO, PENDENTE (motoristas) / MANUTENCAO (veículos)</p>
       </div>
     </div>
   );
