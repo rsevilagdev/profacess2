@@ -1,0 +1,44 @@
+{
+  "description": "Envia automaticamente o resumo de turnos para o e-mail dos gestores ao final de cada per\u00edodo operacional (14h e 22h, segunda a s\u00e1bado).",
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "resumo_turnos_email",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "enviar_resumo": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "enviarResumoTurnos"
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Enviar resumo de turnos",
+            "description": "Compila e envia por e-mail"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Resumo de Turnos por E-mail",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 14,22 * * 1-6",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  }
+}

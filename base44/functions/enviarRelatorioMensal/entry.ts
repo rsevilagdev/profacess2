@@ -3,8 +3,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await base44.auth.me().catch(() => null);
 
     // Determine month range — defaults to previous month, or accepts explicit params
     let body = {};
@@ -105,7 +104,7 @@ Deno.serve(async (req) => {
     }
 
     await base44.asServiceRole.entities.AuditLog.create({
-      user_name: user.full_name || 'Sistema',
+      user_name: user?.full_name || 'Sistema',
       action: 'Relatório mensal enviado por e-mail',
       details: `Mês: ${monthName} | ${emailsSent} emails enviados | ${monthLogs.length} acessos | ${monthLib.length} liberações`,
       category: 'export',

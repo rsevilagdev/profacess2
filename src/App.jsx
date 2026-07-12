@@ -10,6 +10,7 @@ import { ProfarmaAuthProvider } from '@/lib/auth-context-profarma.jsx';
 
 import LoginProfarma from '@/pages/LoginProfarma';
 import SolicitarAcesso from '@/pages/SolicitarAcesso';
+import ForgotPassword from '@/pages/ForgotPassword';
 import Dashboard from '@/pages/Dashboard';
 import NovoAcesso from '@/pages/NovoAcesso';
 import PainelBloqueio from '@/pages/PainelBloqueio';
@@ -39,6 +40,7 @@ function App() {
             <Routes>
               <Route path="/" element={<LoginProfarma />} />
               <Route path="/solicitar-acesso" element={<SolicitarAcesso />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/novo-acesso" element={<NovoAcesso />} />

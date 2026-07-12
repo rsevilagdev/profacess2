@@ -166,7 +166,10 @@ export default function LoginProfarma() {
             </Button>
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <Link to="/forgot-password" className="text-sm text-primary hover:underline">
+              Esqueci minha senha
+            </Link>
             <Link to="/solicitar-acesso" className="text-sm text-primary hover:underline">
               Solicitar novo acesso
             </Link>

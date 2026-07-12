@@ -1,0 +1,54 @@
+{
+  "name": "SecurityConfig",
+  "type": "object",
+  "properties": {
+    "cargo": {
+      "type": "string",
+      "enum": [
+        "administrador_master",
+        "administrador",
+        "encarregado",
+        "operador",
+        "visualizador"
+      ],
+      "description": "Cargo/perfil de acesso"
+    },
+    "session_timeout_minutes": {
+      "type": "number",
+      "default": 30,
+      "description": "Tempo m\u00e1ximo de sess\u00e3o em minutos"
+    },
+    "can_export": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode exportar dados do sistema"
+    },
+    "can_import": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode importar dados para o sistema"
+    },
+    "can_delete_records": {
+      "type": "boolean",
+      "default": false,
+      "description": "Pode excluir registros"
+    },
+    "require_2fa": {
+      "type": "boolean",
+      "default": false,
+      "description": "Exige autentica\u00e7\u00e3o de dois fatores"
+    },
+    "max_login_attempts": {
+      "type": "number",
+      "default": 5,
+      "description": "M\u00e1ximo de tentativas de login antes de bloquear"
+    },
+    "ip_restriction": {
+      "type": "string",
+      "description": "IPs permitidos (separados por v\u00edrgula, vazio = sem restri\u00e7\u00e3o)"
+    }
+  },
+  "required": [
+    "cargo"
+  ]
+}

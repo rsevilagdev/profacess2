@@ -1,0 +1,44 @@
+{
+  "name": "Alerta de Ve\u00edculo Bloqueado",
+  "description": "Envia um alerta imediato para supervisores sempre que um ve\u00edculo \u00e9 marcado como bloqueado na portaria.",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "AccessLog",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": "${ .trigger.data.status == \"bloqueado\" }"
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "alerta_veiculo_bloqueado",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "enviar_alerta": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "alertaVeiculoBloqueado",
+            "args": {
+              "placa": "${ .trigger.data.veiculo_placa }",
+              "filial_id": "${ .trigger.data.filial_id }",
+              "filial_nome": "${ .trigger.data.filial_nome }",
+              "operador_nome": "${ .trigger.data.operador_nome }",
+              "observacao": "${ .trigger.data.observacao }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Alertar supervisores",
+            "description": "Notifica sobre ve\u00edculo bloqueado"
+          }
+        }
+      }
+    ]
+  }
+}

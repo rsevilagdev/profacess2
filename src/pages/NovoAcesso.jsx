@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { maskPlaca, maskCPF, maskNome } from '@/lib/lgpd-utils.js';
+import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
 
 export default function NovoAcesso() {
   const { colaborador } = useProfarmaAuth();
@@ -204,6 +205,9 @@ export default function NovoAcesso() {
           </div>
         )}
       </div>
+
+      {/* Kanban Board */}
+      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} />
 
       {/* Access List */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">

@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { maskCPF } from '@/lib/lgpd-utils.js';
+import SecurityRules from '@/components/configuracoes/SecurityRules';
 
 const ALL_PAGES = [
   { path: '/dashboard', label: 'Dashboard' },
@@ -111,6 +112,8 @@ export default function ConfiguracoesSeguranca() {
           )}
         </div>
       </div>
+
+      <SecurityRules />
     </div>
   );
 }
