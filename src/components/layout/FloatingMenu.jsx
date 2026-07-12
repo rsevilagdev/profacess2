@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, IdCard, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X } from 'lucide-react';
+import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, IdCard, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, Truck, UserCheck, HardDrive, BellRing } from 'lucide-react';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 
 const MENU_GROUPS = [
@@ -12,6 +12,8 @@ const MENU_GROUPS = [
       { path: '/painel-bloqueio', label: 'Painel de Bloqueio', icon: ShieldAlert },
       { path: '/editar-base', label: 'Editar Base de Dados', icon: Database },
       { path: '/verificar-cnh', label: 'Verificar CNH', icon: IdCard },
+      { path: '/gestao-veiculos', label: 'Gestão de Veículos', icon: Truck },
+      { path: '/verificacao-motoristas', label: 'Verificação de Motoristas', icon: UserCheck },
     ]
   },
   {
@@ -31,6 +33,9 @@ const MENU_GROUPS = [
       { path: '/configuracoes', label: 'Configurações', icon: Settings },
       { path: '/configuracoes-seguranca', label: 'Configurações de Segurança', icon: Lock },
       { path: '/exportar-dados', label: 'Exportar/Importar', icon: Download },
+      { path: '/auditoria-sistema', label: 'Auditoria do Sistema', icon: ScrollText },
+      { path: '/gestao-backups', label: 'Gestão de Backups', icon: HardDrive },
+      { path: '/configuracoes-notificacoes', label: 'Config. de Notificações', icon: BellRing },
     ]
   },
   {

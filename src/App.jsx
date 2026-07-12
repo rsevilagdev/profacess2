@@ -28,6 +28,11 @@ import ExportarDados from '@/pages/ExportarDados';
 import Suporte from '@/pages/Suporte';
 import TermosUso from '@/pages/TermosUso';
 import Perfil from '@/pages/Perfil';
+import GestaoVeiculos from '@/pages/GestaoVeiculos';
+import VerificacaoMotoristas from '@/pages/VerificacaoMotoristas';
+import AuditoriaSistema from '@/pages/AuditoriaSistema';
+import GestaoBackups from '@/pages/GestaoBackups';
+import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -59,6 +64,11 @@ function App() {
                 <Route path="/suporte" element={<Suporte />} />
                 <Route path="/termos-uso" element={<TermosUso />} />
                 <Route path="/perfil" element={<Perfil />} />
+                <Route path="/gestao-veiculos" element={<GestaoVeiculos />} />
+                <Route path="/verificacao-motoristas" element={<VerificacaoMotoristas />} />
+                <Route path="/auditoria-sistema" element={<AuditoriaSistema />} />
+                <Route path="/gestao-backups" element={<GestaoBackups />} />
+                <Route path="/configuracoes-notificacoes" element={<ConfiguracoesNotificacoes />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>
