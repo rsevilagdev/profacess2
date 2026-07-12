@@ -56,7 +56,7 @@
     },
     "operador_nome": {
       "type": "string",
-      "description": "Nome do operador"
+      "description": "Nome do operador que registrou o acesso"
     },
     "operador_cpf": {
       "type": "string",
@@ -65,6 +65,23 @@
     "observacao": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"
+    },
+    "aprovado_por": {
+      "type": "string",
+      "description": "Nome de quem autorizou ou bloqueou o acesso"
+    },
+    "aprovado_por_cpf": {
+      "type": "string",
+      "description": "CPF de quem autorizou ou bloqueou"
+    },
+    "data_aprovacao": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data/hora em que o acesso foi autorizado ou bloqueado"
+    },
+    "motivo_bloqueio": {
+      "type": "string",
+      "description": "Motivo do bloqueio (obrigat\u00f3rio ao bloquear)"
     }
   },
   "required": [

@@ -354,7 +354,7 @@ export default function NovoAcesso() {
       )}
 
       {/* Kanban */}
-      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} />
+      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} />
 
       {/* Queue List */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
