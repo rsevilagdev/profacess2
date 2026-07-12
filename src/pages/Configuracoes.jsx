@@ -82,12 +82,12 @@ export default function Configuracoes() {
 
       {/* Users Tab */}
       {tab === 'usuarios' && (
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-bold">Usuários ({users.length})</h3>
-            <Button onClick={openNewUser} className="h-10 rounded-xl"><Plus className="h-4 w-4 mr-1" /> Novo</Button>
+        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm overflow-hidden max-w-full">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <h3 className="font-heading font-bold truncate">Usuários ({users.length})</h3>
+            <Button onClick={openNewUser} className="h-10 rounded-xl shrink-0"><Plus className="h-4 w-4 mr-1" /> Novo</Button>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             {users.map(u => (
               <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl hover:bg-muted/50 border border-border/50">
                 <div className="flex items-center gap-3 min-w-0">
