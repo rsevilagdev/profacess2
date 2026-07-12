@@ -89,20 +89,21 @@ export default function Configuracoes() {
           </div>
           <div className="space-y-2">
             {users.map(u => (
-              <div key={u.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">{u.nome?.[0]?.toUpperCase()}</div>
-                  <div>
-                    <p className="text-sm font-medium">{u.nome}</p>
-                    <p className="text-xs text-muted-foreground">{maskCPF(u.cpf)} · {u.email || '—'}</p>
+              <div key={u.id} className="flex flex-col gap-2 p-3 rounded-xl hover:bg-muted/50 border border-border/50">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-10 w-10 shrink-0 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">{u.nome?.[0]?.toUpperCase()}</div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">{u.nome}</p>
+                    <p className="text-xs text-muted-foreground truncate">{maskCPF(u.cpf)} · {u.email || '—'}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-1 rounded-full bg-muted">{u.cargo}</span>
-                  {u.termos_aceitos && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">Termos OK</span>}
-                  <button onClick={() => toggleUser(u)} className={`h-8 px-2 rounded-lg text-xs ${u.ativo ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</button>
-                  <button onClick={() => openEditUser(u)} className="h-8 w-8 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-4 w-4" /></button>
-                  <button onClick={() => removeUser(u)} className="h-8 w-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs px-2 py-1 rounded-full bg-muted whitespace-nowrap">{u.cargo}</span>
+                  {u.termos_aceitos && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary whitespace-nowrap">Termos OK</span>}
+                  <button onClick={() => toggleUser(u)} className={`h-7 px-2 rounded-lg text-xs whitespace-nowrap ${u.ativo ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</button>
+                  <div className="flex-1" />
+                  <button onClick={() => openEditUser(u)} className="h-8 w-8 shrink-0 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-4 w-4" /></button>
+                  <button onClick={() => removeUser(u)} className="h-8 w-8 shrink-0 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
             ))}
