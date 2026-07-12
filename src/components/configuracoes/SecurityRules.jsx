@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Save, Loader2, Clock, Lock, Download, Upload, Trash2, Key } from 'lucide-react';
+import { Shield, Save, Loader2, Clock, Lock, Download, Upload, Trash2, Key, Globe, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -20,11 +20,11 @@ const RULES = [
 ];
 
 const DEFAULTS = {
-  administrador_master: { can_export: true, can_import: true, can_delete_records: true, require_2fa: false, session_timeout_minutes: 60, max_login_attempts: 10 },
-  administrador: { can_export: true, can_import: true, can_delete_records: false, require_2fa: false, session_timeout_minutes: 45, max_login_attempts: 8 },
-  encarregado: { can_export: true, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 30, max_login_attempts: 5 },
-  operador: { can_export: false, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 20, max_login_attempts: 5 },
-  visualizador: { can_export: false, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 15, max_login_attempts: 3 },
+  administrador_master: { can_export: true, can_import: true, can_delete_records: true, require_2fa: false, session_timeout_minutes: 60, max_login_attempts: 10, ip_restriction: '' },
+  administrador: { can_export: true, can_import: true, can_delete_records: false, require_2fa: false, session_timeout_minutes: 45, max_login_attempts: 8, ip_restriction: '' },
+  encarregado: { can_export: true, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 30, max_login_attempts: 5, ip_restriction: '' },
+  operador: { can_export: false, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 20, max_login_attempts: 5, ip_restriction: '' },
+  visualizador: { can_export: false, can_import: false, can_delete_records: false, require_2fa: false, session_timeout_minutes: 15, max_login_attempts: 3, ip_restriction: '' },
 };
 
 export default function SecurityRules() {
@@ -33,10 +33,9 @@ export default function SecurityRules() {
   const [configIds, setConfigIds] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    loadConfigs();
-  }, []);
+  useEffect(() => { loadConfigs(); }, []);
 
   const loadConfigs = async () => {
     try {
@@ -44,7 +43,7 @@ export default function SecurityRules() {
       const map = {};
       const ids = {};
       CARGOS.forEach(c => { map[c.value] = { ...DEFAULTS[c.value] }; });
-      list.forEach(c => { map[c.cargo] = { ...c }; ids[c.cargo] = c.id; });
+      list.forEach(c => { map[c.cargo] = { ...DEFAULTS[c.cargo], ...c }; ids[c.cargo] = c.id; });
       setConfigs(map);
       setConfigIds(ids);
     } catch (e) {
@@ -56,17 +55,15 @@ export default function SecurityRules() {
   };
 
   const toggleRule = (cargo, ruleKey) => {
-    setConfigs(prev => ({
-      ...prev,
-      [cargo]: { ...prev[cargo], [ruleKey]: !prev[cargo][ruleKey] }
-    }));
+    setConfigs(prev => ({ ...prev, [cargo]: { ...prev[cargo], [ruleKey]: !prev[cargo][ruleKey] } }));
   };
 
   const updateNumber = (cargo, field, value) => {
-    setConfigs(prev => ({
-      ...prev,
-      [cargo]: { ...prev[cargo], [field]: parseInt(value) || 0 }
-    }));
+    setConfigs(prev => ({ ...prev, [cargo]: { ...prev[cargo], [field]: parseInt(value) || 0 } }));
+  };
+
+  const updateText = (cargo, field, value) => {
+    setConfigs(prev => ({ ...prev, [cargo]: { ...prev[cargo], [field]: value } }));
   };
 
   const save = async () => {
@@ -82,10 +79,13 @@ export default function SecurityRules() {
         }
       }
       await base44.entities.AuditLog.create({
-        user_name: colaborador.nome, user_cpf: colaborador.cpf, action: 'Regras de segurança atualizadas',
+        user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+        user_cpf: colaborador.cpf, action: 'Regras de segurança atualizadas',
         details: 'Configuração de segurança por cargo salva', ip_address: 'local', domain: window.location.hostname,
         category: 'user_management', branch_id: colaborador.filial_id
       });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch (e) {}
     setSaving(false);
   };
@@ -100,7 +100,8 @@ export default function SecurityRules() {
           <h3 className="font-heading font-bold">Regras de Segurança por Nível de Acesso</h3>
         </div>
         <Button onClick={save} disabled={saving} className="h-10 rounded-xl">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Salvar Regras
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : saved ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
+          {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar Regras'}
         </Button>
       </div>
 
@@ -155,7 +156,7 @@ export default function SecurityRules() {
                 </td>
               ))}
             </tr>
-            <tr>
+            <tr className="border-b border-border">
               <td className="p-3">
                 <div className="flex items-center gap-2">
                   <Lock className="h-4 w-4 text-muted-foreground" />
@@ -172,9 +173,29 @@ export default function SecurityRules() {
                 </td>
               ))}
             </tr>
+            <tr>
+              <td className="p-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <span>Restrição de IP</span>
+                </div>
+                <p className="text-xs text-muted-foreground ml-6">vazio = sem restrição</p>
+              </td>
+              {CARGOS.map(c => (
+                <td key={c.value} className="text-center p-3">
+                  <input
+                    type="text" value={configs[c.value]?.ip_restriction || ''}
+                    onChange={e => updateText(c.value, 'ip_restriction', e.target.value)}
+                    placeholder="192.168.0.1"
+                    className="w-28 h-8 text-center rounded-lg border border-input bg-transparent text-xs"
+                  />
+                </td>
+              ))}
+            </tr>
           </tbody>
         </table>
       </div>
+      <p className="text-xs text-muted-foreground mt-3">As regras definidas aqui se aplicam a todos os usuários do cargo correspondente. Administradores Master sempre têm acesso total e não podem ser restritos.</p>
     </div>
   );
 }
