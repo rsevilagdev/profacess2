@@ -1,0 +1,66 @@
+{
+  "name": "Driver",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome do motorista"
+    },
+    "cpf": {
+      "type": "string",
+      "description": "CPF do motorista"
+    },
+    "cnh": {
+      "type": "string",
+      "description": "N\u00famero da CNH"
+    },
+    "cnh_validade": {
+      "type": "string",
+      "format": "date",
+      "description": "Validade da CNH"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Telefone do motorista"
+    },
+    "transportadora": {
+      "type": "string",
+      "description": "Transportadora do motorista"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "bloqueado",
+        "pendente"
+      ],
+      "default": "ativo",
+      "description": "Status do motorista"
+    },
+    "documento_verificado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o documento foi verificado"
+    },
+    "qr_code_hash": {
+      "type": "string",
+      "description": "Hash do QR Code"
+    },
+    "observacao": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "nome",
+    "cpf"
+  ]
+}

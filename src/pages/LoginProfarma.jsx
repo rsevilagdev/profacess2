@@ -1,178 +1,185 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, Shield, Building2, ChevronDown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { Truck, Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
-import { formatCPF, cleanCPF } from '@/lib/cpf-utils';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
+import { Button } from '@/components/ui/button';
+import { formatCPF } from '@/lib/cpf-utils.js';
 
 export default function LoginProfarma() {
   const [cpf, setCpf] = useState('');
   const [senha, setSenha] = useState('');
-  const [filialId, setFilialId] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [filiais, setFiliais] = useState([]);
-  const { toast } = useToast();
+  const [filialId, setFilialId] = useState('');
+  const [showSenha, setShowSenha] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showFilialDropdown, setShowFilialDropdown] = useState(false);
   const navigate = useNavigate();
-  const { login, colaborador } = useProfarmaAuth();
+  const { login } = useProfarmaAuth();
 
   useEffect(() => {
-    if (colaborador) navigate('/dashboard');
-  }, [colaborador]);
-
-  useEffect(() => {
-    base44.entities.Filial.filter({ ativo: true }).then(setFiliais).catch(() => {});
+    base44.entities.Filial.list().then(list => {
+      setFiliais(list.filter(f => f.ativo));
+      if (list.length > 0) setFilialId(list[0].id);
+    }).catch(() => {});
   }, []);
 
-  const handleCpfChange = (e) => {
-    setCpf(formatCPF(e.target.value));
-  };
+  const handleCpfChange = (e) => setCpf(formatCPF(e.target.value));
 
   const handleLogin = async () => {
-    const cpfClean = cleanCPF(cpf);
-    if (cpfClean.length !== 11) {
-      toast({ title: 'CPF inválido', description: 'Digite um CPF válido com 11 dígitos.', variant: 'destructive' });
+    setError('');
+    if (!cpf || !senha || !filialId) {
+      setError('Preencha CPF, senha e filial');
       return;
     }
-    if (!senha) {
-      toast({ title: 'Senha obrigatória', variant: 'destructive' });
-      return;
-    }
-
     setLoading(true);
+    const cpfDigits = cpf.replace(/\D/g, '');
     try {
-      const colaboradores = await base44.entities.Colaborador.filter({ cpf: cpfClean });
-      
-      if (colaboradores.length === 0) {
-        // Primeiro acesso — criar como Administrador Master
-        const novoColaborador = await base44.entities.Colaborador.create({
-          nome: 'Administrador',
-          cpf: cpfClean,
-          senha: senha,
-          filial_id: filialId || '',
-          filial_nome: filiais.find(f => f.id === filialId)?.nome || '',
-          cargo: 'administrador_master',
-          ativo: true,
-          ultimo_acesso: new Date().toISOString()
+      const colaboradores = await base44.entities.Colaborador.filter({ cpf: cpfDigits });
+      const filial = filiais.find(f => f.id === filialId);
+
+      if (colaboradores.length > 0) {
+        const colab = colaboradores[0];
+        if (!colab.ativo) { setError('Conta desativada. Contate o administrador.'); setLoading(false); return; }
+        if (colab.senha !== senha) { setError('Senha incorreta'); setLoading(false); return; }
+        const filiaisPermitidas = colab.filiais_permitidas ? colab.filiais_permitidas.split(',').map(s => s.trim()) : [];
+        const hasAccess = colab.cargo === 'administrador_master' || colab.cargo === 'administrador' || filiaisPermitidas.includes(filialId);
+        if (!hasAccess) { setError('Você não tem permissão para acessar esta filial'); setLoading(false); return; }
+
+        const now = new Date().toISOString();
+        await base44.entities.Colaborador.update(colab.id, { ultimo_acesso: now });
+        await base44.entities.AuditLog.create({
+          user_name: colab.nome, user_cpf: colab.cpf, action: 'Login realizado',
+          details: `Filial: ${filial.nome}`, ip_address: 'local', category: 'login',
+          domain: window.location.hostname, branch_id: filialId
         });
-        login(novoColaborador);
-        toast({ title: 'Bem-vindo!', description: 'Conta de Administrador Master criada com sucesso.' });
+
+        login({
+          ...colab, ultimo_acesso: now, filial_id: filialId, filial_nome: filial.nome,
+          filiais_permitidas: colab.filiais_permitidas || filialId
+        });
         navigate('/dashboard');
-        return;
+      } else {
+        const newColab = await base44.entities.Colaborador.create({
+          nome: 'Administrador Master', cpf: cpfDigits, senha,
+          cargo: 'administrador_master', ativo: true, filial_id: filialId, filial_nome: filial.nome,
+          filiais_permitidas: filialId, matricula: 'AUTO', termos_aceitos: false,
+          notification_vehicle_release: true, notification_entry_exit: true,
+          notification_driver_docs: true, notification_admin_ops: true,
+        });
+        await base44.entities.AuditLog.create({
+          user_name: 'Administrador Master', user_cpf: cpfDigits, action: 'Novo administrador cadastrado',
+          details: `Primeiro acesso - Filial: ${filial.nome}`, ip_address: 'local', category: 'user_management',
+          domain: window.location.hostname, branch_id: filialId
+        });
+        login({ ...newColab, filial_id: filialId, filial_nome: filial.nome, filiais_permitidas: filialId });
+        navigate('/dashboard');
       }
-
-      const user = colaboradores[0];
-      if (user.senha !== senha) {
-        toast({ title: 'Senha incorreta', variant: 'destructive' });
-        setLoading(false);
-        return;
-      }
-      if (!user.ativo) {
-        toast({ title: 'Acesso bloqueado', description: 'Sua conta está desativada.', variant: 'destructive' });
-        setLoading(false);
-        return;
-      }
-
-      await base44.entities.Colaborador.update(user.id, { ultimo_acesso: new Date().toISOString() });
-      login(user);
-      navigate('/dashboard');
-    } catch (err) {
-      toast({ title: 'Erro ao entrar', description: 'Tente novamente.', variant: 'destructive' });
+    } catch (e) {
+      setError('Erro ao processar login: ' + e.message);
     }
     setLoading(false);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(200,12%,8%)] via-[hsl(200,10%,10%)] to-[hsl(160,20%,12%)] p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-[hsl(200,12%,14%)]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-8 shadow-2xl">
-          {/* Logo */}
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-[hsl(160,50%,40%)]/15 flex items-center justify-center mb-4">
-              <Truck className="w-8 h-8 text-[hsl(160,50%,40%)]" />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-wide">PROFARMA</h1>
-            <p className="text-xs tracking-[0.3em] text-white/40 mt-1 font-medium">LIBERAAUTO PRO</p>
-          </div>
+  const selectedFilial = filiais.find(f => f.id === filialId);
 
-          {/* Form */}
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-primary/5 animate-pulse" />
+        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-primary/5 animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/3 animate-pulse" style={{ animationDelay: '2s' }} />
+      </div>
+
+      <div className="relative w-full max-w-md fade-in">
+        {/* Brand */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-3xl bg-primary text-primary-foreground shadow-xl mb-4">
+            <Shield className="h-8 w-8" />
+          </div>
+          <h1 className="brand-title text-3xl text-foreground">PROFARMA</h1>
+          <p className="text-sm text-muted-foreground tracking-wide mt-1">LIBERAAUTO PRO</p>
+        </div>
+
+        {/* Login Card */}
+        <div className="bg-card rounded-3xl shadow-xl border border-border p-8">
+          <h2 className="font-heading font-bold text-xl mb-1">Acesso ao Sistema</h2>
+          <p className="text-sm text-muted-foreground mb-6">Faça login com seu CPF e senha</p>
+
+          {error && <div className="bg-destructive/10 text-destructive text-sm rounded-xl p-3 mb-4">{error}</div>}
+
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs font-medium">CPF</Label>
-              <Input
-                placeholder="000.000.000-00"
-                value={cpf}
-                onChange={handleCpfChange}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-12 rounded-xl focus:border-[hsl(160,50%,40%)]/50 focus:ring-[hsl(160,50%,40%)]/20"
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">CPF</label>
+              <input
+                type="text" value={cpf} onChange={handleCpfChange} placeholder="000.000.000-00" maxLength={14}
+                className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring transition-all"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs font-medium">Senha</Label>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Senha</label>
               <div className="relative">
-                <Input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-12 rounded-xl pr-12 focus:border-[hsl(160,50%,40%)]/50 focus:ring-[hsl(160,50%,40%)]/20"
+                <input
+                  type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)}
+                  placeholder="••••••••" onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  className="w-full h-12 px-4 pr-12 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring transition-all"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                <button onClick={() => setShowSenha(!showSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs font-medium">Filial</Label>
-              <Select value={filialId} onValueChange={setFilialId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white h-12 rounded-xl focus:border-[hsl(160,50%,40%)]/50 focus:ring-[hsl(160,50%,40%)]/20">
-                  <SelectValue placeholder="Selecione a filial" />
-                </SelectTrigger>
-                <SelectContent className="bg-[hsl(200,12%,16%)] border-white/10">
-                  {filiais.map((f) => (
-                    <SelectItem key={f.id} value={f.id} className="text-white/80 focus:bg-white/10 focus:text-white">
-                      {f.codigo} - {f.cidade || f.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div>
+              <label className="text-sm font-medium mb-1.5 block">Filial</label>
+              <div className="relative">
+                <button
+                  onClick={() => setShowFilialDropdown(!showFilialDropdown)}
+                  className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent flex items-center justify-between text-left"
+                >
+                  <span className="flex items-center gap-2 text-sm">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    {selectedFilial ? `${selectedFilial.codigo} - ${selectedFilial.nome}` : 'Selecionar filial...'}
+                  </span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </button>
+                {showFilialDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-2xl shadow-xl max-h-60 overflow-y-auto z-10">
+                    {filiais.map(f => (
+                      <button
+                        key={f.id} onClick={() => { setFilialId(f.id); setShowFilialDropdown(false); }}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-accent first:rounded-t-2xl last:rounded-b-2xl ${filialId === f.id ? 'bg-accent font-medium' : ''}`}
+                      >
+                        {f.codigo} - {f.nome}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <Button
-              onClick={handleLogin}
-              disabled={loading}
-              className="w-full h-12 rounded-xl bg-[hsl(160,50%,40%)] hover:bg-[hsl(160,50%,35%)] text-white font-semibold text-base mt-2 transition-all"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Truck className="w-5 h-5 mr-2" />}
-              Entrar
+            <Button onClick={handleLogin} disabled={loading} className="w-full h-12 rounded-2xl text-base">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ENTRAR'}
             </Button>
           </div>
 
-          {/* Footer */}
           <div className="mt-6 text-center">
-            <button
-              onClick={() => navigate('/solicitar-acesso')}
-              className="text-[hsl(160,50%,50%)] hover:text-[hsl(160,50%,60%)] text-sm font-medium transition-colors inline-flex items-center gap-1.5"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              Solicitar acesso
-            </button>
-            <p className="text-white/25 text-xs mt-4 leading-relaxed">
-              Primeiro acesso com CPF não registrado cria conta de Administrador Master
-            </p>
+            <Link to="/solicitar-acesso" className="text-sm text-primary hover:underline">
+              Solicitar novo acesso
+            </Link>
+          </div>
+
+          <div className="mt-4 p-3 bg-muted rounded-xl text-xs text-muted-foreground text-center">
+            <p>Primeiro acesso? Seu CPF será cadastrado como Administrador Master.</p>
           </div>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-6">
+          © 2026 PROFARMA LIBERAAUTO PRO · Todos os direitos reservados
+        </p>
       </div>
     </div>
   );

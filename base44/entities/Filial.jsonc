@@ -8,11 +8,19 @@
     },
     "codigo": {
       "type": "string",
-      "description": "C\u00f3digo da filial (ex: CD PR)"
+      "description": "C\u00f3digo da filial (ex: CD-PR)"
     },
     "cidade": {
       "type": "string",
       "description": "Cidade da filial"
+    },
+    "endereco": {
+      "type": "string",
+      "description": "Endere\u00e7o completo da filial"
+    },
+    "descricao": {
+      "type": "string",
+      "description": "Descri\u00e7\u00e3o da filial"
     },
     "ativo": {
       "type": "boolean",

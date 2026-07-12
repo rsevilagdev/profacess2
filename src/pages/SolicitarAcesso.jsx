@@ -1,109 +1,108 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Loader2, Send, Building2, ChevronDown } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
-import { Truck, ArrowLeft, Send, Loader2 } from 'lucide-react';
-import { formatCPF, cleanCPF } from '@/lib/cpf-utils';
+import { formatCPF } from '@/lib/cpf-utils.js';
+import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 
 export default function SolicitarAcesso() {
-  const [nome, setNome] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [email, setEmail] = useState('');
-  const [filialId, setFilialId] = useState('');
-  const [motivo, setMotivo] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({ nome: '', cpf: '', email: '', telefone: '', matricula: '', motivo: '' });
   const [filiais, setFiliais] = useState([]);
-  const { toast } = useToast();
+  const [filialId, setFilialId] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const navigate = useNavigate();
+  const { colaborador } = useProfarmaAuth();
 
   useEffect(() => {
-    base44.entities.Filial.filter({ ativo: true }).then(setFiliais).catch(() => {});
+    base44.entities.Filial.list().then(list => {
+      setFiliais(list.filter(f => f.ativo));
+    }).catch(() => {});
   }, []);
 
   const handleSubmit = async () => {
-    if (!nome || !cpf) {
-      toast({ title: 'Preencha nome e CPF', variant: 'destructive' });
-      return;
-    }
+    if (!form.nome || !form.cpf || !form.email) return;
     setLoading(true);
+    const cpfDigits = form.cpf.replace(/\D/g, '');
+    const filial = filiais.find(f => f.id === filialId);
     try {
-      const filial = filiais.find(f => f.id === filialId);
       await base44.entities.SolicitacaoAcesso.create({
-        nome,
-        cpf: cleanCPF(cpf),
-        email,
-        filial_id: filialId,
-        filial_nome: filial ? `${filial.codigo} - ${filial.cidade || filial.nome}` : '',
-        motivo,
-        status: 'pendente'
+        nome: form.nome, cpf: cpfDigits, email: form.email, telefone: form.telefone,
+        matricula: form.matricula, filial_id: filialId, filial_nome: filial?.nome,
+        motivo: form.motivo, status: 'pendente'
       });
-      toast({ title: 'Solicitação enviada!', description: 'Aguarde a aprovação de um administrador.' });
-      navigate('/');
-    } catch (err) {
-      toast({ title: 'Erro ao enviar', variant: 'destructive' });
-    }
+      const admins = await base44.entities.Colaborador.list();
+      const destinatarios = admins.filter(a => a.email && (a.cargo === 'administrador_master' || a.cargo === 'administrador' || a.cargo === 'encarregado'));
+      for (const admin of destinatarios) {
+        try {
+          await base44.integrations.Core.SendEmail({
+            to: admin.email,
+            subject: 'Nova Solicitação de Acesso - PROFARMA LIBERAAUTO PRO',
+            body: `Nova solicitação de acesso:\n\nNome: ${form.nome}\nCPF: ${cpfDigits}\nEmail: ${form.email}\nMatrícula: ${form.matricula}\nFilial: ${filial?.nome}\nMotivo: ${form.motivo}`
+          });
+        } catch (e) {}
+      }
+      setDone(true);
+    } catch (e) {}
     setLoading(false);
   };
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[hsl(200,12%,8%)] via-[hsl(200,10%,10%)] to-[hsl(160,20%,12%)] p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-[hsl(200,12%,14%)]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-8 shadow-2xl">
-          <div className="flex flex-col items-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-[hsl(160,50%,40%)]/15 flex items-center justify-center mb-4">
-              <Truck className="w-7 h-7 text-[hsl(160,50%,40%)]" />
-            </div>
-            <h1 className="text-xl font-bold text-white">Solicitar Acesso</h1>
-            <p className="text-xs text-white/40 mt-1">PROFARMA · LIBERAAUTO PRO</p>
+  if (done) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md fade-in">
+          <div className="inline-flex items-center justify-center h-16 w-16 rounded-3xl bg-primary text-primary-foreground mb-4">
+            <Send className="h-8 w-8" />
           </div>
+          <h2 className="font-heading font-bold text-xl mb-2">Solicitação Enviada!</h2>
+          <p className="text-sm text-muted-foreground mb-6">Sua solicitação foi enviada aos administradores. Você receberá um email de resposta.</p>
+          <Button onClick={() => navigate('/')} className="h-12 rounded-2xl px-8">Voltar ao Login</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md fade-in">
+        <div className="bg-card rounded-3xl shadow-xl border border-border p-8">
+          <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4">
+            <ArrowLeft className="h-4 w-4" /> Voltar
+          </Link>
+          <h2 className="font-heading font-bold text-xl mb-1">Solicitar Acesso</h2>
+          <p className="text-sm text-muted-foreground mb-6">Preencha seus dados para solicitação</p>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs">Nome completo</Label>
-              <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Seu nome" className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-11 rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs">CPF</Label>
-              <Input value={cpf} onChange={(e) => setCpf(formatCPF(e.target.value))} placeholder="000.000.000-00" className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-11 rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs">Email</Label>
-              <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" type="email" className="bg-white/5 border-white/10 text-white placeholder:text-white/25 h-11 rounded-xl" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs">Filial</Label>
-              <Select value={filialId} onValueChange={setFilialId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white h-11 rounded-xl">
-                  <SelectValue placeholder="Selecione a filial" />
-                </SelectTrigger>
-                <SelectContent className="bg-[hsl(200,12%,16%)] border-white/10">
-                  {filiais.map((f) => (
-                    <SelectItem key={f.id} value={f.id} className="text-white/80 focus:bg-white/10 focus:text-white">
-                      {f.codigo} - {f.cidade || f.nome}
-                    </SelectItem>
+            <input className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Nome completo" value={form.nome} onChange={e => setForm({...form, nome: e.target.value})} />
+            <input className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring" placeholder="CPF" value={form.cpf} onChange={e => setForm({...form, cpf: formatCPF(e.target.value)})} maxLength={14} />
+            <input className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring" placeholder="E-mail" value={form.email} onChange={e => setForm({...form, email: e.target.value})} />
+            <input className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Telefone/Celular" value={form.telefone} onChange={e => setForm({...form, telefone: e.target.value})} />
+            <input className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring" placeholder="Matrícula" value={form.matricula} onChange={e => setForm({...form, matricula: e.target.value})} />
+
+            <div className="relative">
+              <button onClick={() => setShowDropdown(!showDropdown)} className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent flex items-center justify-between text-left">
+                <span className="flex items-center gap-2 text-sm">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  {filiais.find(f => f.id === filialId)?.nome || 'Selecionar filial...'}
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              </button>
+              {showDropdown && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-2xl shadow-xl max-h-60 overflow-y-auto z-10">
+                  {filiais.map(f => (
+                    <button key={f.id} onClick={() => { setFilialId(f.id); setShowDropdown(false); }} className="w-full text-left px-4 py-3 text-sm hover:bg-accent first:rounded-t-2xl last:rounded-b-2xl">{f.nome}</button>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-white/60 text-xs">Motivo</Label>
-              <Textarea value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Por que precisa de acesso?" className="bg-white/5 border-white/10 text-white placeholder:text-white/25 rounded-xl min-h-[80px] resize-none" />
+                </div>
+              )}
             </div>
 
-            <Button onClick={handleSubmit} disabled={loading} className="w-full h-11 rounded-xl bg-[hsl(160,50%,40%)] hover:bg-[hsl(160,50%,35%)] text-white font-semibold">
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-              Enviar solicitação
+            <textarea className="w-full px-4 py-3 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring min-h-[80px]" placeholder="Motivo / Serviço solicitado" value={form.motivo} onChange={e => setForm({...form, motivo: e.target.value})} />
+
+            <Button onClick={handleSubmit} disabled={loading} className="w-full h-12 rounded-2xl">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ENVIAR SOLICITAÇÃO'}
             </Button>
-
-            <button onClick={() => navigate('/')} className="w-full text-white/40 hover:text-white/60 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 mt-2">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Voltar ao login
-            </button>
           </div>
         </div>
       </div>

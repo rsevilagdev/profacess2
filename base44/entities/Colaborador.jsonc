@@ -14,29 +14,83 @@
       "type": "string",
       "description": "Senha do colaborador"
     },
+    "email": {
+      "type": "string",
+      "description": "Email do colaborador"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Telefone/celular do colaborador"
+    },
+    "matricula": {
+      "type": "string",
+      "description": "N\u00famero de matr\u00edcula do funcion\u00e1rio (obrigat\u00f3rio)"
+    },
+    "foto_perfil": {
+      "type": "string",
+      "description": "URL da foto de perfil"
+    },
     "filial_id": {
       "type": "string",
-      "description": "ID da filial associada"
+      "description": "ID da filial principal"
     },
     "filial_nome": {
       "type": "string",
-      "description": "Nome da filial para exibi\u00e7\u00e3o"
+      "description": "Nome da filial principal"
+    },
+    "filiais_permitidas": {
+      "type": "string",
+      "description": "IDs de filiais permitidas (separados por v\u00edrgula)"
     },
     "cargo": {
       "type": "string",
       "enum": [
         "administrador_master",
         "administrador",
+        "encarregado",
         "operador",
         "visualizador"
       ],
       "default": "operador",
       "description": "Cargo/perfil de acesso"
     },
+    "paginas_permitidas": {
+      "type": "string",
+      "description": "P\u00e1ginas permitidas (separadas por v\u00edrgula)"
+    },
     "ativo": {
       "type": "boolean",
       "default": true,
       "description": "Se o colaborador est\u00e1 ativo"
+    },
+    "termos_aceitos": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se aceitou os termos de uso"
+    },
+    "termos_data": {
+      "type": "string",
+      "description": "Data de aceita\u00e7\u00e3o dos termos"
+    },
+    "notification_vehicle_release": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notifica\u00e7\u00f5es de libera\u00e7\u00e3o de ve\u00edculos"
+    },
+    "notification_entry_exit": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notifica\u00e7\u00f5es de entrada e sa\u00edda"
+    },
+    "notification_driver_docs": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notifica\u00e7\u00f5es de documenta\u00e7\u00e3o de motoristas"
+    },
+    "notification_admin_ops": {
+      "type": "boolean",
+      "default": true,
+      "description": "Notifica\u00e7\u00f5es de opera\u00e7\u00f5es administrativas"
     },
     "ultimo_acesso": {
       "type": "string",
@@ -47,6 +101,7 @@
   "required": [
     "nome",
     "cpf",
-    "senha"
+    "senha",
+    "matricula"
   ]
 }

@@ -1,0 +1,64 @@
+{
+  "name": "Vehicle",
+  "type": "object",
+  "properties": {
+    "placa": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "modelo": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo"
+    },
+    "cor": {
+      "type": "string",
+      "description": "Cor do ve\u00edculo"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "caminhao",
+        "utilitario",
+        "moto",
+        "carro",
+        "outros"
+      ],
+      "default": "caminhao",
+      "description": "Tipo de ve\u00edculo"
+    },
+    "transportadora": {
+      "type": "string",
+      "description": "Nome da transportadora"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ativo",
+        "bloqueado",
+        "manutencao"
+      ],
+      "default": "ativo",
+      "description": "Status do ve\u00edculo"
+    },
+    "observacao": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "carregado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o ve\u00edculo est\u00e1 carregado"
+    }
+  },
+  "required": [
+    "placa"
+  ]
+}

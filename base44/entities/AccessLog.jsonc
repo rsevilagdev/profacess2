@@ -1,0 +1,65 @@
+{
+  "name": "AccessLog",
+  "type": "object",
+  "properties": {
+    "veiculo_placa": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "motorista_nome": {
+      "type": "string",
+      "description": "Nome do motorista"
+    },
+    "motorista_cpf": {
+      "type": "string",
+      "description": "CPF do motorista"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida"
+      ],
+      "default": "entrada",
+      "description": "Tipo de acesso"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "acessado",
+        "liberado",
+        "bloqueado"
+      ],
+      "default": "acessado",
+      "description": "Status do acesso"
+    },
+    "carregado": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o ve\u00edculo saiu carregado"
+    },
+    "operador_nome": {
+      "type": "string",
+      "description": "Nome do operador"
+    },
+    "operador_cpf": {
+      "type": "string",
+      "description": "CPF do operador"
+    },
+    "observacao": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    }
+  },
+  "required": [
+    "veiculo_placa"
+  ]
+}

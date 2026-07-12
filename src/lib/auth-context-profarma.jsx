@@ -7,30 +7,56 @@ export function ProfarmaAuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const stored = localStorage.getItem('profarma_user');
+    const stored = localStorage.getItem('profarma_colaborador');
     if (stored) {
-      setColaborador(JSON.parse(stored));
+      try {
+        setColaborador(JSON.parse(stored));
+      } catch (e) {
+        localStorage.removeItem('profarma_colaborador');
+      }
     }
     setLoading(false);
   }, []);
 
-  const login = (user) => {
-    localStorage.setItem('profarma_user', JSON.stringify(user));
-    setColaborador(user);
+  const login = (colaboradorData) => {
+    localStorage.setItem('profarma_colaborador', JSON.stringify(colaboradorData));
+    setColaborador(colaboradorData);
   };
 
   const logout = () => {
-    localStorage.removeItem('profarma_user');
+    localStorage.removeItem('profarma_colaborador');
     setColaborador(null);
   };
 
+  const updateColaborador = (data) => {
+    const updated = { ...colaborador, ...data };
+    localStorage.setItem('profarma_colaborador', JSON.stringify(updated));
+    setColaborador(updated);
+  };
+
+  const canAccessPage = (pagePath) => {
+    if (!colaborador) return false;
+    if (colaborador.cargo === 'administrador_master' || colaborador.cargo === 'administrador') return true;
+    if (!colaborador.paginas_permitidas || colaborador.paginas_permitidas.length === 0) return true;
+    const pages = colaborador.paginas_permitidas.split(',').map(p => p.trim());
+    return pages.includes(pagePath);
+  };
+
+  const needsTermsAcceptance = () => {
+    return colaborador && !colaborador.termos_aceitos;
+  };
+
   return (
-    <ProfarmaAuthContext.Provider value={{ colaborador, login, logout, loading }}>
+    <ProfarmaAuthContext.Provider value={{
+      colaborador, loading, login, logout, updateColaborador, canAccessPage, needsTermsAcceptance
+    }}>
       {children}
     </ProfarmaAuthContext.Provider>
   );
 }
 
 export function useProfarmaAuth() {
-  return useContext(ProfarmaAuthContext);
+  const ctx = useContext(ProfarmaAuthContext);
+  if (!ctx) throw new Error('useProfarmaAuth deve ser usado dentro de ProfarmaAuthProvider');
+  return ctx;
 }
