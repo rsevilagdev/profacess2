@@ -22,18 +22,19 @@ const COLUMN_MAPS = {
   Driver: {
     columns: [
       { field: 'cpf', header: 'CPF' },
-      { field: 'nome', header: 'MOTORISTA' },
-      { field: 'status', header: 'EST. DE MOTORISTA' },
+      { field: 'nome', header: 'NOME' },
+      { field: 'sobrenome', header: 'SOBRENOME' },
+      { field: 'status_opentech', header: 'STATUS OPENTECH' },
     ],
-    statusMap: { 'ativo': 'VALIDADO', 'bloqueado': 'BLOQUEADO', 'pendente': 'PENDENTE' },
+    statusMap: {},
   },
   Vehicle: {
     columns: [
       { field: 'placa', header: 'PLACA' },
       { field: 'modelo', header: 'MODELO' },
-      { field: 'status', header: 'EST. VEICULO' },
+      { field: 'status_opentech', header: 'STATUS OPENTECH' },
     ],
-    statusMap: { 'ativo': 'VALIDADO', 'bloqueado': 'BLOQUEADO', 'manutencao': 'MANUTENCAO' },
+    statusMap: {},
   },
 };
 
@@ -55,9 +56,67 @@ export default function ExportarDados() {
       }
       const exportObj = {
         exportDate: new Date().toISOString(),
-        exportedBy: colaborador.nome,
+        exportedBy: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
         system: 'PROFARMA_LIBERAAUTO_PRO',
-        version: '2.0',
+        version: '3.0',
+        appDesign: {
+          theme: 'Material 3 - Paleta verde/cinza',
+          darkMode: false,
+          layout: 'Menu flutuante superior',
+          responsive: true,
+          language: 'pt-BR',
+          fonts: { heading: 'Inter', body: 'Inter', display: 'Inter' },
+          colors: {
+            primary: 'hsl(173 100% 21%) - Verde teal',
+            background: 'hsl(80 27% 96%) - Cinza claro',
+            destructive: 'hsl(0 62% 50%) - Vermelho',
+          }
+        },
+        pages: [
+          { path: '/', name: 'LoginProfarma', description: 'Login por CPF, senha e filial' },
+          { path: '/solicitar-acesso', name: 'SolicitarAcesso', description: 'Solicitação de acesso ao sistema' },
+          { path: '/forgot-password', name: 'ForgotPassword', description: 'Recuperação de senha por CPF' },
+          { path: '/dashboard', name: 'Dashboard', description: 'Painel principal com métricas' },
+          { path: '/novo-acesso', name: 'NovoAcesso', description: 'Registro de acesso com verificação de placa e CPF, kanban de liberação' },
+          { path: '/painel-bloqueio', name: 'PainelBloqueio', description: 'Painel de bloqueios' },
+          { path: '/editar-base', name: 'EditarBase', description: 'CRUD de veículos e motoristas com modal' },
+          { path: '/relatorios', name: 'Relatorios', description: 'Relatórios operacionais com gráficos' },
+          { path: '/relatorio-personalizado', name: 'RelatorioPersonalizado', description: 'Relatório personalizado exportável' },
+          { path: '/resumo-turnos', name: 'ResumoTurnos', description: 'Resumo de turnos operacionais' },
+          { path: '/notificacoes', name: 'Notificacoes', description: 'Central de notificações com seleção de usuários' },
+          { path: '/auditoria', name: 'Auditoria', description: 'Logs de auditoria do sistema' },
+          { path: '/gerenciamento-filiais', name: 'GerenciamentoFiliais', description: 'CRUD de filiais com veículos e motoristas paginados' },
+          { path: '/configuracoes', name: 'Configuracoes', description: 'Configurações do sistema' },
+          { path: '/configuracoes-seguranca', name: 'ConfiguracoesSeguranca', description: 'Permissões de páginas e regras de segurança por cargo' },
+          { path: '/verificar-cnh', name: 'VerificarCNH', description: 'Verificação de autenticidade de CNH' },
+          { path: '/exportar-dados', name: 'ExportarDados', description: 'Exportação e importação de dados com Excel inteligente' },
+          { path: '/suporte', name: 'Suporte', description: 'Suporte e manual do sistema' },
+          { path: '/termos-uso', name: 'TermosUso', description: 'Termos de uso com botão de aceitação' },
+          { path: '/perfil', name: 'Perfil', description: 'Perfil do usuário' },
+        ],
+        authentication: {
+          type: 'CPF + Senha + Filial',
+          firstAccess: 'Cria automaticamente Administrador Master',
+          passwordRecovery: 'Por CPF, envia senha temporária por e-mail',
+          termsRequired: true,
+          roles: ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'],
+        },
+        functionalities: [
+          'Controle de acesso por placa e CPF do motorista',
+          'Verificação de status de veículo e motorista na base de dados',
+          'Fila de liberação de saída (kanban)',
+          'Solicitação de autorização de cadastro para administradores',
+          'Registro de acompanhante/ajudante (sem verificação, apenas log)',
+          'Alerta automático para supervisores quando veículo é bloqueado',
+          'Relatório mensal automático por e-mail (CSV/Excel)',
+          'Resumo de turnos automático por e-mail aos gestores',
+          'Verificação de CNH com autenticidade via IA',
+          'Importação inteligente de Excel (auto-detecta motoristas/veículos, upsert)',
+          'Permissões de páginas por usuário',
+          'Regras de segurança por cargo (2FA, timeout, tentativas de login)',
+          'Auditoria completa (IP, domínio, ajudantes, todas as ações)',
+          'Ofuscação de dados sensíveis (LGPD)',
+        ],
         entities: data,
       };
       const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
@@ -127,7 +186,6 @@ export default function ExportarDados() {
     setImporting(true); setImportResult(null);
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
       const isJSON = file.name.endsWith('.json');
 
       if (isJSON) {
@@ -150,28 +208,17 @@ export default function ExportarDados() {
           }
         }
         setImportResult({ success: true, count: totalImported });
-      } else if (isExcel) {
-        const schema = { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } } } };
-        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url, json_schema: schema });
-        const rawRecords = result.output?.data || (Array.isArray(result.output) ? result.output : []);
-        const records = rawRecords.map(r => remapImportRecord(r, selectedEntity));
-        if (records.length > 0 && base44.entities[selectedEntity]) {
-          await base44.entities[selectedEntity].bulkCreate(records);
-          setImportResult({ success: true, count: records.length });
-        } else {
-          setImportResult({ success: false, error: 'Nenhum registro encontrado no arquivo' });
-        }
       } else {
-        const schema = { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } } } };
-        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url, json_schema: schema });
-        const rawRecords = result.output?.data || (Array.isArray(result.output) ? result.output : []);
-        const records = rawRecords.map(r => remapImportRecord(r, selectedEntity));
-        if (records.length > 0 && base44.entities[selectedEntity]) {
-          await base44.entities[selectedEntity].bulkCreate(records);
-          setImportResult({ success: true, count: records.length });
+        // Smart Excel/CSV import — auto-detects entity type, upserts (update status_opentech if exists, create if not)
+        const res = await base44.functions.invoke('importarExcelInteligente', { file_url });
+        const d = res.data;
+        if (d.success) {
+          setImportResult({ success: true, count: d.created + d.updated, detail: `${d.entityType === 'Vehicle' ? 'Veículos' : 'Motoristas'}: ${d.created} criados, ${d.updated} atualizados, ${d.errors} erros` });
+        } else {
+          setImportResult({ success: false, error: d.error || 'Erro na importação' });
         }
       }
-      await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action: `Importação: ${file.name}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
+      await base44.entities.AuditLog.create({ user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''), user_cpf: colaborador.cpf, action: `Importação: ${file.name}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
     } catch (err) { setImportResult({ success: false, error: err.message }); }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = '';
@@ -241,7 +288,7 @@ export default function ExportarDados() {
         {importResult && (
           <div className={`mt-4 p-3 rounded-xl flex items-center gap-2 ${importResult.success ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
             {importResult.success ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            <span className="text-sm">{importResult.success ? `${importResult.count} registros importados com sucesso!` : `Erro: ${importResult.error}`}</span>
+            <span className="text-sm">{importResult.success ? `${importResult.count} registros processados! ${importResult.detail || ''}` : `Erro: ${importResult.error}`}</span>
           </div>
         )}
       </div>
@@ -262,13 +309,14 @@ export default function ExportarDados() {
               <thead>
                 <tr className="border-b border-border">
                   <th className="text-left px-3 py-2 font-medium">CPF</th>
-                  <th className="text-left px-3 py-2 font-medium">MOTORISTA</th>
-                  <th className="text-left px-3 py-2 font-medium">EST. DE MOTORISTA</th>
+                  <th className="text-left px-3 py-2 font-medium">NOME</th>
+                  <th className="text-left px-3 py-2 font-medium">SOBRENOME</th>
+                  <th className="text-left px-3 py-2 font-medium">STATUS OPENTECH</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-border"><td className="px-3 py-2">007.220.389-76</td><td className="px-3 py-2">Márcio Granella</td><td className="px-3 py-2">VALIDADO</td></tr>
-                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
+                <tr className="border-b border-border"><td className="px-3 py-2">007.220.389-76</td><td className="px-3 py-2">Márcio</td><td className="px-3 py-2">Granella</td><td className="px-3 py-2">VALIDADO</td></tr>
+                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
               </tbody>
             </table>
           </div>
@@ -279,7 +327,7 @@ export default function ExportarDados() {
                 <tr className="border-b border-border">
                   <th className="text-left px-3 py-2 font-medium">PLACA</th>
                   <th className="text-left px-3 py-2 font-medium">MODELO</th>
-                  <th className="text-left px-3 py-2 font-medium">EST. VEICULO</th>
+                  <th className="text-left px-3 py-2 font-medium">STATUS OPENTECH</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,7 +337,7 @@ export default function ExportarDados() {
             </table>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-3">Status aceitos: VALIDADO, BLOQUEADO, PENDENTE (motoristas) / MANUTENCAO (veículos)</p>
+        <p className="text-xs text-muted-foreground mt-3">A importação inteligente detecta automaticamente se os dados são de motoristas ou veículos. Se o registro já existe na base, atualiza apenas o Status Opentech. Se não existe, cria um novo registro.</p>
       </div>
     </div>
   );

@@ -14,6 +14,14 @@
       "type": "string",
       "description": "CPF do motorista"
     },
+    "ajudante_nome": {
+      "type": "string",
+      "description": "Nome do acompanhante/ajudante"
+    },
+    "ajudante_cpf": {
+      "type": "string",
+      "description": "CPF do acompanhante/ajudante"
+    },
     "filial_id": {
       "type": "string",
       "description": "ID da filial"

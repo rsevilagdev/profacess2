@@ -6,6 +6,10 @@
       "type": "string",
       "description": "Nome do motorista"
     },
+    "sobrenome": {
+      "type": "string",
+      "description": "Sobrenome do motorista"
+    },
     "cpf": {
       "type": "string",
       "description": "CPF do motorista"
@@ -44,6 +48,10 @@
       ],
       "default": "ativo",
       "description": "Status do motorista"
+    },
+    "status_opentech": {
+      "type": "string",
+      "description": "Status Opentech do motorista"
     },
     "documento_verificado": {
       "type": "boolean",

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, CheckCircle, AlertTriangle, Truck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { maskPlaca, maskNome } from '@/lib/lgpd-utils.js';
+
 
 const COLUMNS = [
   { id: 'acessado', title: 'Aguardando Autorização', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-500/10', dot: 'bg-orange-500' },
@@ -59,10 +59,10 @@ export default function KanbanBoard({ acessos, onRefresh }) {
                             >
                               <div className="flex items-center gap-2">
                                 <div className={`h-2 w-2 rounded-full ${col.dot}`} />
-                                <p className="text-sm font-medium">{maskPlaca(item.veiculo_placa)}</p>
+                                <p className="text-sm font-medium">{item.veiculo_placa}</p>
                               </div>
                               <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                                <span>{item.motorista_nome ? maskNome(item.motorista_nome) : '—'}</span>
+                                <span>{item.motorista_nome || '—'}</span>
                                 <span>{new Date(item.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
                               {item.carregado && (

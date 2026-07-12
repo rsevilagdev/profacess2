@@ -48,6 +48,10 @@
       "default": "ativo",
       "description": "Status do ve\u00edculo"
     },
+    "status_opentech": {
+      "type": "string",
+      "description": "Status Opentech do ve\u00edculo"
+    },
     "observacao": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Building2, Truck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, X, Building2, Truck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
-import { maskPlaca } from '@/lib/lgpd-utils.js';
 
 const PAGE_SIZE = 10;
 
@@ -12,6 +11,8 @@ export default function GerenciamentoFiliais() {
   const [filiais, setFiliais] = useState([]);
   const [selectedFilial, setSelectedFilial] = useState(null);
   const [veiculos, setVeiculos] = useState([]);
+  const [motoristas, setMotoristas] = useState([]);
+  const [subTab, setSubTab] = useState('veiculos');
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -26,25 +27,32 @@ export default function GerenciamentoFiliais() {
 
   const selectFilial = async (f) => {
     setSelectedFilial(f);
-    const veics = await base44.entities.Vehicle.filter({ filial_id: f.id });
-    setVeiculos(veics);
-    setPage(0);
+    const [veics, drivers] = await Promise.all([
+      base44.entities.Vehicle.filter({ filial_id: f.id }).catch(() => []),
+      base44.entities.Driver.filter({ filial_id: f.id }).catch(() => []),
+    ]);
+    setVeiculos(veics); setMotoristas(drivers); setPage(0);
   };
 
   useEffect(() => { loadFiliais(); }, []);
 
-  const filteredVeiculos = veiculos.filter(v => !search || v.placa?.toLowerCase().includes(search.toLowerCase()) || v.transportadora?.toLowerCase().includes(search.toLowerCase()));
-  const totalPages = Math.max(1, Math.ceil(filteredVeiculos.length / PAGE_SIZE));
-  const pageData = filteredVeiculos.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const currentList = subTab === 'veiculos' ? veiculos : motoristas;
+  const filteredItems = currentList.filter(item => {
+    if (!search) return true;
+    const term = search.toLowerCase();
+    if (subTab === 'veiculos') return item.placa?.toLowerCase().includes(term) || item.modelo?.toLowerCase().includes(term) || item.transportadora?.toLowerCase().includes(term);
+    return item.nome?.toLowerCase().includes(term) || item.sobrenome?.toLowerCase().includes(term) || item.cpf?.includes(search);
+  });
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
+  const pageData = filteredItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const save = async () => {
     if (editing) {
       await base44.entities.Filial.update(editing.id, form);
       await logAudit('Filial editada', form.nome);
     } else {
-      const created = await base44.entities.Filial.create(form);
+      await base44.entities.Filial.create(form);
       await logAudit('Filial criada', form.nome);
-      await base44.entities.Notification.create({ title: 'Filial Criada', message: `Filial "${form.nome}" foi criada`, type: 'admin_ops', sender_name: colaborador.nome });
     }
     setShowForm(false); loadFiliais();
   };
@@ -52,12 +60,15 @@ export default function GerenciamentoFiliais() {
   const remove = async (f) => {
     await base44.entities.Filial.delete(f.id);
     await logAudit('Filial excluída', f.nome);
-    await base44.entities.Notification.create({ title: 'Filial Excluída', message: `Filial "${f.nome}" foi removida`, type: 'admin_ops', sender_name: colaborador.nome });
     loadFiliais();
   };
 
   const logAudit = async (action, details) => {
-    await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action, details, ip_address: 'local', domain: window.location.hostname, category: 'branch' });
+    await base44.entities.AuditLog.create({
+      user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+      user_cpf: colaborador.cpf, action, details,
+      ip_address: 'local', domain: window.location.hostname, category: 'branch'
+    });
   };
 
   return (
@@ -65,7 +76,7 @@ export default function GerenciamentoFiliais() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="brand-title text-2xl">Gerenciamento de Filiais</h1>
-          <p className="text-sm text-muted-foreground">CRUD de filiais e veículos por filial</p>
+          <p className="text-sm text-muted-foreground">Filiais, veículos e motoristas por unidade</p>
         </div>
         <Button onClick={() => { setEditing(null); setForm({ nome: '', codigo: '', cidade: '', endereco: '', descricao: '', ativo: true }); setShowForm(true); }} className="h-12 rounded-2xl">
           <Plus className="h-5 w-5 mr-1" /> Nova Filial
@@ -92,36 +103,55 @@ export default function GerenciamentoFiliais() {
         ))}
       </div>
 
-      {/* Vehicles per Filial */}
+      {/* Vehicles and Drivers per Filial */}
       {selectedFilial && (
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-heading font-bold flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Veículos - {selectedFilial.nome}</h3>
-            <span className="text-xs text-muted-foreground">{filteredVeiculos.length} veículos</span>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+            <div className="flex gap-2">
+              <button onClick={() => { setSubTab('veiculos'); setPage(0); }} className={`px-3 py-2 rounded-xl text-sm font-medium ${subTab === 'veiculos' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                <Truck className="h-4 w-4 inline mr-1" /> Veículos ({veiculos.length})
+              </button>
+              <button onClick={() => { setSubTab('motoristas'); setPage(0); }} className={`px-3 py-2 rounded-xl text-sm font-medium ${subTab === 'motoristas' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                <Users className="h-4 w-4 inline mr-1" /> Motoristas ({motoristas.length})
+              </button>
+            </div>
+            <span className="text-xs text-muted-foreground">{selectedFilial.nome}</span>
           </div>
+
+          {/* Search */}
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar veículo..." className="w-full h-10 pl-10 pr-4 rounded-xl border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} placeholder={`Buscar ${subTab === 'veiculos' ? 'veículo' : 'motorista'}...`} className="w-full h-10 pl-10 pr-4 rounded-xl border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
           </div>
+
           {pageData.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum veículo nesta filial</p>
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhum {subTab === 'veiculos' ? 'veículo' : 'motorista'} nesta filial</p>
           ) : (
             <div className="space-y-2">
-              {pageData.map(v => (
-                <div key={v.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
+              {pageData.map(item => (
+                <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
                   <div className="flex items-center gap-3">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    {subTab === 'veiculos' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Users className="h-4 w-4 text-muted-foreground" />}
                     <div>
-                      <p className="text-sm font-medium blur-lg-text">{maskPlaca(v.placa)}</p>
-                      <p className="text-xs text-muted-foreground blur-lg-text">{v.transportadora || '—'}</p>
+                      {subTab === 'veiculos' ? (
+                        <>
+                          <p className="text-sm font-medium">{item.placa}</p>
+                          <p className="text-xs text-muted-foreground">{item.modelo || '—'} · {item.transportadora || '—'}</p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm font-medium">{item.nome} {item.sobrenome || ''}</p>
+                          <p className="text-xs text-muted-foreground">{item.cpf}</p>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${v.status === 'ativo' ? 'bg-primary/10 text-primary' : v.status === 'bloqueado' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>{v.status}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'ativo' ? 'bg-primary/10 text-primary' : item.status === 'bloqueado' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>{item.status}</span>
                 </div>
               ))}
             </div>
           )}
-          {filteredVeiculos.length > PAGE_SIZE && (
+          {filteredItems.length > PAGE_SIZE && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-xs text-muted-foreground">Página {page + 1} de {totalPages}</p>
               <div className="flex gap-2">

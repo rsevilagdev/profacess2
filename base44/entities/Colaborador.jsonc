@@ -4,7 +4,11 @@
   "properties": {
     "nome": {
       "type": "string",
-      "description": "Nome completo do colaborador"
+      "description": "Nome do colaborador"
+    },
+    "sobrenome": {
+      "type": "string",
+      "description": "Sobrenome do colaborador"
     },
     "cpf": {
       "type": "string",
