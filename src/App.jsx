@@ -34,6 +34,7 @@ import AuditoriaSistema from '@/pages/AuditoriaSistema';
 import GestaoBackups from '@/pages/GestaoBackups';
 import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
 import AppLayout from '@/components/layout/AppLayout';
+import ConfigAutoRepair from '@/components/ConfigAutoRepair';
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <QueryClientProvider client={queryClientInstance}>
           <Router>
             <ScrollToTop />
+            <ConfigAutoRepair />
             <Routes>
               <Route path="/" element={<LoginProfarma />} />
               <Route path="/solicitar-acesso" element={<SolicitarAcesso />} />

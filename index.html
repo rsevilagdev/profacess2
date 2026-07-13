@@ -9,6 +9,41 @@
     <title>PROFARMA LIBERAAUTO PRO</title>
   </head>
   <body>
+    <!--
+      =============================================================================
+      CONFIGURAÇÃO DINÂMICA EM TEMPO DE EXECUÇÃO
+      =============================================================================
+      Este bloco permite configurar o app SEM recompilar.
+
+      COMO USAR:
+      1. AUTO-DETECÇÃO (padrão):
+         Não precisa fazer nada. O app detecta automaticamente o domínio
+         e configura a URL da API.
+
+      2. CONFIGURAÇÃO MANUAL (recomendado para deploy externo):
+         Descomente as linhas abaixo e preencha com seus valores:
+         - appId:       Seu App ID na Base44 (ex: com.base44.profarma)
+         - appBaseUrl:   URL da API (use '' para mesmo domínio, ou a URL da Base44)
+
+      3. VIA URL (dinâmico, sem editar código):
+         Acesse: https://seuapp.com/?app_id=SEU_APP_ID&app_base_url=https://api.base44.com
+         O app salva em localStorage e usa nas próximas visitas.
+
+      4. VIA BUILD (Vite env vars):
+         VITE_BASE44_APP_ID=com.base44.meuapp
+         VITE_BASE44_APP_BASE_URL=https://api.base44.com
+      =============================================================================
+    -->
+    <script>
+      // Configuração de tempo de execução — edite aqui para deploy externo
+      // Descomente e preencha para configurar manualmente:
+      window.__BASE44_CONFIG__ = {
+        // appId: "com.base44.SEU_APP",       // ← Seu App ID da Base44
+        // appBaseUrl: "",                    // ← '' = mesmo domínio | 'https://api.base44.com' = API externa
+        // functionsVersion: "",              // ← vazio = versão mais recente
+      };
+    </script>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
