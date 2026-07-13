@@ -15,15 +15,25 @@ export default function LoginProfarma() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showFilialDropdown, setShowFilialDropdown] = useState(false);
+  const [filiaisLoading, setFiliaisLoading] = useState(true);
+  const [filiaisError, setFiliaisError] = useState('');
   const navigate = useNavigate();
   const { login } = useProfarmaAuth();
 
-  useEffect(() => {
+  const loadFiliais = useCallback(() => {
+    setFiliaisLoading(true);
+    setFiliaisError('');
     base44.entities.Filial.list().then(list => {
       setFiliais(list.filter(f => f.ativo));
       if (list.length > 0) setFilialId(list[0].id);
-    }).catch(() => {});
+      setFiliaisLoading(false);
+    }).catch((err) => {
+      setFiliaisError('Erro ao carregar filiais: ' + (err?.message || 'verifique a conexão'));
+      setFiliaisLoading(false);
+    });
   }, []);
+
+  useEffect(() => { loadFiliais(); }, [loadFiliais]);
 
   const handleCpfChange = (e) => setCpf(formatCPF(e.target.value));
 
@@ -133,6 +143,13 @@ export default function LoginProfarma() {
               </div>
             </div>
 
+            {filiaisError && (
+              <div className="bg-destructive/10 text-destructive text-sm rounded-xl p-3">
+                {filiaisError}
+                <button onClick={loadFiliais} className="ml-2 underline text-xs">Tentar novamente</button>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium mb-1.5 block">Filial</label>
               <div className="relative">
@@ -142,20 +159,30 @@ export default function LoginProfarma() {
                 >
                   <span className="flex items-center gap-2 text-sm">
                     <Building2 className="h-4 w-4 text-primary" />
-                    {selectedFilial ? `${selectedFilial.codigo} - ${selectedFilial.nome}` : 'Selecionar filial...'}
+                    {filiaisLoading ? 'Carregando filiais...' : selectedFilial ? `${selectedFilial.codigo} - ${selectedFilial.nome}` : 'Selecionar filial...'}
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
                 {showFilialDropdown && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-2xl shadow-xl max-h-60 overflow-y-auto z-10">
-                    {filiais.map(f => (
-                      <button
-                        key={f.id} onClick={() => { setFilialId(f.id); setShowFilialDropdown(false); }}
-                        className={`w-full text-left px-4 py-3 text-sm hover:bg-accent first:rounded-t-2xl last:rounded-b-2xl ${filialId === f.id ? 'bg-accent font-medium' : ''}`}
-                      >
-                        {f.codigo} - {f.nome}
-                      </button>
-                    ))}
+                    {filiaisLoading ? (
+                      <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Carregando filiais...
+                      </div>
+                    ) : filiais.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-muted-foreground">
+                        Nenhuma filial ativa encontrada
+                      </div>
+                    ) : (
+                      filiais.map(f => (
+                        <button
+                          key={f.id} onClick={() => { setFilialId(f.id); setShowFilialDropdown(false); }}
+                          className={`w-full text-left px-4 py-3 text-sm hover:bg-accent first:rounded-t-2xl last:rounded-b-2xl ${filialId === f.id ? 'bg-accent font-medium' : ''}`}
+                        >
+                          {f.codigo} - {f.nome}
+                        </button>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
