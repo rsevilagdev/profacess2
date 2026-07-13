@@ -1,8 +1,9 @@
-import { createClient } from '@base44/sdk';
+import { createClient } from "@base44/sdk";
 
-// O plugin @base44/vite-plugin injeta automaticamente as variáveis
-// de ambiente (VITE_BASE44_APP_ID, etc.) no build.
-// O SDK resolve tudo internamente — não é necessário config custom.
+// As variáveis são injetadas pelo @base44/vite-plugin no build da plataforma.
 export const base44 = createClient({
-  requiresAuth: false,
+  appId: import.meta.env.VITE_BASE44_APP_ID,
+  serverUrl: import.meta.env.VITE_BASE44_BACKEND_URL,
+  appBaseUrl: import.meta.env.VITE_BASE44_BACKEND_URL,
+  functionsVersion: import.meta.env.VITE_BASE44_FUNCTIONS_VERSION,
 });
