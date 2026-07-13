@@ -49,6 +49,30 @@ const getAppParams = () => {
 }
 
 
+// Verificação de variáveis de ambiente — avisa no console se faltar
+// configuração essencial (apenas em desenvolvimento)
+if (!getAppParamValue("app_id", { defaultValue: import.meta.env.VITE_BASE44_APP_ID })) {
+	console.warn(
+		'%c⚠️ PROFARMA LIBERAAUTO PRO — Variável de ambiente ausente',
+		'color: #dc2626; font-weight: bold; font-size: 14px;',
+		'\n\nVITE_BASE44_APP_ID não está definida. O app não funcionará corretamente.\n' +
+		'Se está fazendo build fora da plataforma Base44 (GitHub, Vercel, etc.),\n' +
+		'configure as variáveis de ambiente conforme o arquivo .env.example\n\n' +
+		'Variáveis necessárias:\n' +
+		'  • VITE_BASE44_APP_ID       → ID do app na Base44\n' +
+		'  • VITE_BASE44_APP_BASE_URL → URL do backend da Base44\n'
+	);
+}
+if (!getAppParamValue("app_base_url", { defaultValue: import.meta.env.VITE_BASE44_APP_BASE_URL })) {
+	console.warn(
+		'%c⚠️ PROFARMA LIBERAAUTO PRO — Variável de ambiente ausente',
+		'color: #dc2626; font-weight: bold; font-size: 14px;',
+		'\n\nVITE_BASE44_APP_BASE_URL não está definida. O app não conseguirá\n' +
+		'conectar ao backend da Base44.\n' +
+		'Veja o arquivo .env.example para instruções de configuração.\n'
+	);
+}
+
 export const appParams = {
 	...getAppParams()
 }
