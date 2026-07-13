@@ -175,9 +175,7 @@ export default function LoginProfarma() {
             </Link>
           </div>
 
-          <div className="mt-4 p-3 bg-muted rounded-xl text-xs text-muted-foreground text-center">
-            <p>Primeiro acesso? Seu CPF será cadastrado como Administrador Master.</p>
-          </div>
+
         </div>
 
         <p className="text-center text-xs text-muted-foreground mt-6">
