@@ -35,12 +35,15 @@
       =============================================================================
     -->
     <script>
-      // Configuração de tempo de execução — edite aqui para deploy externo
-      // Descomente e preencha para configurar manualmente:
+      // Configuração de tempo de execução — edite aqui apenas para deploy externo
+      // AVISO: NÃO defina appId aqui se o app está hospedado na Base44.
+      // A plataforma injeta o App ID correto automaticamente no build.
+      // Use este bloco APENAS em hosts externos (GitHub Pages, Vercel, etc.)
+      // onde as variáveis de ambiente do Vite não estão disponíveis.
       window.__BASE44_CONFIG__ = {
-        appId: "adrian-aguiar-cevila",       // ← Seu App ID da Base44
-        appBaseUrl: "",                    // ← '' = mesmo domínio | 'https://api.base44.com' = API externa
-        functionsVersion: "",              // ← vazio = versão mais recente
+        // appId: "",                        // ← Descomente e preencha apenas em deploy externo
+        // appBaseUrl: "",                    // ← '' = mesmo domínio | 'https://api.base44.com' = API externa
+        // functionsVersion: "",              // ← vazio = versão mais recente
       };
     </script>
 

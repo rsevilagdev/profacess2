@@ -74,14 +74,14 @@ function autoDetectAppId() {
     }
   }
 
-  // 3. Procurar no localStorage (configuração persistida anteriormente)
-  const stored = storage.getItem('base44_app_id');
-  if (stored) return stored;
-
-  // 4. Procurar no window.__BASE44_CONFIG__
+  // 4. Procurar no window.__BASE44_CONFIG__ (deploy externo)
   if (windowObj.__BASE44_CONFIG__?.appId) {
     return windowObj.__BASE44_CONFIG__.appId;
   }
+
+  // 5. Procurar no localStorage (configuração persistida anteriormente)
+  const stored = storage.getItem('base44_app_id');
+  if (stored) return stored;
 
   return null;
 }
@@ -90,16 +90,17 @@ function autoDetectAppId() {
  * Lê um valor de configuração de múltiplas fontes
  */
 function resolveConfigValue(key, envKey, autoDetectFn) {
-  // 1. window.__BASE44_CONFIG__ (configuração de tempo de execução)
-  if (!isNode && windowObj.__BASE44_CONFIG__?.[key] != null) {
-    return windowObj.__BASE44_CONFIG__[key];
+  // 1. Variável de ambiente do Vite (build-time, injetada pela plataforma Base44)
+  //    Deve ter prioridade máxima — é o valor oficial injetado no build da Base44
+  if (import.meta.env[envKey]) {
+    return import.meta.env[envKey];
   }
 
   if (isNode) {
-    return import.meta.env[envKey] || autoDetectFn();
+    return autoDetectFn();
   }
 
-  // 2. URL params
+  // 2. URL params (permite override dinâmico via URL)
   const urlParams = new URLSearchParams(window.location.search);
   const urlValue = urlParams.get(key);
   if (urlValue) {
@@ -108,14 +109,15 @@ function resolveConfigValue(key, envKey, autoDetectFn) {
     return urlValue;
   }
 
-  // 3. localStorage
+  // 3. localStorage (configuração persistida anteriormente)
   const storageKey = `base44_${key.replace(/([A-Z])/g, '_$1').toLowerCase()}`;
   const stored = storage.getItem(storageKey);
   if (stored) return stored;
 
-  // 4. Variável de ambiente do Vite (build-time)
-  if (import.meta.env[envKey]) {
-    return import.meta.env[envKey];
+  // 4. window.__BASE44_CONFIG__ (configuração manual para deploy externo)
+  //    Apenas usado quando a plataforma não injetou o valor no build
+  if (windowObj.__BASE44_CONFIG__?.[key] != null) {
+    return windowObj.__BASE44_CONFIG__[key];
   }
 
   // 5. Auto-detecção
