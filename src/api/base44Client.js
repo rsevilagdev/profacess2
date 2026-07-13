@@ -1,15 +1,8 @@
 import { createClient } from '@base44/sdk';
-import { appParams } from '@/lib/app-params';
 
-const { appId, token, functionsVersion, appBaseUrl, serverUrl } = appParams;
-
-// Cria o cliente com configuração dinâmica
-// serverUrl é resolvido dinamicamente: '' (mesmo domínio) ou URL da API Base44
+// O plugin @base44/vite-plugin injeta automaticamente as variáveis
+// de ambiente (VITE_BASE44_APP_ID, etc.) no build.
+// O SDK resolve tudo internamente — não é necessário config custom.
 export const base44 = createClient({
-  appId,
-  token,
-  functionsVersion,
-  serverUrl: serverUrl || '',
   requiresAuth: false,
-  appBaseUrl
 });
