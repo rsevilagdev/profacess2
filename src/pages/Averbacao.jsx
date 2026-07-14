@@ -256,6 +256,7 @@ export default function Averbacao() {
     try {
       const colPrioridade = fileData.processedMeta?.priorityColumn || findColumn(fileData.headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
       const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
+      const colRota = findColumn(fileData.headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
       const colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
 
       const records = [];
@@ -267,7 +268,13 @@ export default function Averbacao() {
           ),
           count: item.count
         });
-        const prioridadeStr = colPrioridade ? String(item.row[colPrioridade] || '') : '';
+        let prioridadeStr = colPrioridade ? String(item.row[colPrioridade] || '') : '';
+        // For priorities 90/91, include route in prioridade to ensure unique keys per route
+        const priorityNum = parseInt(prioridadeStr) || 0;
+        if ((priorityNum === 90 || priorityNum === 91) && colRota) {
+          const rota = item.lists?.[colRota]?.[0] || String(item.row[colRota] || '').trim();
+          if (rota) prioridadeStr = `${prioridadeStr}_${rota}`;
+        }
         const totalGeral = colVlNf ? parseNumber(item.row[colVlNf]) : 0;
 
         // Extract ALL unique dates from the data column — one record per date
@@ -335,12 +342,19 @@ export default function Averbacao() {
 
       const toUpdate = [];
       const toCreate = [];
+      const seenUpdateIds = new Set();
+      const seenCreateKeys = new Set();
       for (const r of records) {
         const key = `${r.mes || ''}_${r.dia || ''}_${String(r.prioridade || '').trim()}`;
         if (existingMap[key]) {
-          toUpdate.push({ id: existingMap[key], ...r });
-        } else {
+          const existingId = existingMap[key];
+          if (!seenUpdateIds.has(existingId)) {
+            toUpdate.push({ id: existingId, ...r });
+            seenUpdateIds.add(existingId);
+          }
+        } else if (!seenCreateKeys.has(key)) {
           toCreate.push(r);
+          seenCreateKeys.add(key);
         }
       }
 
