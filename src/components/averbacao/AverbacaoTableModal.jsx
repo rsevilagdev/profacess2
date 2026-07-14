@@ -1,11 +1,38 @@
-import { useState } from 'react';
+import { useState, useRef, useLayoutEffect, useCallback } from 'react';
 import { X, CheckCircle, RotateCcw, Settings2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+
+const ROW_HEIGHT = 32;
+const BUFFER = 8;
 
 export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRestore }) {
   const [selectedColumns, setSelectedColumns] = useState([...fileData.visibleColumns]);
   const [showSelector, setShowSelector] = useState(!fileData.processed);
   const [processing, setProcessing] = useState(false);
+
+  // Virtual scroll
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(500);
+  const scrollRef = useRef(null);
+  const rafRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!scrollRef.current) return;
+    setViewportHeight(scrollRef.current.clientHeight);
+    const ro = new ResizeObserver(() => {
+      if (scrollRef.current) setViewportHeight(scrollRef.current.clientHeight);
+    });
+    ro.observe(scrollRef.current);
+    return () => { ro.disconnect(); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  const handleScroll = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      if (scrollRef.current) setScrollTop(scrollRef.current.scrollTop);
+      rafRef.current = null;
+    });
+  }, []);
 
   const toggleColumn = (col) => {
     setSelectedColumns(prev =>
@@ -29,9 +56,14 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
   };
 
   const displayColumns = fileData.processed ? fileData.visibleColumns : fileData.headers;
-  const MAX_ROWS = 500;
-  const visibleRows = fileData.rows.slice(0, MAX_ROWS);
-  const hasMore = fileData.rows.length > MAX_ROWS;
+  const totalRows = fileData.rows.length;
+  const totalHeight = totalRows * ROW_HEIGHT;
+  const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
+  const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER * 2;
+  const endIndex = Math.min(totalRows, startIndex + visibleCount);
+  const visibleRows = fileData.rows.slice(startIndex, endIndex);
+  const topSpacer = startIndex * ROW_HEIGHT;
+  const bottomSpacer = Math.max(0, totalHeight - endIndex * ROW_HEIGHT);
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
@@ -73,8 +105,8 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
           </div>
         )}
 
-        {/* Table */}
-        <div className="flex-1 overflow-auto p-3">
+        {/* Table with virtual scroll */}
+        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 overflow-auto p-3">
           <table className="w-full text-sm border-collapse">
             <thead className="sticky top-0 z-10">
               <tr>
@@ -86,8 +118,11 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((row, idx) => (
-                <tr key={idx} className="hover:bg-muted/30">
+              {topSpacer > 0 && (
+                <tr><td colSpan={displayColumns.length} style={{ height: topSpacer, padding: 0, border: 'none' }} /></tr>
+              )}
+              {visibleRows.map((row, i) => (
+                <tr key={startIndex + i} className="hover:bg-muted/30" style={{ height: ROW_HEIGHT }}>
                   {displayColumns.map(col => (
                     <td key={col} className="px-3 py-1.5 border-b border-border/50 whitespace-nowrap text-xs">
                       {row[col] || '—'}
@@ -95,6 +130,9 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
                   ))}
                 </tr>
               ))}
+              {bottomSpacer > 0 && (
+                <tr><td colSpan={displayColumns.length} style={{ height: bottomSpacer, padding: 0, border: 'none' }} /></tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -102,8 +140,7 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
         {/* Footer */}
         <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
           <span className="text-xs text-muted-foreground">
-            {displayColumns.length} colunas · {fileData.rows.length} registros
-            {hasMore && <span className="text-orange-600"> · exibindo primeiras {MAX_ROWS}</span>}
+            {displayColumns.length} colunas · {totalRows} registros
           </span>
           <div className="flex gap-2">
             {fileData.processed ? (
