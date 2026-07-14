@@ -1,27 +1,32 @@
 import { useState } from 'react';
-import { LifeBuoy, BookOpen, ChevronDown, ChevronUp, MessageSquare, Search, Send } from 'lucide-react';
+import { LifeBuoy, BookOpen, ChevronDown, ChevronUp, MessageSquare, Search, Send, Download, Loader2, ScanLine, Truck, ShieldCheck } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
+import { Button } from '@/components/ui/button';
+import { MANUAL_SECTIONS, FAQ } from '@/lib/manual-data';
+import ManualSection from '@/components/suporte/ManualSection';
 
-const FAQ = [
-  { q: 'Como faço a validação de um motorista?', a: 'Na página "Novo Acesso", busque o veículo pela placa. Em seguida, clique no botão "Escanear QR Code" para verificar os documentos do motorista terceirizado. O sistema validará automaticamente a autenticidade e o status do motorista na base de dados.' },
-  { q: 'Como proceder em caso de erro nos dados do veículo?', a: 'Se os dados do veículo estiverem incorretos, acesse "Editar Base de Dados", busque o veículo pela placa e clique no ícone de edição. Após corrigir, o status será atualizado imediatamente. Se o erro for de bloqueio indevido, altere o status para "ativo".' },
-  { q: 'O que fazer quando um veículo está bloqueado?', a: 'Veículos bloqueados não podem ser liberados. O sistema exibirá um alerta vermelho. Para desbloquear, um administrador deve acessar "Editar Base de Dados", localizar o veículo e alterar o status para "ativo".' },
-  { q: 'Como funciona a integração com a cancela automática?', a: 'Após validar o veículo e o motorista, o sistema envia o comando de abertura da cancela. Uma animação visual confirma o acionamento. Os logs de comunicação são registrados em tempo real. Em caso de falha de comunicação, o operador deve verificar a conexão e tentar novamente.' },
-  { q: 'Como exportar relatórios contábeis?', a: 'Acesse "Relatório Personalizado", selecione as colunas e status desejados, e clique em "Exportar PDF" (com marca d\'água confidencial) ou "Exportar Excel" (protegido com senha do CPF do administrador).' },
-  { q: 'Como solicitar acesso a outras filiais?', a: 'Na página "Perfil", clique em "Solicitar Novas Permissões". O sistema enviará um email aos administradores que poderão autorizar o acesso. Após aprovação, as permissões serão adicionadas automaticamente.' },
-  { q: 'Como funciona o backup automático?', a: 'O sistema realiza backups periódicos automáticos em segundo plano, armazenados de forma criptografada na nuvem. O indicador de sincronização no painel principal mostra o status. Backups manuais podem ser acionados em "Configurações > Backup".' },
-  { q: 'Por que os dados aparecem borrados?', a: 'Para proteção de dados (LGPD), a maioria dos dados sensíveis (CPF, CNH, placas) são exibidos de forma ofuscada/borrada. Apenas o status é totalmente visível. Dados completos são acessíveis apenas em operações específicas autorizadas.' },
-];
+const imageUrlToBase64 = async (url) => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.readAsDataURL(blob);
+  });
+};
 
 export default function Suporte() {
   const { colaborador } = useProfarmaAuth();
-  const [open, setOpen] = useState(null);
+  const [openSection, setOpenSection] = useState(null);
+  const [faqOpen, setFaqOpen] = useState(null);
   const [search, setSearch] = useState('');
   const [showChat, setShowChat] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [exporting, setExporting] = useState(false);
 
-  const filtered = FAQ.filter(f => !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase()));
+  const filteredFaq = FAQ.filter(f => !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase()));
 
   const askQuestion = async () => {
     if (!input.trim()) return;
@@ -30,33 +35,179 @@ export default function Suporte() {
     setInput('');
     const match = FAQ.find(f => f.q.toLowerCase().includes(userMsg.toLowerCase()) || userMsg.toLowerCase().includes(f.q.toLowerCase().split(' ')[0]));
     setTimeout(() => {
-      setMessages(prev => [...prev, { role: 'assistant', content: match ? match.a : 'Não encontrei uma resposta exata para sua pergunta. Tente reformular ou consulte as perguntas frequentes abaixo. Se persistir, contate o administrador do sistema.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: match ? match.a : 'Não encontrei uma resposta exata. Consulte as seções do manual acima ou as perguntas frequentes abaixo. Se persistir, contate o administrador.' }]);
     }, 500);
+  };
+
+  const exportManualPDF = async () => {
+    setExporting(true);
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let y = 30;
+
+      // Capa
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(24);
+      doc.setTextColor(0, 105, 92);
+      doc.text('PROFARMA', pageWidth / 2, y, { align: 'center' });
+      y += 10;
+      doc.setFontSize(16);
+      doc.text('LIBERAAUTO PRO', pageWidth / 2, y, { align: 'center' });
+      y += 10;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(13);
+      doc.setTextColor(80, 80, 80);
+      doc.text('Manual do Operador', pageWidth / 2, y, { align: 'center' });
+      y += 8;
+      doc.setFontSize(10);
+      doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, pageWidth / 2, y, { align: 'center' });
+      y += 6;
+      if (colaborador?.nome) {
+        doc.text(`Usuário: ${colaborador.nome}`, pageWidth / 2, y, { align: 'center' });
+      }
+
+      // Seções
+      for (const section of MANUAL_SECTIONS) {
+        doc.addPage();
+        y = 25;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        doc.setTextColor(0, 105, 92);
+        doc.text(section.title, margin, y);
+        y += 8;
+
+        // Imagem
+        if (section.image) {
+          try {
+            const dataUrl = await imageUrlToBase64(section.image);
+            const imgWidth = pageWidth - margin * 2;
+            const imgHeight = 55;
+            if (y + imgHeight > pageHeight - 20) { doc.addPage(); y = 25; }
+            doc.addImage(dataUrl, 'PNG', margin, y, imgWidth, imgHeight);
+            y += imgHeight + 6;
+          } catch (e) {}
+        }
+
+        // Tópicos
+        for (const topic of section.topics) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(11);
+          doc.setTextColor(30, 30, 30);
+          if (y > pageHeight - 25) { doc.addPage(); y = 25; }
+          doc.text(topic.title, margin, y);
+          y += 6;
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(10);
+          doc.setTextColor(70, 70, 70);
+          const lines = doc.splitTextToSize(topic.content, pageWidth - margin * 2);
+          for (const line of lines) {
+            if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+            doc.text(line, margin, y);
+            y += 5;
+          }
+          y += 4;
+        }
+      }
+
+      // FAQ
+      doc.addPage();
+      y = 25;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(15);
+      doc.setTextColor(0, 105, 92);
+      doc.text('Perguntas Frequentes', margin, y);
+      y += 8;
+      for (const f of FAQ) {
+        if (y > pageHeight - 30) { doc.addPage(); y = 25; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.setTextColor(30, 30, 30);
+        const qLines = doc.splitTextToSize(`P: ${f.q}`, pageWidth - margin * 2);
+        for (const line of qLines) {
+          if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+          doc.text(line, margin, y);
+          y += 5;
+        }
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(70, 70, 70);
+        const aLines = doc.splitTextToSize(`R: ${f.a}`, pageWidth - margin * 2);
+        for (const line of aLines) {
+          if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+          doc.text(line, margin, y);
+          y += 5;
+        }
+        y += 5;
+      }
+
+      // Rodapé em todas as páginas
+      const pageCount = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`PROFARMA LIBERAAUTO PRO — Manual do Operador — Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+
+      doc.save('Manual_PROFARMA_LIBERAAUTO_PRO.pdf');
+    } catch (e) {}
+    setExporting(false);
   };
 
   return (
     <div className="space-y-6 fade-in">
-      <div>
-        <h1 className="brand-title text-2xl">Suporte & Manual do Operador</h1>
-        <p className="text-sm text-muted-foreground">Base de conhecimento e ajuda interativa</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="brand-title text-2xl">Suporte & Manual do Operador</h1>
+          <p className="text-sm text-muted-foreground">Base de conhecimento, manual completo e ajuda interativa</p>
+        </div>
+        <Button onClick={exportManualPDF} disabled={exporting} className="h-12 rounded-2xl">
+          {exporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+          Exportar Manual (PDF)
+        </Button>
       </div>
 
       {/* Quick Help */}
       <div className="grid sm:grid-cols-3 gap-3">
         <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-          <BookOpen className="h-6 w-6 text-primary mb-2" />
-          <h3 className="font-heading font-bold text-sm mb-1">Validação de Motoristas</h3>
-          <p className="text-xs text-muted-foreground">Busque o veículo e escaneie o QR Code do motorista</p>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+            <ScanLine className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="font-heading font-bold text-sm mb-1">Acessos & Kanban</h3>
+          <p className="text-xs text-muted-foreground">Registro de acesso, fluxo de aprovação e liberação de saída</p>
         </div>
         <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-          <LifeBuoy className="h-6 w-6 text-primary mb-2" />
-          <h3 className="font-heading font-bold text-sm mb-1">Cancela Automática</h3>
-          <p className="text-xs text-muted-foreground">Liberação automática após validação bem-sucedida</p>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+            <Truck className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="font-heading font-bold text-sm mb-1">CRDK & Verificação</h3>
+          <p className="text-xs text-muted-foreground">Transferências entre CDs com verificação de placa por IA na foto</p>
         </div>
         <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-          <MessageSquare className="h-6 w-6 text-primary mb-2" />
-          <h3 className="font-heading font-bold text-sm mb-1">Chat de Suporte</h3>
-          <p className="text-xs text-muted-foreground">Tire dúvidas com o assistente interativo</p>
+          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
+            <ShieldCheck className="h-5 w-5 text-primary" />
+          </div>
+          <h3 className="font-heading font-bold text-sm mb-1">Segurança & LGPD</h3>
+          <p className="text-xs text-muted-foreground">Dados protegidos, auditoria completa e backup criptografado</p>
+        </div>
+      </div>
+
+      {/* Manual */}
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <BookOpen className="h-5 w-5 text-primary" />
+          <h3 className="font-heading font-bold">Manual do Sistema</h3>
+          <span className="text-xs text-muted-foreground ml-auto">{MANUAL_SECTIONS.length} seções</span>
+        </div>
+        <div className="space-y-2">
+          {MANUAL_SECTIONS.map((section, i) => (
+            <ManualSection key={section.id} section={section} isOpen={openSection === i} onToggle={() => setOpenSection(openSection === i ? null : i)} />
+          ))}
         </div>
       </div>
 
@@ -87,20 +238,24 @@ export default function Suporte() {
       {/* FAQ */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
-          <Search className="h-5 w-5 text-muted-foreground" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nas perguntas frequentes..." className="flex-1 h-10 px-2 bg-transparent text-sm focus:outline-none" />
+          <LifeBuoy className="h-5 w-5 text-primary" />
+          <h3 className="font-heading font-bold">Perguntas Frequentes</h3>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar nas perguntas..." className="flex-1 h-10 px-2 bg-transparent text-sm focus:outline-none" />
         </div>
         <div className="space-y-2">
-          {filtered.map((f, i) => (
+          {filteredFaq.map((f, i) => (
             <div key={i} className="border border-border rounded-2xl overflow-hidden">
-              <button onClick={() => setOpen(open === i ? null : i)} className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50">
-                <span className="text-sm font-medium">{f.q}</span>
-                {open === i ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+              <button onClick={() => setFaqOpen(faqOpen === i ? null : i)} className="w-full flex items-center justify-between p-4 text-left hover:bg-muted/50">
+                <span className="text-sm font-medium pr-2">{f.q}</span>
+                {faqOpen === i ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />}
               </button>
-              {open === i && <div className="p-4 pt-0 text-sm text-muted-foreground fade-in">{f.a}</div>}
+              {faqOpen === i && <div className="p-4 pt-0 text-sm text-muted-foreground fade-in">{f.a}</div>}
             </div>
           ))}
-          {filtered.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum resultado encontrado</p>}
+          {filteredFaq.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">Nenhum resultado encontrado</p>}
         </div>
       </div>
     </div>
