@@ -140,28 +140,51 @@ export default function AverbacaoReport({ tipo, periodo }) {
     });
 
     if (tipo === 'semestral') {
+      // Filter out aggregated 90/91 records (without route) when individual route records exist
+      let filteredParsed = parsed;
+      for (const pn of [90, 91]) {
+        const hasRouteRecords = filteredParsed.some(r => {
+          const num = parseInt(String(r.prioridade || '')) || 0;
+          return num === pn && String(r.prioridade || '').includes('_');
+        });
+        if (hasRouteRecords) {
+          filteredParsed = filteredParsed.filter(r => String(r.prioridade || '').trim() !== String(pn));
+        }
+      }
+
       // Group by mes + prioridade, sum total_geral
       const groups = {};
-      for (const r of parsed) {
+      for (const r of filteredParsed) {
         const key = `${r.mes}__${r.prioridade}`;
         if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
         groups[key].total += (Number(r.total_geral) || 0);
       }
-      // Sort by month order then priority
+      // Sort by month order then priority then route
       return Object.values(groups).sort((a, b) => {
         const ma = MESES.indexOf(a.mes);
         const mb = MESES.indexOf(b.mes);
         if (ma !== mb) return ma - mb;
-        return (parseInt(a.prioridade) || 0) - (parseInt(b.prioridade) || 0);
-      }).map(g => ({
-        'Data do Embarque': g.mes ? g.mes.toUpperCase() : '',
-        'Placa Veículo': '',
-        'Itinerário': g.prioridade || '',
-        'UF Origem': getField(g.first.row, g.first.lists, FIELD_MAP.ufOrigem),
-        'UF Destino': getField(g.first.row, g.first.lists, FIELD_MAP.ufDestino),
-        'Urbano': getField(g.first.row, g.first.lists, FIELD_MAP.urbano),
-        'Valor de mercadoria': g.total,
-      }));
+        const pa = parseInt(a.prioridade) || 0;
+        const pb = parseInt(b.prioridade) || 0;
+        if (pa !== pb) return pa - pb;
+        const ra = a.prioridade.includes('_') ? parseNumber(a.prioridade.split('_')[1]) : 0;
+        const rb = b.prioridade.includes('_') ? parseNumber(b.prioridade.split('_')[1]) : 0;
+        return ra - rb;
+      }).map(g => {
+        const priorityStr = String(g.prioridade || '').trim();
+        const priorityNum = parseInt(priorityStr) || 0;
+        const isUrban = (priorityNum === 90 || priorityNum === 91);
+        const itinerario = priorityStr.includes('_') ? priorityStr.replace('_', '-') : priorityStr;
+        return {
+          'Data do Embarque': g.mes ? g.mes.toUpperCase() : '',
+          'Placa Veículo': '',
+          'Itinerário': itinerario,
+          'UF Origem': 'PR',
+          'UF Destino': 'PR',
+          'Urbano': isUrban ? 'Sim' : 'Não',
+          'Valor de mercadoria': g.total,
+        };
+      });
     } else {
       // Mensal: one row per date+priority, sorted by date then priority
       // Filter out aggregated 90/91 records (without route) when individual route records exist
@@ -305,15 +328,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       }
 
       const pdfFileName = `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`;
-      const blob = doc.output('blob');
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = pdfFileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      doc.save(pdfFileName);
     } catch (e) {
       console.error('Erro export PDF:', e);
       setExportError('Erro ao exportar PDF: ' + (e.message || 'desconhecido'));
@@ -339,16 +354,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
-      const xlsxBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([xlsxBlob], { type: 'application/octet-stream' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
     } catch (e) {
       console.error('Erro export Excel:', e);
       setExportError('Erro ao exportar Excel: ' + (e.message || 'desconhecido'));
