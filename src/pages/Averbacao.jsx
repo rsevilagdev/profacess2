@@ -238,7 +238,13 @@ export default function Averbacao() {
           data_referencia: dataRef,
           prioridade: colPrioridade ? String(item.row[colPrioridade] || '') : '',
           arquivo_origem: fileData.fileName,
-          dados_json: JSON.stringify({ row: item.row, lists: item.lists, count: item.count }),
+          dados_json: JSON.stringify({
+            row: item.row,
+            lists: Object.fromEntries(
+              Object.entries(item.lists || {}).map(([k, v]) => [k, v.slice(0, 100)])
+            ),
+            count: item.count
+          }),
           total_geral: colVlNf ? parseNumber(item.row[colVlNf]) : 0,
           operador_nome: colaborador?.nome || '',
           filial_id: colaborador?.filial_id || '',
