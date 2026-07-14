@@ -174,7 +174,7 @@ function RouteBlock({ title, items, total }) {
                 <div className="pl-4 space-y-1">
                   {routes.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>↳ Rota {item.rota}</span>
+                      <span>{item.prioridade} - {item.rota}</span>
                       <span className="tabular-nums">{formatCurrency(item.total)}</span>
                     </div>
                   ))}

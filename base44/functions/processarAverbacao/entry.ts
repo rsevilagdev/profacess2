@@ -29,12 +29,25 @@ function parseDelimitedLine(line, delimiter) {
 
 function parseDelimitedText(text) {
   const delimiter = detectDelimiter(text);
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length === 0) return { headers: [], records: [] };
-  const headers = parseDelimitedLine(lines[0], delimiter);
+  const allLines = text.split(/\r?\n/).filter(l => l.trim());
+  if (allLines.length === 0) return { headers: [], records: [] };
+
+  // Find the header row by looking for known column names in the first 10 lines
+  let headerLineIdx = 0;
+  for (let i = 0; i < Math.min(allLines.length, 10); i++) {
+    const upper = allLines[i].toUpperCase();
+    if (upper.includes('NUMNF') || upper.includes('PRIORIDADE') || upper.includes('VL LITO') || upper.includes('VL_LITO') || upper.includes('VLLITO') || upper.includes('ROTA')) {
+      headerLineIdx = i;
+      break;
+    }
+  }
+
+  const headers = parseDelimitedLine(allLines[headerLineIdx], delimiter);
   const records = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseDelimitedLine(lines[i], delimiter);
+  for (let i = headerLineIdx + 1; i < allLines.length; i++) {
+    const values = parseDelimitedLine(allLines[i], delimiter);
+    // Skip rows where first value is empty or matches the first header (repeated header)
+    if (!values[0] || values[0].toUpperCase().trim() === (headers[0] || '').toUpperCase().trim()) continue;
     const record = {};
     headers.forEach((h, idx) => { record[h] = values[idx] || ''; });
     records.push(record);
@@ -137,7 +150,7 @@ Deno.serve(async (req) => {
     const colUfOrigem = findColumn(headers, ['UF ORIGEM', 'UF_ORIGEM', 'ORIGEM', 'UF ORIG']);
     const colUfDestino = findColumn(headers, ['UF DESTINO', 'UF_DESTINO', 'DESTINO', 'UF DEST']);
     const colUrbano = findColumn(headers, ['URBANO']);
-    const colValor = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VALOR DA NOTA FISCAL', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA FISCAL', 'VALOR DE MERCADORIA', 'VALOR MERCADORIA', 'VALOR', 'VL_MERCADORIA', 'VLMERCADORIA', 'MERCADORIA', 'VL MERCADORIA']);
+    const colValor = findColumn(headers, ['VL LITO', 'VL_LITO', 'VLLITO', 'VALOR LITO', 'VL LITRO', 'VL_LITRO', 'VALOR LITRO', 'VL NF', 'VL_NF', 'VLNF', 'VALOR DA NOTA FISCAL', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA FISCAL', 'VALOR DE MERCADORIA', 'VALOR MERCADORIA', 'VALOR', 'VL_MERCADORIA', 'VLMERCADORIA', 'MERCADORIA', 'VL MERCADORIA']);
 
     // Deduplicate by NumNf
     const seenNf = new Set();
@@ -168,6 +181,7 @@ Deno.serve(async (req) => {
         uf_origem: colUfOrigem ? String(record[colUfOrigem] || '') : '',
         uf_destino: colUfDestino ? String(record[colUfDestino] || '') : '',
         urbano: colUrbano ? String(record[colUrbano] || '') : '',
+        vl_lito: colValor ? parseNumber(record[colValor]) : 0,
         valor: colValor ? parseNumber(record[colValor]) : 0,
         num_nf: colNumNf ? String(record[colNumNf] || '') : ''
       };
@@ -235,6 +249,7 @@ Deno.serve(async (req) => {
         uf_origem: colUfOrigem,
         uf_destino: colUfDestino,
         urbano: colUrbano,
+        vl_lito: colValor,
         valor: colValor
       }
     });

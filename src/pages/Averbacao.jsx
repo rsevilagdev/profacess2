@@ -116,10 +116,64 @@ export default function Averbacao() {
   };
 
   const exportCSV = () => {
-    const headers = ['Data', 'Prioridade', 'Rota', 'Valor'];
-    const lines = [headers.join(';')];
+    const records = filteredRecords();
+    const lines = ['Data;Prioridade;Rota;Valor'];
 
-    lines.push(`Total ${periodLabel};;;;${periodTotal.toFixed(2).replace('.', ',')}`);
+    // Group by day
+    const groups = {};
+    records.forEach(r => {
+      const date = new Date(r.data_embarque);
+      if (isNaN(date)) return;
+      const key = date.toDateString();
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(r);
+    });
+
+    Object.keys(groups).sort((a, b) => new Date(a) - new Date(b)).forEach(key => {
+      const dayRecords = groups[key];
+      const dayLabel = formatDate(dayRecords[0].data_embarque);
+      lines.push(`DIA: ${dayLabel};;;`);
+
+      // Block 1: 1-89
+      const b1 = dayRecords.filter(r => (r.prioridade || 0) < 90);
+      const b1g = {};
+      b1.forEach(r => { const p = r.prioridade || 0; b1g[p] = (b1g[p] || 0) + (r.valor || 0); });
+      if (Object.keys(b1g).length > 0) {
+        lines.push(`;Prioridades 1 a 89;;`);
+        Object.keys(b1g).sort((a, b) => Number(a) - Number(b)).forEach(p => {
+          lines.push(`;Prioridade ${p};;${b1g[p].toFixed(2).replace('.', ',')}`);
+        });
+      }
+
+      // Block 2: 90-91
+      const b2 = dayRecords.filter(r => r.prioridade === 90 || r.prioridade === 91);
+      const b2g = {};
+      b2.forEach(r => { const k = `${r.prioridade}|${r.rota || 0}`; if (!b2g[k]) b2g[k] = { prioridade: r.prioridade, rota: r.rota || 0, total: 0 }; b2g[k].total += r.valor || 0; });
+      if (Object.keys(b2g).length > 0) {
+        lines.push(`;Prioridades 90 e 91 (por Rota);;`);
+        Object.keys(b2g).sort((a, b) => { const [pa, ra] = a.split('|').map(Number); const [pb, rb] = b.split('|').map(Number); return pa !== pb ? pa - pb : ra - rb; }).forEach(k => {
+          const g = b2g[k];
+          lines.push(`;${g.prioridade} - ${g.rota};;${g.total.toFixed(2).replace('.', ',')}`);
+        });
+      }
+
+      // Block 3: >91
+      const b3 = dayRecords.filter(r => (r.prioridade || 0) > 91);
+      const b3g = {};
+      b3.forEach(r => { const p = r.prioridade || 0; b3g[p] = (b3g[p] || 0) + (r.valor || 0); });
+      if (Object.keys(b3g).length > 0) {
+        lines.push(`;Prioridades acima de 91;;`);
+        Object.keys(b3g).sort((a, b) => Number(a) - Number(b)).forEach(p => {
+          lines.push(`;Prioridade ${p};;${b3g[p].toFixed(2).replace('.', ',')}`);
+        });
+      }
+
+      const dayTotal = dayRecords.reduce((s, r) => s + (r.valor || 0), 0);
+      lines.push(`Total ${dayLabel};;${dayTotal.toFixed(2).replace('.', ',')}`);
+      lines.push('');
+    });
+
+    lines.push(`Total ${periodLabel};;${periodTotal.toFixed(2).replace('.', ',')}`);
 
     const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
