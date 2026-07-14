@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, FileText, FileSpreadsheet, Mail, Calendar, Database } from 'lucide-react';
+import { Loader2, FileText, FileSpreadsheet, Mail, Database } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
@@ -7,9 +7,58 @@ import { Button } from '@/components/ui/button';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
+const REPORT_COLUMNS = [
+  'Data do Embarque',
+  'Placa Veículo',
+  'Itinerário',
+  'UF Origem',
+  'UF Destino',
+  'Urbano',
+  'Valor de mercadoria',
+];
+
+function findColumnInRow(row, possibleNames) {
+  const keys = Object.keys(row);
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const k of keys) {
+      if (k.toUpperCase().trim() === upper) return k;
+    }
+  }
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const k of keys) {
+      if (k.toUpperCase().trim().includes(upper)) return k;
+    }
+  }
+  return null;
+}
+
+function getField(row, lists, field) {
+  const key = findColumnInRow(row, field.names);
+  if (!key) return '';
+  const val = row[key] || '';
+  if (lists && lists[key] && lists[key].length > 1) {
+    return lists[key].join(', ');
+  }
+  return String(val);
+}
+
+function formatCurrency(val) {
+  return Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+const FIELD_MAP = {
+  data: { names: ['DATA DO EMBARQUE', 'DATA EMBARQUE', 'DATA', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE'] },
+  placa: { names: ['PLACA VEÍCULO', 'PLACA VEICULO', 'PLACA', 'VEICULO', 'VEÍCULO'] },
+  itinerario: { names: ['ITINERÁRIO', 'ITINERARIO', 'ROTA', 'RUTA', 'ROUTE'] },
+  ufOrigem: { names: ['UF ORIGEM', 'UF_ORIGEM', 'ORIGEM'] },
+  ufDestino: { names: ['UF DESTINO', 'UF_DESTINO', 'DESTINO'] },
+  urbano: { names: ['URBANO'] },
+  valor: { names: ['VALOR DE MERCADORIA', 'VL NF', 'VL_NF', 'VLNF', 'VALOR NF', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA', 'VALOR', 'VL MERCADORIA', 'VLMERCADORIA', 'VL_MERCADORIA'] },
+};
+
 export default function AverbacaoReport({ tipo, periodo }) {
-  // tipo: 'mensal' | 'semestral'
-  // periodo: selected month name (mensal) or semester number 1|2 (semestral)
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
@@ -34,79 +83,102 @@ export default function AverbacaoReport({ tipo, periodo }) {
         const semMonths = periodo === 1 ? MESES.slice(0, 6) : MESES.slice(6);
         filtered = all.filter(r => semMonths.includes(r.mes));
       }
-      // Deduplicate by prioridade + dados_json content
-      const seen = new Set();
-      const deduped = [];
-      for (const r of filtered) {
-        const key = `${r.prioridade}_${r.dados_json}`;
-        if (!seen.has(key)) { seen.add(key); deduped.push(r); }
-      }
-      deduped.sort((a, b) => (parseInt(a.prioridade) || 0) - (parseInt(b.prioridade) || 0));
-      setRecords(deduped);
+      setRecords(filtered);
     } catch (e) {}
     setLoading(false);
   };
 
-  const parsed = records.map(r => {
-    try {
-      const data = JSON.parse(r.dados_json || '{}');
-      return { ...r, row: data.row || {}, lists: data.lists || {}, count: data.count || 0 };
-    } catch (e) {
-      return { ...r, row: {}, lists: {}, count: 0 };
-    }
-  });
-
-  const columns = parsed.length > 0 ? Object.keys(parsed[0].row) : [];
-  const totalGeral = records.reduce((acc, r) => acc + (r.total_geral || 0), 0);
-
-  const periodoLabel = tipo === 'mensal' ? periodo : `Semestre ${periodo}º`;
-
-  const buildExportRows = () => {
-    return parsed.map(r => {
-      const row = {};
-      columns.forEach(col => {
-        const cellLists = r.lists[col];
-        if (cellLists && cellLists.length > 1) {
-          row[col] = cellLists.join(', ');
-        } else {
-          row[col] = r.row[col] || '';
-        }
-      });
-      return row;
+  // Parse records and build report rows
+  const buildReportRows = () => {
+    const parsed = records.map(r => {
+      try {
+        const data = JSON.parse(r.dados_json || '{}');
+        return { ...r, row: data.row || {}, lists: data.lists || {}, count: data.count || 0 };
+      } catch (e) {
+        return { ...r, row: {}, lists: {}, count: 0 };
+      }
     });
+
+    if (tipo === 'semestral') {
+      // Group by mes + prioridade, sum total_geral
+      const groups = {};
+      for (const r of parsed) {
+        const key = `${r.mes}__${r.prioridade}`;
+        if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
+        groups[key].total += (r.total_geral || 0);
+      }
+      // Sort by month order then priority
+      return Object.values(groups).sort((a, b) => {
+        const ma = MESES.indexOf(a.mes);
+        const mb = MESES.indexOf(b.mes);
+        if (ma !== mb) return ma - mb;
+        return (parseInt(a.prioridade) || 0) - (parseInt(b.prioridade) || 0);
+      }).map(g => ({
+        'Data do Embarque': g.mes ? g.mes.toUpperCase() : '',
+        'Placa Veículo': '',
+        'Itinerário': g.prioridade || '',
+        'UF Origem': getField(g.first.row, g.first.lists, FIELD_MAP.ufOrigem),
+        'UF Destino': getField(g.first.row, g.first.lists, FIELD_MAP.ufDestino),
+        'Urbano': getField(g.first.row, g.first.lists, FIELD_MAP.urbano),
+        'Valor de mercadoria': g.total,
+      }));
+    } else {
+      // Mensal: one row per priority group, deduplicated
+      const seen = new Set();
+      const deduped = [];
+      for (const r of parsed) {
+        const key = `${r.prioridade}_${r.dados_json}`;
+        if (!seen.has(key)) { seen.add(key); deduped.push(r); }
+      }
+      deduped.sort((a, b) => (parseInt(a.prioridade) || 0) - (parseInt(b.prioridade) || 0));
+      return deduped.map(r => ({
+        'Data do Embarque': getField(r.row, r.lists, FIELD_MAP.data) || r.data_referencia || '',
+        'Placa Veículo': getField(r.row, r.lists, FIELD_MAP.placa),
+        'Itinerário': r.prioridade || '',
+        'UF Origem': getField(r.row, r.lists, FIELD_MAP.ufOrigem),
+        'UF Destino': getField(r.row, r.lists, FIELD_MAP.ufDestino),
+        'Urbano': getField(r.row, r.lists, FIELD_MAP.urbano),
+        'Valor de mercadoria': r.total_geral || 0,
+      }));
+    }
   };
 
+  const reportRows = buildReportRows();
+  const totalGeral = reportRows.reduce((acc, r) => acc + (Number(r['Valor de mercadoria']) || 0), 0);
+  const periodoLabel = tipo === 'mensal' ? periodo : `${periodo}º Semestre`;
+  const filialNome = records.length > 0 ? (records[0].filial_nome || 'PR01') : 'PR01';
+
   const exportPDF = () => {
-    if (parsed.length === 0) return;
+    if (reportRows.length === 0) return;
     setExportingPdf(true);
     try {
       const doc = new jsPDF({ orientation: 'landscape' });
       const pw = doc.internal.pageSize.getWidth();
       const ph = doc.internal.pageSize.getHeight();
       const m = 12;
-      let y = 16;
+      let y = 14;
 
-      // Header
+      // Header - Razão Social
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(14);
+      doc.setFontSize(10);
       doc.setTextColor(0, 105, 92);
-      doc.text('PROFARMA LIBERAAUTO PRO', pw / 2, y, { align: 'center' });
-      y += 6;
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(30, 30, 30);
-      const title = tipo === 'mensal' ? `Averbação Mensal — ${periodoLabel}` : `Averbação Semestral — ${periodoLabel}`;
-      doc.text(title, pw / 2, y, { align: 'center' });
+      doc.text('Razão Social Segurado: PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA', m, y);
       y += 5;
       doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')}`, pw / 2, y, { align: 'center' });
-      y += 8;
+      doc.setTextColor(60, 60, 60);
+      doc.text(`CNPJ Segurado: 45.453.214/0002-86`, m, y);
+      doc.text(`Mês: ${tipo === 'mensal' ? periodo.toUpperCase() : periodoLabel.toUpperCase()}`, pw / 2, y);
+      doc.text(`Filial: ${filialNome}`, pw - m - 60, y);
+      y += 5;
+      doc.text(`Total Geral: R$ ${formatCurrency(totalGeral)}`, m, y);
+      y += 7;
 
       // Table
       const availWidth = pw - m * 2;
-      const colCount = columns.length;
-      const colWidth = availWidth / colCount;
+      const colWidths = [50, 35, 25, 25, 25, 25, 45]; // proportional widths
+      const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+      const scale = availWidth / totalColWidth;
+      const scaledWidths = colWidths.map(w => w * scale);
 
       // Header row
       doc.setFillColor(0, 105, 92);
@@ -115,10 +187,9 @@ export default function AverbacaoReport({ tipo, periodo }) {
       doc.setFontSize(7);
       doc.setTextColor(255, 255, 255);
       let x = m;
-      columns.forEach(col => {
-        const label = String(col).substring(0, Math.floor(colWidth / 1.8));
-        doc.text(label, x + 1, y);
-        x += colWidth;
+      REPORT_COLUMNS.forEach((col, i) => {
+        doc.text(col, x + 1, y);
+        x += scaledWidths[i];
       });
       y += 6;
 
@@ -126,39 +197,38 @@ export default function AverbacaoReport({ tipo, periodo }) {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(40, 40, 40);
       const rowH = 5;
-      parsed.forEach((r, idx) => {
-        if (y > ph - 20) { doc.addPage(); y = 16; }
+      reportRows.forEach((r, idx) => {
+        if (y > ph - 20) { doc.addPage(); y = 14; }
         if (idx % 2 === 0) {
           doc.setFillColor(240, 245, 244);
           doc.rect(m, y - 4, availWidth, rowH, 'F');
         }
         x = m;
-        columns.forEach(col => {
-          const cellLists = r.lists[col];
-          const val = cellLists && cellLists.length > 1
-            ? `${cellLists[0]} +${cellLists.length - 1}`
-            : (r.row[col] || '');
-          doc.text(String(val).substring(0, Math.floor(colWidth / 1.8)), x + 1, y);
-          x += colWidth;
+        REPORT_COLUMNS.forEach((col, i) => {
+          let val = r[col];
+          if (col === 'Valor de mercadoria') {
+            val = formatCurrency(val);
+          }
+          doc.text(String(val || '—').substring(0, Math.floor(scaledWidths[i] / 1.8)), x + 1, y);
+          x += scaledWidths[i];
         });
         y += rowH;
       });
 
-      // Total
-      if (y > ph - 15) { doc.addPage(); y = 16; }
-      y += 4;
+      // Total row
+      if (y > ph - 15) { doc.addPage(); y = 14; }
+      y += 3;
+      doc.setFillColor(0, 105, 92);
+      doc.rect(m, y - 4, availWidth, 6, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
-      doc.setTextColor(0, 105, 92);
-      doc.text(`Total Geral: R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, m, y);
-      y += 5;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`${parsed.length} grupo(s) de prioridade`, m, y);
+      doc.setTextColor(255, 255, 255);
+      doc.text('TOTAL GERAL', m + 1, y);
+      doc.text(`R$ ${formatCurrency(totalGeral)}`, m + availWidth - 60, y);
 
-      // Footer pagination
+      // Footer
       const pc = doc.internal.getNumberOfPages();
+      const title = tipo === 'mensal' ? `Averbação Mensal — ${periodoLabel}` : `Averbação Semestral — ${periodoLabel}`;
       for (let i = 1; i <= pc; i++) {
         doc.setPage(i);
         doc.setFont('helvetica', 'normal');
@@ -173,11 +243,20 @@ export default function AverbacaoReport({ tipo, periodo }) {
   };
 
   const exportExcel = () => {
-    if (parsed.length === 0) return;
+    if (reportRows.length === 0) return;
     setExportingExcel(true);
     try {
-      const rows = buildExportRows();
-      const ws = XLSX.utils.json_to_sheet(rows);
+      // Build sheet with header info like the original spreadsheet
+      const aoa = [];
+      // Row 0: header info
+      aoa.push(['Razão Social Segurado: PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA', 'Cnpj Segurado: ', '45453214002286', 'Mês: ', tipo === 'mensal' ? periodo.toUpperCase() : periodoLabel.toUpperCase(), 'Filial ', filialNome, totalGeral]);
+      // Row 1: column headers
+      aoa.push(REPORT_COLUMNS);
+      // Data rows
+      for (const r of reportRows) {
+        aoa.push(REPORT_COLUMNS.map(col => col === 'Valor de mercadoria' ? r[col] : (r[col] || '')));
+      }
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
       XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
@@ -186,21 +265,22 @@ export default function AverbacaoReport({ tipo, periodo }) {
   };
 
   const sendEmail = async () => {
-    if (parsed.length === 0 || !emailTo) return;
+    if (reportRows.length === 0 || !emailTo) return;
     setSendingEmail(true);
     setEmailMsg('');
     try {
-      const rows = buildExportRows();
       const htmlTable = `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:11px;font-family:Arial">
-        <thead><tr>${columns.map(c => `<th style="background:#00695C;color:#fff">${c}</th>`).join('')}</tr></thead>
-        <tbody>${rows.map(r => `<tr>${columns.map(c => `<td>${r[c] || ''}</td>`).join('')}</tr>`).join('')}</tbody>
+        <thead><tr>${REPORT_COLUMNS.map(c => `<th style="background:#00695C;color:#fff">${c}</th>`).join('')}</tr></thead>
+        <tbody>${reportRows.map(r => `<tr>${REPORT_COLUMNS.map(c => `<td>${c === 'Valor de mercadoria' ? formatCurrency(r[c]) : (r[c] || '')}</td>`).join('')}</tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="6" style="font-weight:bold;background:#00695C;color:#fff">TOTAL GERAL</td><td style="font-weight:bold;background:#00695C;color:#fff">R$ ${formatCurrency(totalGeral)}</td></tr></tfoot>
       </table>`;
       const body = `
         <h2 style="color:#00695C">PROFARMA LIBERAAUTO PRO</h2>
+        <p><strong>Razão Social Segurado:</strong> PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA</p>
+        <p><strong>CNPJ:</strong> 45.453.214/0002-86 | <strong>Filial:</strong> ${filialNome}</p>
         <h3>${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}</h3>
         <p>Gerado em ${new Date().toLocaleString('pt-BR')}</p>
-        <p><strong>Total Geral:</strong> R$ ${totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-        <p><strong>Grupos:</strong> ${parsed.length}</p>
+        <p><strong>Total Geral:</strong> R$ ${formatCurrency(totalGeral)}</p>
         ${htmlTable}
       `;
       await base44.integrations.Core.SendEmail({
@@ -225,7 +305,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
             {tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — {periodoLabel}
           </h2>
         </div>
-        {parsed.length > 0 && (
+        {reportRows.length > 0 && (
           <div className="flex gap-2 flex-wrap">
             <Button onClick={exportPDF} disabled={exportingPdf} variant="secondary" size="sm" className="h-9 rounded-xl">
               {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} PDF
@@ -239,15 +319,26 @@ export default function AverbacaoReport({ tipo, periodo }) {
 
       {loading ? (
         <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
-      ) : parsed.length === 0 ? (
+      ) : reportRows.length === 0 ? (
         <p className="text-center py-8 text-sm text-muted-foreground">Nenhum registro encontrado para o período selecionado</p>
       ) : (
         <>
+          {/* Header info like the spreadsheet */}
+          <div className="mb-4 text-xs space-y-1">
+            <p className="font-bold">Razão Social Segurado: PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA</p>
+            <div className="flex flex-wrap gap-4 text-muted-foreground">
+              <span>CNPJ Segurado: 45.453.214/0002-86</span>
+              <span>Mês: {tipo === 'mensal' ? periodo.toUpperCase() : periodoLabel.toUpperCase()}</span>
+              <span>Filial: {filialNome}</span>
+              <span className="font-bold text-primary">Total: R$ {formatCurrency(totalGeral)}</span>
+            </div>
+          </div>
+
           <div className="overflow-auto max-h-[600px] border border-border rounded-xl">
             <table className="w-full text-xs border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {columns.map(col => (
+                  {REPORT_COLUMNS.map(col => (
                     <th key={col} className="border border-black px-2 py-1.5 bg-primary text-primary-foreground font-medium text-left whitespace-nowrap">
                       {col}
                     </th>
@@ -255,31 +346,25 @@ export default function AverbacaoReport({ tipo, periodo }) {
                 </tr>
               </thead>
               <tbody>
-                {parsed.map((r, idx) => (
-                  <tr key={r.id || idx} className={idx % 2 === 0 ? 'bg-muted/20' : ''}>
-                    {columns.map(col => {
-                      const cellLists = r.lists[col];
-                      const cellValue = r.row[col];
-                      return (
-                        <td key={col} className="border border-black px-2 py-1 whitespace-nowrap">
-                          {cellLists && cellLists.length > 1
-                            ? <span>{cellLists[0]} <span className="text-primary font-medium">+{cellLists.length - 1}</span></span>
-                            : <span>{cellValue || '—'}</span>}
-                        </td>
-                      );
-                    })}
+                {reportRows.map((r, idx) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-muted/20' : ''}>
+                    {REPORT_COLUMNS.map(col => (
+                      <td key={col} className="border border-black px-2 py-1 whitespace-nowrap">
+                        {col === 'Valor de mercadoria'
+                          ? formatCurrency(r[col])
+                          : (r[col] || '—')}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr className="bg-primary">
+                  <td colSpan={6} className="border border-black px-2 py-1.5 text-primary-foreground font-bold text-right">TOTAL GERAL</td>
+                  <td className="border border-black px-2 py-1.5 text-primary-foreground font-bold whitespace-nowrap">R$ {formatCurrency(totalGeral)}</td>
+                </tr>
+              </tfoot>
             </table>
-          </div>
-
-          <div className="mt-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="text-sm">
-              <span className="font-bold text-primary">Total Geral: </span>
-              R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="text-muted-foreground ml-3">{parsed.length} grupo(s)</span>
-            </div>
           </div>
 
           {/* Email section */}
