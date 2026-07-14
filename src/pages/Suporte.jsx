@@ -5,6 +5,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { MANUAL_SECTIONS, FAQ } from '@/lib/manual-data';
 import ManualSection from '@/components/suporte/ManualSection';
+import { triggerDownload } from '@/lib/export-utils';
 
 const imageUrlToBase64 = async (url) => {
   const response = await fetch(url);
@@ -27,6 +28,14 @@ export default function Suporte() {
   const [exporting, setExporting] = useState(false);
 
   const filteredFaq = FAQ.filter(f => !search || f.q.toLowerCase().includes(search.toLowerCase()) || f.a.toLowerCase().includes(search.toLowerCase()));
+
+  // Group sections by group field
+  const groups = MANUAL_SECTIONS.reduce((acc, section) => {
+    const g = section.group || 'Outros';
+    if (!acc[g]) acc[g] = [];
+    acc[g].push(section);
+    return acc;
+  }, {});
 
   const askQuestion = async () => {
     if (!input.trim()) return;
@@ -56,11 +65,11 @@ export default function Suporte() {
       y += 10;
       doc.setFontSize(16);
       doc.text('LIBERAAUTO PRO', pageWidth / 2, y, { align: 'center' });
-      y += 10;
+      y += 12;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(13);
       doc.setTextColor(80, 80, 80);
-      doc.text('Manual do Operador', pageWidth / 2, y, { align: 'center' });
+      doc.text('Manual Completo do Sistema', pageWidth / 2, y, { align: 'center' });
       y += 8;
       doc.setFontSize(10);
       doc.text(`Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, pageWidth / 2, y, { align: 'center' });
@@ -68,46 +77,103 @@ export default function Suporte() {
       if (colaborador?.nome) {
         doc.text(`Usuário: ${colaborador.nome}`, pageWidth / 2, y, { align: 'center' });
       }
+      y += 10;
+      doc.setFontSize(9);
+      doc.setTextColor(120, 120, 120);
+      doc.text(`Este manual contém ${MANUAL_SECTIONS.length} seções com instruções detalhadas,`, pageWidth / 2, y, { align: 'center' });
+      y += 5;
+      doc.text('passo a passo e dicas para operação completa do sistema.', pageWidth / 2, y, { align: 'center' });
 
-      // Seções
-      for (const section of MANUAL_SECTIONS) {
+      // Seções por grupo
+      for (const [groupName, sections] of Object.entries(groups)) {
         doc.addPage();
         y = 25;
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(15);
+        doc.setFontSize(16);
         doc.setTextColor(0, 105, 92);
-        doc.text(section.title, margin, y);
+        doc.text(groupName, margin, y);
+        y += 4;
+        doc.setDrawColor(0, 105, 92);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
         y += 8;
 
-        // Imagem
-        if (section.image) {
-          try {
-            const dataUrl = await imageUrlToBase64(section.image);
-            const imgWidth = pageWidth - margin * 2;
-            const imgHeight = 55;
-            if (y + imgHeight > pageHeight - 20) { doc.addPage(); y = 25; }
-            doc.addImage(dataUrl, 'PNG', margin, y, imgWidth, imgHeight);
-            y += imgHeight + 6;
-          } catch (e) {}
-        }
-
-        // Tópicos
-        for (const topic of section.topics) {
+        for (const section of sections) {
+          if (y > pageHeight - 30) { doc.addPage(); y = 25; }
           doc.setFont('helvetica', 'bold');
-          doc.setFontSize(11);
-          doc.setTextColor(30, 30, 30);
-          if (y > pageHeight - 25) { doc.addPage(); y = 25; }
-          doc.text(topic.title, margin, y);
-          y += 6;
+          doc.setFontSize(13);
+          doc.setTextColor(0, 105, 92);
+          doc.text(section.title, margin, y);
+          y += 7;
 
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(10);
-          doc.setTextColor(70, 70, 70);
-          const lines = doc.splitTextToSize(topic.content, pageWidth - margin * 2);
-          for (const line of lines) {
-            if (y > pageHeight - 20) { doc.addPage(); y = 25; }
-            doc.text(line, margin, y);
-            y += 5;
+          if (section.image) {
+            try {
+              const dataUrl = await imageUrlToBase64(section.image);
+              const imgWidth = pageWidth - margin * 2;
+              const imgHeight = 50;
+              if (y + imgHeight > pageHeight - 20) { doc.addPage(); y = 25; }
+              doc.addImage(dataUrl, 'PNG', margin, y, imgWidth, imgHeight);
+              y += imgHeight + 5;
+            } catch (e) {}
+          }
+
+          for (const topic of section.topics) {
+            if (y > pageHeight - 30) { doc.addPage(); y = 25; }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(11);
+            doc.setTextColor(30, 30, 30);
+            const titleLines = doc.splitTextToSize(topic.title, pageWidth - margin * 2);
+            for (const line of titleLines) {
+              if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+              doc.text(line, margin, y);
+              y += 5;
+            }
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(9.5);
+            doc.setTextColor(70, 70, 70);
+            const contentLines = doc.splitTextToSize(topic.content, pageWidth - margin * 2);
+            for (const line of contentLines) {
+              if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+              doc.text(line, margin, y);
+              y += 4.5;
+            }
+
+            if (topic.steps) {
+              for (let si = 0; si < topic.steps.length; si++) {
+                if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+                const stepText = `${si + 1}. ${topic.steps[si]}`;
+                const stepLines = doc.splitTextToSize(stepText, pageWidth - margin * 2 - 8);
+                for (let li = 0; li < stepLines.length; li++) {
+                  if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+                  doc.setFont('helvetica', li === 0 ? 'bold' : 'normal');
+                  doc.setFontSize(9);
+                  doc.setTextColor(60, 60, 60);
+                  doc.text(stepLines[li], margin + 4, y);
+                  y += 4.5;
+                }
+              }
+              y += 2;
+            }
+
+            if (topic.tip) {
+              if (y > pageHeight - 20) { doc.addPage(); y = 25; }
+              doc.setFillColor(230, 245, 242);
+              doc.roundedRect(margin, y - 3.5, pageWidth - margin * 2, 6, 1, 1, 'F');
+              doc.setFont('helvetica', 'bold');
+              doc.setFontSize(8.5);
+              doc.setTextColor(0, 105, 92);
+              doc.text('DICA:', margin + 2, y);
+              doc.setFont('helvetica', 'normal');
+              const tipLines = doc.splitTextToSize(topic.tip, pageWidth - margin * 2 - 20);
+              for (const line of tipLines) {
+                if (y > pageHeight - 15) { doc.addPage(); y = 25; }
+                doc.text(line, margin + 16, y);
+                y += 4;
+              }
+              y += 4;
+            }
+            y += 3;
           }
           y += 4;
         }
@@ -117,45 +183,52 @@ export default function Suporte() {
       doc.addPage();
       y = 25;
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(15);
+      doc.setFontSize(16);
       doc.setTextColor(0, 105, 92);
       doc.text('Perguntas Frequentes', margin, y);
+      y += 4;
+      doc.setDrawColor(0, 105, 92);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
       y += 8;
       for (const f of FAQ) {
         if (y > pageHeight - 30) { doc.addPage(); y = 25; }
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
+        doc.setFontSize(10.5);
         doc.setTextColor(30, 30, 30);
         const qLines = doc.splitTextToSize(`P: ${f.q}`, pageWidth - margin * 2);
         for (const line of qLines) {
           if (y > pageHeight - 20) { doc.addPage(); y = 25; }
           doc.text(line, margin, y);
-          y += 5;
+          y += 4.5;
         }
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
+        doc.setFontSize(9.5);
         doc.setTextColor(70, 70, 70);
         const aLines = doc.splitTextToSize(`R: ${f.a}`, pageWidth - margin * 2);
         for (const line of aLines) {
           if (y > pageHeight - 20) { doc.addPage(); y = 25; }
           doc.text(line, margin, y);
-          y += 5;
+          y += 4.5;
         }
-        y += 5;
+        y += 4;
       }
 
-      // Rodapé em todas as páginas
+      // Rodapé
       const pageCount = doc.internal.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        doc.text(`PROFARMA LIBERAAUTO PRO — Manual do Operador — Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text(`PROFARMA LIBERAAUTO PRO — Manual Completo — Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
       }
 
-      doc.save('Manual_PROFARMA_LIBERAAUTO_PRO.pdf');
-    } catch (e) {}
+      const pdfBlob = doc.output('blob');
+      triggerDownload(pdfBlob, 'Manual_Completo_PROFARMA_LIBERAAUTO_PRO.pdf');
+    } catch (e) {
+      console.error('Erro ao exportar manual:', e);
+    }
     setExporting(false);
   };
 
@@ -163,8 +236,8 @@ export default function Suporte() {
     <div className="space-y-6 fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="brand-title text-2xl">Suporte & Manual do Operador</h1>
-          <p className="text-sm text-muted-foreground">Base de conhecimento, manual completo e ajuda interativa</p>
+          <h1 className="brand-title text-2xl">Suporte & Manual Completo</h1>
+          <p className="text-sm text-muted-foreground">Base de conhecimento completo, passo a passo e ajuda interativa</p>
         </div>
         <Button onClick={exportManualPDF} disabled={exporting} className="h-12 rounded-2xl">
           {exporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
@@ -197,19 +270,29 @@ export default function Suporte() {
         </div>
       </div>
 
-      {/* Manual */}
-      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-4">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <h3 className="font-heading font-bold">Manual do Sistema</h3>
-          <span className="text-xs text-muted-foreground ml-auto">{MANUAL_SECTIONS.length} seções</span>
+      {/* Manual com grupos */}
+      {Object.entries(groups).map(([groupName, sections]) => (
+        <div key={groupName} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <BookOpen className="h-5 w-5 text-primary" />
+            <h3 className="font-heading font-bold">{groupName}</h3>
+            <span className="text-xs text-muted-foreground ml-auto">{sections.length} seção{sections.length > 1 ? 'ões' : ''}</span>
+          </div>
+          <div className="space-y-2">
+            {sections.map((section, i) => {
+              const globalIndex = MANUAL_SECTIONS.indexOf(section);
+              return (
+                <ManualSection
+                  key={section.id}
+                  section={section}
+                  isOpen={openSection === globalIndex}
+                  onToggle={() => setOpenSection(openSection === globalIndex ? null : globalIndex)}
+                />
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-2">
-          {MANUAL_SECTIONS.map((section, i) => (
-            <ManualSection key={section.id} section={section} isOpen={openSection === i} onToggle={() => setOpenSection(openSection === i ? null : i)} />
-          ))}
-        </div>
-      </div>
+      ))}
 
       {/* Chat */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">

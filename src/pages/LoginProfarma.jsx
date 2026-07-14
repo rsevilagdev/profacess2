@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
+import ParticleBackground from '@/components/ParticleBackground';
 
 export default function LoginProfarma() {
   const [cpf, setCpf] = useState('');
@@ -95,90 +96,82 @@ export default function LoginProfarma() {
   const selectedFilial = filiais.find(f => f.id === filialId);
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background */}
+    <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden bg-[#061614]">
+      <ParticleBackground />
+
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-primary/5 animate-pulse" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-primary/5 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary/3 animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute -top-20 -left-20 w-[280px] h-[280px] sm:w-[400px] sm:h-[400px] rounded-full bg-teal-500/20 blur-[100px] float-orb-1" />
+        <div className="absolute -bottom-20 -right-20 w-[280px] h-[280px] sm:w-[400px] sm:h-[400px] rounded-full bg-emerald-500/15 blur-[100px] float-orb-2" />
+        <div className="absolute top-1/2 left-1/2 w-[350px] h-[350px] sm:w-[500px] sm:h-[500px] rounded-full bg-teal-600/10 blur-[120px] float-orb-3" />
       </div>
 
-      <div className="relative w-full max-w-md fade-in">
-        {/* Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center h-16 w-16 rounded-3xl bg-primary text-primary-foreground shadow-xl mb-4">
-            <Shield className="h-8 w-8" />
+      <div className="relative w-full max-w-md z-10">
+        <div className="text-center mb-8 card-entrance">
+          <div className="relative inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-primary shadow-2xl mb-4 logo-glow">
+            <Shield className="h-10 w-10 text-primary-foreground" />
+            <div className="absolute inset-0 rounded-3xl overflow-hidden">
+              <div className="absolute left-0 right-0 h-0.5 bg-white/50 laser-scan" />
+            </div>
           </div>
-          <h1 className="brand-title text-3xl text-foreground">PROFARMA</h1>
-          <p className="text-sm text-muted-foreground tracking-wide mt-1">LIBERAAUTO PRO</p>
+          <h1 className="brand-title text-3xl text-white">PROFARMA</h1>
+          <p className="text-xs text-teal-300/70 tracking-[0.3em] mt-1 font-medium">LIBERAAUTO PRO</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-card rounded-3xl shadow-xl border border-border p-8">
-          <h2 className="font-heading font-bold text-xl mb-1">Acesso ao Sistema</h2>
-          <p className="text-sm text-muted-foreground mb-6">Faça login com seu CPF e senha</p>
+        <div className="bg-white/5 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 p-6 sm:p-8 card-entrance" style={{ animationDelay: '0.1s' }}>
+          <h2 className="font-heading font-bold text-xl text-white mb-1">Acesso ao Sistema</h2>
+          <p className="text-sm text-teal-200/50 mb-6">Faça login com seu CPF e senha</p>
 
-          {error && <div className="bg-destructive/10 text-destructive text-sm rounded-xl p-3 mb-4">{error}</div>}
+          {error && <div className="bg-red-500/10 text-red-300 text-sm rounded-xl p-3 mb-4 border border-red-500/20">{error}</div>}
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium mb-1.5 block">CPF</label>
-              <input
-                type="text" value={cpf} onChange={handleCpfChange} placeholder="000.000.000-00" maxLength={14}
-                className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-              />
+              <label className="text-sm font-medium text-teal-100/80 mb-1.5 block">CPF</label>
+              <input type="text" value={cpf} onChange={handleCpfChange} placeholder="000.000.000-00" maxLength={14}
+                className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-white text-base placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-teal-400/50 focus:border-teal-400/50 transition-all" />
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Senha</label>
+              <label className="text-sm font-medium text-teal-100/80 mb-1.5 block">Senha</label>
               <div className="relative">
-                <input
-                  type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)}
+                <input type={showSenha ? 'text' : 'password'} value={senha} onChange={e => setSenha(e.target.value)}
                   placeholder="••••••••" onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  className="w-full h-12 px-4 pr-12 rounded-2xl border border-input bg-transparent text-base focus:outline-none focus:ring-2 focus:ring-ring transition-all"
-                />
-                <button onClick={() => setShowSenha(!showSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  className="w-full h-12 px-4 pr-12 rounded-2xl bg-white/5 border border-white/10 text-white text-base placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-teal-400/50 focus:border-teal-400/50 transition-all" />
+                <button onClick={() => setShowSenha(!showSenha)} className="absolute right-3 top-1/2 -translate-y-1/2 text-teal-200/40 hover:text-teal-200 transition-colors">
                   {showSenha ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
             </div>
 
             {filiaisError && (
-              <div className="bg-destructive/10 text-destructive text-sm rounded-xl p-3">
+              <div className="bg-red-500/10 text-red-300 text-sm rounded-xl p-3 border border-red-500/20">
                 {filiaisError}
                 <button onClick={loadFiliais} className="ml-2 underline text-xs">Tentar novamente</button>
               </div>
             )}
 
             <div>
-              <label className="text-sm font-medium mb-1.5 block">Filial</label>
+              <label className="text-sm font-medium text-teal-100/80 mb-1.5 block">Filial</label>
               <div className="relative">
-                <button
-                  onClick={() => setShowFilialDropdown(!showFilialDropdown)}
-                  className="w-full h-12 px-4 rounded-2xl border border-input bg-transparent flex items-center justify-between text-left"
-                >
+                <button onClick={() => setShowFilialDropdown(!showFilialDropdown)}
+                  className="w-full h-12 px-4 rounded-2xl bg-white/5 border border-white/10 text-white flex items-center justify-between text-left hover:bg-white/10 transition-all">
                   <span className="flex items-center gap-2 text-sm">
-                    <Building2 className="h-4 w-4 text-primary" />
+                    <Building2 className="h-4 w-4 text-teal-400" />
                     {filiaisLoading ? 'Carregando filiais...' : selectedFilial ? `${selectedFilial.codigo} - ${selectedFilial.nome}` : 'Selecionar filial...'}
                   </span>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  <ChevronDown className="h-4 w-4 text-teal-200/40" />
                 </button>
                 {showFilialDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-2xl shadow-xl max-h-60 overflow-y-auto z-10">
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-[#0d1f1c] border border-white/10 rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-10">
                     {filiaisLoading ? (
-                      <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
+                      <div className="px-4 py-3 text-sm text-teal-200/50 flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" /> Carregando filiais...
                       </div>
                     ) : filiais.length === 0 ? (
-                      <div className="px-4 py-3 text-sm text-muted-foreground">
-                        Nenhuma filial ativa encontrada
-                      </div>
+                      <div className="px-4 py-3 text-sm text-teal-200/50">Nenhuma filial ativa encontrada</div>
                     ) : (
                       filiais.map(f => (
-                        <button
-                          key={f.id} onClick={() => { setFilialId(f.id); setShowFilialDropdown(false); }}
-                          className={`w-full text-left px-4 py-3 text-sm hover:bg-accent first:rounded-t-2xl last:rounded-b-2xl ${filialId === f.id ? 'bg-accent font-medium' : ''}`}
-                        >
+                        <button key={f.id} onClick={() => { setFilialId(f.id); setShowFilialDropdown(false); }}
+                          className={`w-full text-left px-4 py-3 text-sm text-white hover:bg-white/10 first:rounded-t-2xl last:rounded-b-2xl transition-colors ${filialId === f.id ? 'bg-white/10 font-medium' : ''}`}>
                           {f.codigo} - {f.nome}
                         </button>
                       ))
@@ -188,26 +181,18 @@ export default function LoginProfarma() {
               </div>
             </div>
 
-            <Button onClick={handleLogin} disabled={loading} className="w-full h-12 rounded-2xl text-base">
+            <Button onClick={handleLogin} disabled={loading} className="w-full h-12 rounded-2xl text-base font-bold">
               {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'ENTRAR'}
             </Button>
           </div>
 
           <div className="mt-6 flex flex-col items-center gap-2">
-            <Link to="/forgot-password" className="text-sm text-primary hover:underline">
-              Esqueci minha senha
-            </Link>
-            <Link to="/solicitar-acesso" className="text-sm text-primary hover:underline">
-              Solicitar novo acesso
-            </Link>
+            <Link to="/forgot-password" className="text-sm text-teal-300/70 hover:text-teal-200 transition-colors">Esqueci minha senha</Link>
+            <Link to="/solicitar-acesso" className="text-sm text-teal-300/70 hover:text-teal-200 transition-colors">Solicitar novo acesso</Link>
           </div>
-
-
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
-          © 2026 PROFARMA LIBERAAUTO PRO · Todos os direitos reservados
-        </p>
+        <p className="text-center text-xs text-teal-200/30 mt-6">© 2026 PROFARMA LIBERAAUTO PRO · Todos os direitos reservados</p>
       </div>
     </div>
   );
