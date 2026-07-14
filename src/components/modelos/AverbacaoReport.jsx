@@ -342,7 +342,16 @@ export default function AverbacaoReport({ tipo, periodo }) {
         doc.text(`PROFARMA LIBERAAUTO PRO — ${title} — Página ${i} de ${pc}`, pw / 2, ph - 6, { align: 'center' });
       }
 
-      doc.save(`averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`);
+      const pdfFileName = `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`;
+      const blob = doc.output('blob');
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = pdfFileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Erro export PDF:', e);
       setExportError('Erro ao exportar PDF: ' + (e.message || 'desconhecido'));
@@ -368,7 +377,16 @@ export default function AverbacaoReport({ tipo, periodo }) {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
-      XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
+      const xlsxBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([xlsxBlob], { type: 'application/octet-stream' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (e) {
       console.error('Erro export Excel:', e);
       setExportError('Erro ao exportar Excel: ' + (e.message || 'desconhecido'));
