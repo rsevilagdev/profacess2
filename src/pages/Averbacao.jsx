@@ -191,6 +191,17 @@ export default function Averbacao() {
           setLoading(false);
           return;
         }
+        // Remove duplicate NumNf — keep only one record per nota fiscal
+        const colNumNfDedup = findColumn(parsed.headers, ['NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUNF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
+        if (colNumNfDedup) {
+          const seen = new Set();
+          parsed.rows = parsed.rows.filter(r => {
+            const nf = String(r[colNumNfDedup] || '').trim();
+            if (!nf || seen.has(nf)) return false;
+            seen.add(nf);
+            return true;
+          });
+        }
         setFileData({
           fileName: file.name,
           headers: parsed.headers,

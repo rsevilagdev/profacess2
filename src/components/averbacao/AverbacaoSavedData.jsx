@@ -8,6 +8,110 @@ import DropdownCell from './DropdownCell';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
+function findCol(columns, possibleNames) {
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const c of columns) {
+      if (c.toUpperCase().trim() === upper) return c;
+    }
+  }
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const c of columns) {
+      if (c.toUpperCase().trim().includes(upper)) return c;
+    }
+  }
+  return null;
+}
+
+function parseNum(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const cleaned = String(val).replace(/[^\d,-]/g, '').replace('.', '').replace(',', '.');
+  return Number(cleaned) || 0;
+}
+
+function formatNum(val) {
+  return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function groupSavedByPriority(records) {
+  if (records.length === 0) return records;
+
+  const columns = Object.keys(records[0].parsedRow || {});
+  const colRota = findCol(columns, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
+
+  const groups = {};
+  const groupKeys = [];
+
+  for (const r of records) {
+    const priority = String(r.prioridade || '').trim();
+    const priorityNum = parseInt(priority) || 0;
+    let groupKey;
+    if ((priorityNum === 90 || priorityNum === 91) && colRota) {
+      const rota = String(r.parsedRow?.[colRota] || '').trim();
+      groupKey = `${priority}_${rota}`;
+    } else {
+      groupKey = priority;
+    }
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+      groupKeys.push({ key: groupKey, priority: priorityNum });
+    }
+    groups[groupKey].push(r);
+  }
+
+  groupKeys.sort((a, b) => a.priority - b.priority);
+
+  const result = [];
+  for (const gk of groupKeys) {
+    const groupRecords = groups[gk.key];
+    if (groupRecords.length === 1) {
+      result.push(groupRecords[0]);
+      continue;
+    }
+
+    const merged = { ...groupRecords[0] };
+    const mergedRow = {};
+    const mergedLists = {};
+    let mergedCount = 0;
+
+    for (const col of columns) {
+      const isListCol = groupRecords.some(r => r.parsedLists?.[col]);
+
+      if (isListCol) {
+        const allValues = new Set();
+        for (const r of groupRecords) {
+          const vals = r.parsedLists?.[col] || [];
+          vals.forEach(v => allValues.add(v));
+        }
+        const uniqueValues = [...allValues];
+        mergedRow[col] = uniqueValues.length > 1
+          ? `${uniqueValues[0]} +${uniqueValues.length - 1}`
+          : (uniqueValues[0] || '');
+        mergedLists[col] = uniqueValues;
+      } else {
+        let sum = 0;
+        for (const r of groupRecords) {
+          sum += parseNum(r.parsedRow?.[col]);
+        }
+        mergedRow[col] = formatNum(sum);
+      }
+    }
+
+    for (const r of groupRecords) {
+      mergedCount += r.parsedCount || 0;
+    }
+
+    merged.parsedRow = mergedRow;
+    merged.parsedLists = mergedLists;
+    merged.parsedCount = mergedCount;
+    result.push(merged);
+  }
+
+  return result;
+}
+
 export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,11 +168,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
     }
   });
 
-  const sortedParsed = [...parsed].sort((a, b) => {
-    const pa = parseInt(a.prioridade) || 0;
-    const pb = parseInt(b.prioridade) || 0;
-    return pa - pb;
-  });
+  const sortedParsed = groupSavedByPriority(parsed);
   const columns = sortedParsed.length > 0 ? Object.keys(sortedParsed[0].parsedRow) : [];
 
   const toggleDia = (dia) => {
