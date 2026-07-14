@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Database, Loader2, Search, Calendar } from 'lucide-react';
+import { Database, Loader2, Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import DropdownCell from './DropdownCell';
@@ -36,7 +36,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
     try {
       const data = JSON.parse(r.dados_json || '{}');
       return { ...r, parsedRow: data.row || {}, parsedLists: data.lists || {}, parsedCount: data.count || 0 };
-    } catch {
+    } catch (e) {
       return { ...r, parsedRow: {}, parsedLists: {}, parsedCount: 0 };
     }
   });
