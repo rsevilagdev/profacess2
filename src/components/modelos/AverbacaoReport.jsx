@@ -93,16 +93,28 @@ export default function AverbacaoReport({ tipo, periodo }) {
     loadManagers();
   }, [tipo, periodo]);
 
+  const loadAllRecords = async (filterObj) => {
+    const all = [];
+    const PAGE_SIZE = 5000;
+    let skip = 0;
+    while (true) {
+      const batch = await base44.entities.AverbacaoRecord.filter(filterObj, '-created_date', PAGE_SIZE, skip);
+      all.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+      skip += PAGE_SIZE;
+    }
+    return all;
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
       let filtered = [];
       if (tipo === 'mensal') {
-        filtered = await base44.entities.AverbacaoRecord.filter({ mes: periodo }, '-created_date', 2000);
+        filtered = await loadAllRecords({ mes: periodo });
       } else {
         const semMonths = periodo === 1 ? MESES.slice(0, 6) : MESES.slice(6);
-        const all = await base44.entities.AverbacaoRecord.list('-created_date', 2000);
-        filtered = all.filter(r => semMonths.includes(r.mes));
+        filtered = await loadAllRecords({ mes: semMonths });
       }
       setRecords(filtered);
     } catch (e) {}
