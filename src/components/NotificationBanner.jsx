@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Bell, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
@@ -6,30 +6,39 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 export default function NotificationBanner() {
   const { colaborador } = useProfarmaAuth();
   const [current, setCurrent] = useState(null);
+  const [seenIds, setSeenIds] = useState(new Set());
+  const timerRef = useRef(null);
 
   const fetchUnread = useCallback(async () => {
     if (!colaborador) return;
     try {
-      const list = await base44.entities.Notification.list('-created_date', 5);
-      const unread = list.filter(n => !n.read);
-      if (unread.length > 0) {
+      const list = await base44.entities.Notification.list('-created_date', 10);
+      const mine = list.filter(n => {
+        if (n.read) return false;
+        if (seenIds.has(n.id)) return false;
+        // Targeted to me, or broadcast (no target)
+        if (!n.target_user_id) return true;
+        return n.target_user_id === colaborador.id;
+      });
+      if (mine.length > 0) {
         const prefMap = {
           admin_ops: 'notification_admin_ops',
           vehicle_release: 'notification_vehicle_release',
           driver_docs: 'notification_driver_docs',
           entry_exit: 'notification_entry_exit',
         };
-        const prefKey = prefMap[unread[0].type] || 'notification_admin_ops';
+        const n = mine[0];
+        const prefKey = prefMap[n.type] || 'notification_admin_ops';
         if (colaborador[prefKey] !== false) {
-          setCurrent(unread[0]);
+          setCurrent(n);
         }
       }
     } catch (e) { /* silent */ }
-  }, [colaborador]);
+  }, [colaborador, seenIds]);
 
   useEffect(() => {
     fetchUnread();
-    const interval = setInterval(fetchUnread, 30000);
+    const interval = setInterval(fetchUnread, 15000);
     return () => clearInterval(interval);
   }, [fetchUnread]);
 
@@ -38,10 +47,22 @@ export default function NotificationBanner() {
     return sub;
   }, [fetchUnread]);
 
+  // Auto-hide after 3 seconds
+  useEffect(() => {
+    if (!current) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setCurrent(null);
+      setSeenIds(prev => new Set([...prev, current.id]));
+    }, 3000);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [current]);
+
   if (!current) return null;
 
   const dismiss = async () => {
     try { await base44.entities.Notification.update(current.id, { read: true }); } catch (e) {}
+    setSeenIds(prev => new Set([...prev, current.id]));
     setCurrent(null);
   };
 
@@ -54,6 +75,7 @@ export default function NotificationBanner() {
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm">{current.title}</p>
           <p className="text-xs opacity-90 mt-0.5">{current.message}</p>
+          {current.sender_name && <p className="text-[10px] opacity-70 mt-1">De: {current.sender_name}</p>}
         </div>
         <button onClick={dismiss} className="shrink-0 hover:bg-primary-foreground/20 rounded-lg p-1">
           <X className="h-4 w-4" />

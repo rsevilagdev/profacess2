@@ -17,11 +17,19 @@ export default function Notificacoes() {
       base44.entities.Notification.list('-created_date', 50),
       base44.entities.Colaborador.list(),
     ]);
-    setNotifications(notifs);
+    // Show only notifications targeted to me or broadcast (no target_user_id)
+    const mine = notifs.filter(n => !n.target_user_id || n.target_user_id === colaborador?.id);
+    setNotifications(mine);
     setUsers(usersList.filter(u => u.ativo));
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [colaborador]);
+
+  // Real-time subscription
+  useEffect(() => {
+    const unsubscribe = base44.entities.Notification.subscribe(() => loadData());
+    return unsubscribe;
+  }, [colaborador]);
 
   const toggleUser = (userId) => {
     setForm(prev => ({
@@ -35,7 +43,7 @@ export default function Notificacoes() {
   const send = async () => {
     if (!form.title) return;
     setSending(true);
-    const senderName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
+    const senderName = colaborador.nome;
     const targets = form.targetUserIds.length > 0 ? form.targetUserIds : users.map(u => u.id);
 
     for (const userId of targets) {
@@ -67,7 +75,7 @@ export default function Notificacoes() {
   const markRead = async (id) => { await base44.entities.Notification.update(id, { read: true }); loadData(); };
   const remove = async (id) => { await base44.entities.Notification.delete(id); loadData(); };
 
-  const userDisplayName = (u) => `${u.nome} ${u.sobrenome || ''} — Mat: ${u.matricula || 'N/A'}`.trim();
+  const userDisplayName = (u) => `${u.nome} — Mat: ${u.matricula || 'N/A'}`;
 
   return (
     <div className="space-y-6 fade-in">

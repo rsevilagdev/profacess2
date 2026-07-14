@@ -2,17 +2,44 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import FloatingMenu from './FloatingMenu.jsx';
 import TermsModal from '@/components/TermsModal.jsx';
 import NotificationBanner from '@/components/NotificationBanner.jsx';
-import { Loader2 } from 'lucide-react';
+import { Loader2, LogOut } from 'lucide-react';
 import { Outlet, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function AppLayout() {
-  const { colaborador, loading } = useProfarmaAuth();
+  const { colaborador, loading, logout } = useProfarmaAuth();
   const navigate = useNavigate();
+  const [forceLogoutMsg, setForceLogoutMsg] = useState(null);
+  const lastCheckRef = useRef('');
 
   useEffect(() => {
     if (!loading && !colaborador) navigate('/');
   }, [loading, colaborador, navigate]);
+
+  // Forced logout at 07:00 and 19:00 for portaria users (operador)
+  useEffect(() => {
+    if (!colaborador) return;
+    const checkTurno = () => {
+      const now = new Date();
+      const hh = now.getHours();
+      const mm = now.getMinutes();
+      const key = `${hh}:${mm}`;
+      if (lastCheckRef.current === key) return;
+      lastCheckRef.current = key;
+
+      // 07:00 and 19:00 — exact minute
+      if ((hh === 7 || hh === 19) && mm === 0) {
+        setForceLogoutMsg('Fechamento de turno (07:00 / 19:00). Você será desconectado.');
+        setTimeout(() => {
+          logout();
+          navigate('/');
+        }, 3000);
+      }
+    };
+    checkTurno();
+    const interval = setInterval(checkTurno, 30000);
+    return () => clearInterval(interval);
+  }, [colaborador, logout, navigate]);
 
   if (loading) {
     return (
@@ -29,6 +56,15 @@ export default function AppLayout() {
       <FloatingMenu />
       <NotificationBanner />
       <TermsModal />
+      {forceLogoutMsg && (
+        <div className="fixed inset-0 z-[60] bg-foreground/80 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <LogOut className="h-12 w-12 text-primary mx-auto mb-3" />
+            <p className="font-heading font-bold text-lg mb-1">Fechamento de Turno</p>
+            <p className="text-sm text-muted-foreground">{forceLogoutMsg}</p>
+          </div>
+        </div>
+      )}
       <main className="pt-20 px-4 md:px-8 pb-8 max-w-7xl mx-auto">
         <Outlet />
       </main>

@@ -1,20 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Edit2, Trash2, X, Building2, Truck, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Building2, MapPin, Hash } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 
-const PAGE_SIZE = 10;
-
 export default function GerenciamentoFiliais() {
   const { colaborador } = useProfarmaAuth();
   const [filiais, setFiliais] = useState([]);
-  const [selectedFilial, setSelectedFilial] = useState(null);
-  const [veiculos, setVeiculos] = useState([]);
-  const [motoristas, setMotoristas] = useState([]);
-  const [subTab, setSubTab] = useState('veiculos');
-  const [page, setPage] = useState(0);
-  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ nome: '', codigo: '', cidade: '', endereco: '', descricao: '', ativo: true });
@@ -22,29 +14,9 @@ export default function GerenciamentoFiliais() {
   const loadFiliais = async () => {
     const list = await base44.entities.Filial.list();
     setFiliais(list);
-    if (!selectedFilial && list.length > 0) selectFilial(list[0]);
-  };
-
-  const selectFilial = async (f) => {
-    setSelectedFilial(f);
-    const [veics, drivers] = await Promise.all([
-      base44.entities.Vehicle.filter({ filial_id: f.id }).catch(() => []),
-      base44.entities.Driver.filter({ filial_id: f.id }).catch(() => []),
-    ]);
-    setVeiculos(veics); setMotoristas(drivers); setPage(0);
   };
 
   useEffect(() => { loadFiliais(); }, []);
-
-  const currentList = subTab === 'veiculos' ? veiculos : motoristas;
-  const filteredItems = currentList.filter(item => {
-    if (!search) return true;
-    const term = search.toLowerCase();
-    if (subTab === 'veiculos') return item.placa?.toLowerCase().includes(term) || item.modelo?.toLowerCase().includes(term) || item.transportadora?.toLowerCase().includes(term);
-    return item.nome?.toLowerCase().includes(term) || item.sobrenome?.toLowerCase().includes(term) || item.cpf?.includes(search);
-  });
-  const totalPages = Math.max(1, Math.ceil(filteredItems.length / PAGE_SIZE));
-  const pageData = filteredItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const save = async () => {
     if (editing) {
@@ -65,105 +37,73 @@ export default function GerenciamentoFiliais() {
 
   const logAudit = async (action, details) => {
     await base44.entities.AuditLog.create({
-      user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
-      user_cpf: colaborador.cpf, action, details,
+      user_name: colaborador.nome, user_cpf: colaborador.cpf, action, details,
       ip_address: 'local', domain: window.location.hostname, category: 'branch'
     });
   };
+
+  const openNew = () => {
+    setEditing(null);
+    setForm({ nome: '', codigo: '', cidade: '', endereco: '', descricao: '', ativo: true });
+    setShowForm(true);
+  };
+
+  const openEdit = (f) => {
+    setEditing(f);
+    setForm(f);
+    setShowForm(true);
+  };
+
+  const isAdmin = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
   return (
     <div className="space-y-6 fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="brand-title text-2xl">Gerenciamento de Filiais</h1>
-          <p className="text-sm text-muted-foreground">Filiais, veículos e motoristas por unidade</p>
+          <p className="text-sm text-muted-foreground">Cadastro de unidades operacionais</p>
         </div>
-        <Button onClick={() => { setEditing(null); setForm({ nome: '', codigo: '', cidade: '', endereco: '', descricao: '', ativo: true }); setShowForm(true); }} className="h-12 rounded-2xl">
-          <Plus className="h-5 w-5 mr-1" /> Nova Filial
-        </Button>
+        {isAdmin && (
+          <Button onClick={openNew} className="h-12 rounded-2xl">
+            <Plus className="h-5 w-5 mr-1" /> Nova Filial
+          </Button>
+        )}
       </div>
 
-      {/* Filiais Grid */}
-      <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
         {filiais.map(f => (
-          <div key={f.id} className={`bg-card rounded-2xl border-2 p-4 shadow-sm cursor-pointer transition-colors ${selectedFilial?.id === f.id ? 'border-primary' : 'border-border hover:border-primary/30'}`} onClick={() => selectFilial(f)}>
-            <div className="flex items-center justify-between mb-2">
-              <Building2 className="h-5 w-5 text-primary" />
-              <div className="flex gap-1">
-                <button onClick={(e) => { e.stopPropagation(); setEditing(f); setForm(f); setShowForm(true); }} className="h-7 w-7 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-3.5 w-3.5" /></button>
-                <button onClick={(e) => { e.stopPropagation(); remove(f); }} className="h-7 w-7 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
+          <div key={f.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between mb-3">
+              <div className="h-11 w-11 rounded-2xl bg-primary/10 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-primary" />
               </div>
+              {isAdmin && (
+                <div className="flex gap-1">
+                  <button onClick={() => openEdit(f)} className="h-8 w-8 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-4 w-4" /></button>
+                  <button onClick={() => remove(f)} className="h-8 w-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
+                </div>
+              )}
             </div>
-            <p className="font-medium text-sm truncate">{f.nome}</p>
-            <p className="text-xs text-muted-foreground">{f.codigo}</p>
-            <div className="flex items-center gap-1 mt-2">
+            <p className="font-heading font-bold text-base truncate">{f.nome}</p>
+            <div className="space-y-1 mt-2">
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Hash className="h-3 w-3" />{f.codigo}</p>
+              {f.cidade && <p className="text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3 w-3" />{f.cidade}</p>}
+            </div>
+            {f.endereco && <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{f.endereco}</p>}
+            <div className="mt-3">
               <span className={`text-xs px-2 py-0.5 rounded-full ${f.ativo ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>{f.ativo ? 'Ativa' : 'Inativa'}</span>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Vehicles and Drivers per Filial */}
-      {selectedFilial && (
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-            <div className="flex gap-2">
-              <button onClick={() => { setSubTab('veiculos'); setPage(0); }} className={`px-3 py-2 rounded-xl text-sm font-medium ${subTab === 'veiculos' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                <Truck className="h-4 w-4 inline mr-1" /> Veículos ({veiculos.length})
-              </button>
-              <button onClick={() => { setSubTab('motoristas'); setPage(0); }} className={`px-3 py-2 rounded-xl text-sm font-medium ${subTab === 'motoristas' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                <Users className="h-4 w-4 inline mr-1" /> Motoristas ({motoristas.length})
-              </button>
-            </div>
-            <span className="text-xs text-muted-foreground">{selectedFilial.nome}</span>
-          </div>
-
-          {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} placeholder={`Buscar ${subTab === 'veiculos' ? 'veículo' : 'motorista'}...`} className="w-full h-10 pl-10 pr-4 rounded-xl border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-          </div>
-
-          {pageData.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Nenhum {subTab === 'veiculos' ? 'veículo' : 'motorista'} nesta filial</p>
-          ) : (
-            <div className="space-y-2">
-              {pageData.map(item => (
-                <div key={item.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
-                  <div className="flex items-center gap-3">
-                    {subTab === 'veiculos' ? <Truck className="h-4 w-4 text-muted-foreground" /> : <Users className="h-4 w-4 text-muted-foreground" />}
-                    <div>
-                      {subTab === 'veiculos' ? (
-                        <>
-                          <p className="text-sm font-medium">{item.placa}</p>
-                          <p className="text-xs text-muted-foreground">{item.modelo || '—'} · {item.transportadora || '—'}</p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="text-sm font-medium">{item.nome} {item.sobrenome || ''}</p>
-                          <p className="text-xs text-muted-foreground">{item.cpf}</p>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${item.status === 'ativo' ? 'bg-primary/10 text-primary' : item.status === 'bloqueado' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>{item.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-          {filteredItems.length > PAGE_SIZE && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-xs text-muted-foreground">Página {page + 1} de {totalPages}</p>
-              <div className="flex gap-2">
-                <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0} className="h-8 w-8 rounded-lg border border-border flex items-center justify-center disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-                <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1} className="h-8 w-8 rounded-lg border border-border flex items-center justify-center disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
-              </div>
-            </div>
-          )}
+      {filiais.length === 0 && (
+        <div className="bg-card rounded-2xl border border-border p-12 shadow-sm text-center">
+          <Building2 className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Nenhuma filial cadastrada</p>
         </div>
       )}
 
-      {/* Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
           <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full p-6">
