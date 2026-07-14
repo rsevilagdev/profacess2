@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { Building2, Activity, Truck, Users, ShieldAlert, CheckCircle, XCircle, Calendar, ChevronLeft, ChevronRight, ClipboardList, FileClock, Loader2 } from 'lucide-react';
+import { Building2, Activity, Truck, Users, ShieldAlert, CheckCircle, XCircle, Calendar, ChevronLeft, ChevronRight, ClipboardList, FileClock, Loader2, DollarSign } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { maskPlaca } from '@/lib/lgpd-utils.js';
+import EconomicAnalysis from '@/components/monitor/EconomicAnalysis';
 
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -218,6 +219,9 @@ export default function MonitorFiliais() {
           <button onClick={() => setTab('calendario')} className={`px-4 py-2 rounded-2xl text-sm font-medium ${tab === 'calendario' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}>
             <Calendar className="h-4 w-4 inline mr-2" /> Calendário
           </button>
+          <button onClick={() => setTab('economico')} className={`px-4 py-2 rounded-2xl text-sm font-medium ${tab === 'economico' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}>
+            <DollarSign className="h-4 w-4 inline mr-2" /> Econômico
+          </button>
         </div>
       </div>
 
@@ -301,58 +305,15 @@ export default function MonitorFiliais() {
             </div>
           </div>
         </>
-      ) : (
+      ) : tab === 'calendario' ? (
         <>
           {/* Calendar tab */}
-          <div className="grid lg:grid-cols-2 gap-4 mb-4">
-            <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <FileClock className="h-5 w-5 text-blue-600" />
-                <h3 className="font-heading font-bold">Liberações Pendentes</h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600">{liberacoes.length}</span>
-              </div>
-              {liberacoes.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma liberação pendente</p>
-              ) : (
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {liberacoes.slice(0, 10).map(l => (
-                    <div key={l.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                      <div className="min-w-0">
-                        <p className="text-sm truncate">{l.cliente || '—'}</p>
-                        <p className="text-xs text-muted-foreground">Pedido: {l.numero_pedido || '—'} · {l.filial_nome || '—'}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">{new Date(l.created_date).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <ClipboardList className="h-5 w-5 text-orange-600" />
-                <h3 className="font-heading font-bold">Tarefas de Revisão</h3>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-600">{reviewTasks.length}</span>
-              </div>
-              {reviewTasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma tarefa de revisão pendente</p>
-              ) : (
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {reviewTasks.slice(0, 10).map(r => (
-                    <div key={r.id} className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50">
-                      <div className="min-w-0">
-                        <p className="text-sm truncate">{r.tipo === 'veiculo' ? maskPlaca(r.target_cpf) : r.target_nome || '—'}</p>
-                        <p className="text-xs text-muted-foreground">{r.motivo || '—'} · {r.solicitante_nome}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">{new Date(r.created_date).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+...
           <CalendarView liberacoes={liberacoes} reviewTasks={reviewTasks} />
         </>
-      )}
+      ) : tab === 'economico' ? (
+        <EconomicAnalysis filialId={colaborador?.filial_id} filialNome={colaborador?.filial_nome} />
+      ) : null}
     </div>
   );
 }

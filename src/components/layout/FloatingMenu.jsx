@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing, Calendar, Activity, LayoutGrid, Truck } from 'lucide-react';
+import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing, Calendar, Activity, LayoutGrid, Truck, DollarSign } from 'lucide-react';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 
 const MENU_GROUPS = [
@@ -12,6 +12,7 @@ const MENU_GROUPS = [
       { path: '/acesso-crdk', label: 'Acesso CRDK', icon: Truck },
       { path: '/painel-bloqueio', label: 'Painel de Bloqueio', icon: ShieldAlert },
       { path: '/monitor-filiais', label: 'Monitor de Filiais', icon: Activity },
+      { path: '/supervisao-filiais', label: 'Supervisão de Filiais', icon: DollarSign, supervisorOnly: true },
       { path: '/editar-base', label: 'Editar Base de Dados', icon: Database },
     ]
   },
@@ -82,6 +83,7 @@ export default function FloatingMenu() {
   useEffect(() => { setOpen(false); }, [location.pathname]);
 
   const initials = colaborador?.nome?.trim().split(' ').map(p => p[0]).slice(0, 2).join('').toUpperCase() || 'U';
+  const isSupervisor = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
   return (
     <>
@@ -104,6 +106,7 @@ export default function FloatingMenu() {
                 <div key={group.label} className="mb-2">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-3 py-1">{group.label}</p>
                   {group.items.map(item => {
+                    if (item.supervisorOnly && !isSupervisor) return null;
                     if (!canAccessPage(item.path)) return null;
                     const active = location.pathname === item.path;
                     const Icon = item.icon;

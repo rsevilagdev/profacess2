@@ -31,6 +31,7 @@ import AuditoriaSistema from '@/pages/AuditoriaSistema';
 import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
 import PlanoTrabalho from '@/pages/PlanoTrabalho';
 import MonitorFiliais from '@/pages/MonitorFiliais';
+import SupervisaoFiliais from '@/pages/SupervisaoFiliais';
 import Modelos from '@/pages/Modelos';
 import AcessoCRDK from '@/pages/AcessoCRDK';
 import Averbacao from '@/pages/Averbacao';
@@ -68,6 +69,7 @@ function App() {
                 <Route path="/configuracoes-notificacoes" element={<ConfiguracoesNotificacoes />} />
                 <Route path="/plano-trabalho" element={<PlanoTrabalho />} />
                 <Route path="/monitor-filiais" element={<MonitorFiliais />} />
+                <Route path="/supervisao-filiais" element={<SupervisaoFiliais />} />
                 <Route path="/modelos" element={<Modelos />} />
                 <Route path="/acesso-crdk" element={<AcessoCRDK />} />
                 <Route path="/averbacao" element={<Averbacao />} />
