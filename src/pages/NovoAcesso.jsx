@@ -23,7 +23,7 @@ export default function NovoAcesso() {
   const [requestingAuth, setRequestingAuth] = useState(false);
   const [reviewRequests, setReviewRequests] = useState([]);
 
-  const canEditDB = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
+  const canEditDB = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
 
   useEffect(() => {
     loadAcessos();

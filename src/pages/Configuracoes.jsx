@@ -12,6 +12,8 @@ const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operado
 const PAGES = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/acessos', label: 'Acessos' },
+  { path: '/acesso-crdk', label: 'Acesso CRDK' },
+  { path: '/verificacao-rapida', label: 'Verificação Rápida' },
   { path: '/painel-bloqueio', label: 'Painel de Bloqueio' },
   { path: '/monitor-filiais', label: 'Monitor de Filiais' },
   { path: '/editar-base', label: 'Editar Base de Dados' },

@@ -20,7 +20,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   const [liberandoItem, setLiberandoItem] = useState(null);
   const [liberandoObs, setLiberandoObs] = useState('');
 
-  const canApprove = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
+  const canApprove = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
 
   // Itens liberados (tipo='saida') saem do kanban de fluxo
   const activeAcessos = acessos.filter(a => a.tipo !== 'saida');
