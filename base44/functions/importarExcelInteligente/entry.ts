@@ -1,39 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
-
-function parseCSVLine(line) {
-  const result = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
-      else { inQuotes = !inQuotes; }
-    } else if ((char === ';' || char === ',' || char === '\t') && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  result.push(current.trim());
-  return result;
-}
-
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return [];
-  const headers = parseCSVLine(lines[0]);
-  const records = [];
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i]);
-    if (values.length === 1 && !values[0]) continue;
-    const record = {};
-    headers.forEach((h, idx) => { record[h || `col${idx}`] = values[idx] || ''; });
-    records.push(record);
-  }
-  return records;
-}
+import * as XLSX from 'npm:xlsx@0.18.5';
 
 Deno.serve(async (req) => {
   try {
@@ -45,65 +11,22 @@ Deno.serve(async (req) => {
     const fileUrl = body.file_url;
     if (!fileUrl) return Response.json({ success: false, error: 'file_url é obrigatório' });
 
+    // Fetch file and parse with XLSX (handles both Excel and CSV)
     let rawRecords = [];
-
-    // Strategy 1: Try fetching and parsing as CSV/text
     try {
       const fileRes = await fetch(fileUrl);
-      const text = await fileRes.text();
-      if (text && text.length > 0) {
-        const parsed = parseCSV(text);
-        if (parsed.length > 0) {
-          // Verify it's not binary garbage
-          const firstHeader = Object.keys(parsed[0])[0] || '';
-          if (firstHeader.length < 50 && !firstHeader.includes('\u0000')) {
-            rawRecords = parsed;
-          }
-        }
+      const arrayBuffer = await fileRes.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      const firstSheet = workbook.SheetNames[0];
+      if (firstSheet) {
+        const worksheet = workbook.Sheets[firstSheet];
+        rawRecords = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
       }
-    } catch (fetchErr) { /* will try extraction */ }
-
-    // Strategy 2: Fall back to extraction integration (for Excel files)
-    if (rawRecords.length === 0) {
-      try {
-        const schema = {
-          type: 'object',
-          properties: {
-            rows: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  col1: { type: 'string' },
-                  col2: { type: 'string' },
-                  col3: { type: 'string' },
-                  col4: { type: 'string' },
-                  col5: { type: 'string' },
-                  col6: { type: 'string' },
-                }
-              }
-            }
-          },
-          required: ['rows']
-        };
-        const result = await base44.integrations.Core.ExtractDataFromUploadedFile({ file_url: fileUrl, json_schema: schema });
-        const output = result.output;
-        if (Array.isArray(output)) {
-          rawRecords = output;
-        } else if (output && typeof output === 'object') {
-          if (Array.isArray(output.rows)) rawRecords = output.rows;
-          else if (Array.isArray(output.data)) rawRecords = output.data;
-          else if (Array.isArray(output.items)) rawRecords = output.items;
-          else {
-            const keys = Object.keys(output);
-            const hasMeaningfulKeys = keys.some(k => !['status', 'details'].includes(k));
-            if (hasMeaningfulKeys) rawRecords = [output];
-          }
-        }
-      } catch (extractErr) { /* extraction failed */ }
+    } catch (parseErr) {
+      return Response.json({ success: false, error: 'Não foi possível ler o arquivo: ' + (parseErr.message || String(parseErr)) });
     }
 
-    if (rawRecords.length === 0) {
+    if (!rawRecords || rawRecords.length === 0) {
       return Response.json({ success: false, error: 'Nenhum registro encontrado no arquivo. Verifique se o arquivo contém colunas com cabeçalhos (PLACA, CPF, NOME, etc.).' });
     }
 
@@ -133,14 +56,12 @@ Deno.serve(async (req) => {
     // Find value: exact match first, then partial (longest key first for precision)
     const findValue = (record, possibleKeys) => {
       const keys = Object.keys(record);
-      // Exact match
       for (const key of keys) {
         const upper = key.toUpperCase().trim();
         for (const pk of possibleKeys) {
           if (upper === pk.toUpperCase()) return record[key];
         }
       }
-      // Partial match — longest key first
       const sorted = [...possibleKeys].sort((a, b) => b.length - a.length);
       for (const key of keys) {
         const upper = key.toUpperCase().trim();
@@ -161,56 +82,57 @@ Deno.serve(async (req) => {
 
     let created = 0, updated = 0, errors = 0;
     const errorDetails = [];
+    const errMsg = (e) => e?.message || e?.error || String(e) || 'Unknown error';
 
     if (entityType === 'Vehicle') {
-      const existing = await base44.entities.Vehicle.list('-created_date', 5000);
+      const existing = await base44.asServiceRole.entities.Vehicle.list('-created_date', 5000);
       const placaMap = {};
       existing.forEach(v => { if (v.placa) placaMap[v.placa.toUpperCase()] = v; });
 
       for (const record of rawRecords) {
         try {
           const placa = String(findValue(record, ['PLACA']) || '').toUpperCase().trim();
-          if (!placa) { errors++; continue; }
+          if (!placa) { errors++; errorDetails.push('Placa vazia'); continue; }
           const modelo = String(findValue(record, ['MODELO']) || '').trim();
-          const statusRaw = String(findValue(record, ['EST. VEICULO', 'EST VEICULO', 'ESTADO VEICULO', 'STATUS', 'OPENTECH', 'EST']) || '').trim();
+          const statusRaw = String(findValue(record, ['STATUS PARA VEICULO', 'EST. VEICULO', 'EST VEICULO', 'ESTADO VEICULO', 'STATUS', 'OPENTECH', 'EST']) || '').trim();
           const status = mapStatus(statusRaw);
 
           if (placaMap[placa]) {
-            await base44.entities.Vehicle.update(placaMap[placa].id, { modelo, status, status_opentech: statusRaw });
+            await base44.asServiceRole.entities.Vehicle.update(placaMap[placa].id, { modelo, status, status_opentech: statusRaw });
             updated++;
           } else {
-            await base44.entities.Vehicle.create({ placa, modelo, status, status_opentech: statusRaw });
+            await base44.asServiceRole.entities.Vehicle.create({ placa, modelo, status, status_opentech: statusRaw });
             created++;
           }
-        } catch (e) { errors++; errorDetails.push(e.message); }
+        } catch (e) { errors++; errorDetails.push(errMsg(e)); }
       }
     } else {
-      const existing = await base44.entities.Driver.list('-created_date', 5000);
+      const existing = await base44.asServiceRole.entities.Driver.list('-created_date', 5000);
       const cpfMap = {};
       existing.forEach(d => { if (d.cpf) cpfMap[String(d.cpf).replace(/\D/g, '')] = d; });
 
       for (const record of rawRecords) {
         try {
           const cpf = String(findValue(record, ['CPF']) || '').replace(/\D/g, '');
-          if (!cpf) { errors++; continue; }
+          if (!cpf) { errors++; errorDetails.push('CPF vazio'); continue; }
           const nomeCompleto = String(findValue(record, ['NOME E SOBRENOME', 'NOME', 'MOTORISTA']) || '').trim();
           const statusRaw = String(findValue(record, ['EST. DE MOTORISTA', 'EST DE MOTORISTA', 'ESTADO MOTORISTA', 'STATUS', 'OPENTECH', 'EST']) || '').trim();
           const status = mapStatus(statusRaw);
 
           if (cpfMap[cpf]) {
-            await base44.entities.Driver.update(cpfMap[cpf].id, { nome: nomeCompleto, status, status_opentech: statusRaw });
+            await base44.asServiceRole.entities.Driver.update(cpfMap[cpf].id, { nome: nomeCompleto, status, status_opentech: statusRaw });
             updated++;
           } else {
-            await base44.entities.Driver.create({ nome: nomeCompleto, cpf, status, status_opentech: statusRaw });
+            await base44.asServiceRole.entities.Driver.create({ nome: nomeCompleto, cpf, status, status_opentech: statusRaw });
             created++;
           }
-        } catch (e) { errors++; errorDetails.push(e.message); }
+        } catch (e) { errors++; errorDetails.push(errMsg(e)); }
       }
     }
 
     if (user) {
       try {
-        await base44.entities.AuditLog.create({
+        await base44.asServiceRole.entities.AuditLog.create({
           user_name: user.full_name || 'Sistema',
           action: `Importação Excel inteligente: ${entityType}`,
           details: `${created} criados, ${updated} atualizados, ${errors} erros`,
