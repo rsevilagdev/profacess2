@@ -47,20 +47,16 @@ function groupSavedByPriority(records) {
   for (const r of records) {
     const priority = String(r.prioridade || '').trim();
     const priorityNum = parseInt(priority) || 0;
-    let groupKey;
     let rotaNum = 0;
-    if ((priorityNum === 90 || priorityNum === 91) && colRota) {
-      const rota = String(r.parsedRow?.[colRota] || '').trim();
-      rotaNum = parseNum(rota);
-      groupKey = `${priority}_${rota}`;
-    } else {
-      groupKey = priority;
+    if (priorityNum === 90 || priorityNum === 91) {
+      const parts = priority.split('_');
+      rotaNum = parts.length > 1 ? parseNum(parts[1]) : 0;
     }
-    if (!groups[groupKey]) {
-      groups[groupKey] = [];
-      groupKeys.push({ key: groupKey, priority: priorityNum, rota: rotaNum });
+    if (!groups[priority]) {
+      groups[priority] = [];
+      groupKeys.push({ key: priority, priority: priorityNum, rota: rotaNum });
     }
-    groups[groupKey].push(r);
+    groups[priority].push(r);
   }
 
   groupKeys.sort((a, b) => {
