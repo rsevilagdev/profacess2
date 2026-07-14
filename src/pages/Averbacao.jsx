@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Download, Calendar, CalendarRange, ChevronDown, RefreshCw } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, Download, Calendar, CalendarRange, ChevronDown, RefreshCw, Send } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,7 @@ export default function Averbacao() {
   const [view, setView] = useState('mensal');
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState(null);
+  const [sendingSheets, setSendingSheets] = useState(false);
   const fileRef = useRef(null);
 
   const handleFile = async (e) => {
@@ -40,6 +41,24 @@ export default function Averbacao() {
       setSelectedMonth(result.available_months?.[0] ?? null);
       setSelectedSemester(result.available_semesters?.[0] ?? null);
       setView('mensal');
+      // Envio automático para Google Sheets se configurado
+      const spreadsheetId = localStorage.getItem('google_sheets_id');
+      if (spreadsheetId && result.available_months?.length > 0) {
+        const month = result.available_months[0];
+        const monthRecords = result.records.filter(r => {
+          const d = new Date(r.data_embarque);
+          return !isNaN(d) && d.getMonth() === month;
+        });
+        try {
+          await base44.functions.invoke('enviarAverbacaoParaSheets', {
+            spreadsheet_id: spreadsheetId,
+            records: monthRecords,
+            view: 'mensal',
+            period_label: MESES[month],
+            metadata: result.metadata
+          });
+        } catch (e) {}
+      }
     } catch (e) {}
     setLoading(false);
   };
@@ -85,6 +104,31 @@ export default function Averbacao() {
   const periodLabel = view === 'mensal'
     ? (selectedMonth !== null ? MESES[selectedMonth] : '')
     : (selectedSemester === 1 ? '1º Semestre (Jan - Jun)' : '2º Semestre (Jul - Dez)');
+
+  const enviarParaSheets = async () => {
+    const spreadsheetId = localStorage.getItem('google_sheets_id');
+    if (!spreadsheetId) {
+      alert('Configure o ID da planilha do Google Sheets nas Configurações > Integrações.');
+      return;
+    }
+    const records = filteredRecords();
+    if (records.length === 0) return;
+    setSendingSheets(true);
+    try {
+      const response = await base44.functions.invoke('enviarAverbacaoParaSheets', {
+        spreadsheet_id: spreadsheetId,
+        records,
+        view,
+        period_label: periodLabel,
+        metadata: data.metadata
+      });
+      const result = response.data || response;
+      if (result.error) throw new Error(result.error);
+    } catch (e) {
+      alert('Erro ao enviar para Google Sheets. Verifique se a conta Google está conectada em Configurações > Integrações.');
+    }
+    setSendingSheets(false);
+  };
 
   const exportCSV = () => {
     const groups = grouped();
@@ -170,6 +214,10 @@ export default function Averbacao() {
         <div className="flex gap-2">
           <Button onClick={resetFile} variant="secondary" className="h-12 rounded-2xl">
             <RefreshCw className="h-5 w-5" /> Trocar Arquivo
+          </Button>
+          <Button onClick={enviarParaSheets} disabled={sendingSheets} variant="secondary" className="h-12 rounded-2xl">
+            {sendingSheets ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+            Enviar para Sheets
           </Button>
           <Button onClick={exportCSV} className="h-12 rounded-2xl">
             <Download className="h-5 w-5" /> Exportar CSV
