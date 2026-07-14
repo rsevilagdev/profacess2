@@ -277,20 +277,37 @@ export default function Averbacao() {
         }
         const totalGeral = colVlNf ? parseNumber(item.row[colVlNf]) : 0;
 
-        // Extract ALL unique dates from the data column — one record per date
-        const allDates = [];
-        if (colData && item.lists?.[colData]) {
-          for (const dateStr of item.lists[colData]) {
-            const d = parseDate(dateStr);
-            if (d) {
-              const mesNome = MESES[d.getMonth()];
-              const diaStr = String(d.getDate()).padStart(2, '0');
-              const dataRef = d.toLocaleDateString('pt-BR');
-              allDates.push({ mes: mesNome, dia: diaStr, dataRef });
+        // Find original rows matching this priority (and route for 90/91) to compute per-date totals
+        const priorityVal = colPrioridade ? String(item.row[colPrioridade] || '').trim() : '';
+        let matchingRows = fileData.rows.filter(row =>
+          String(row[colPrioridade] || '').trim() === priorityVal
+        );
+        if ((priorityNum === 90 || priorityNum === 91) && colRota) {
+          const routeVal = item.lists?.[colRota]?.[0] || String(item.row[colRota] || '').trim();
+          matchingRows = matchingRows.filter(row =>
+            String(row[colRota] || '').trim() === routeVal
+          );
+        }
+
+        // Group matching rows by date and sum value column per date
+        const dateGroups = {};
+        for (const row of matchingRows) {
+          const dateStr = colData ? String(row[colData] || '').trim() : '';
+          const d = parseDate(dateStr);
+          if (d) {
+            const mesNome = MESES[d.getMonth()];
+            const diaStr = String(d.getDate()).padStart(2, '0');
+            const dataRef = d.toLocaleDateString('pt-BR');
+            const key = `${mesNome}_${diaStr}`;
+            if (!dateGroups[key]) {
+              dateGroups[key] = { mes: mesNome, dia: diaStr, dataRef, total: 0 };
+            }
+            if (colVlNf) {
+              dateGroups[key].total += parseNumber(row[colVlNf]);
             }
           }
         }
-        const uniqueDates = [...new Map(allDates.map(d => [`${d.mes}_${d.dia}`, d])).values()];
+        const uniqueDates = Object.values(dateGroups);
 
         if (uniqueDates.length === 0) {
           records.push({
@@ -312,7 +329,7 @@ export default function Averbacao() {
               prioridade: prioridadeStr,
               arquivo_origem: fileData.fileName,
               dados_json: dadosJson,
-              total_geral: totalGeral,
+              total_geral: dt.total,
               operador_nome: colaborador?.nome || '',
               filial_id: colaborador?.filial_id || '',
               filial_nome: colaborador?.filial_nome || '',

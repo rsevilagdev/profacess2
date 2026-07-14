@@ -183,23 +183,49 @@ export default function AverbacaoReport({ tipo, periodo }) {
         'Valor de mercadoria': g.total,
       }));
     } else {
-      // Mensal: one row per priority group, deduplicated
-      const seen = new Set();
-      const deduped = [];
-      for (const r of parsed) {
-        const key = `${r.prioridade}_${r.dados_json}`;
-        if (!seen.has(key)) { seen.add(key); deduped.push(r); }
+      // Mensal: one row per date+priority, sorted by date then priority
+      // Filter out aggregated 90/91 records (without route) when individual route records exist
+      let filtered = parsed;
+      for (const pn of [90, 91]) {
+        const hasRouteRecords = filtered.some(r => {
+          const num = parseInt(String(r.prioridade || '')) || 0;
+          return num === pn && String(r.prioridade || '').includes('_');
+        });
+        if (hasRouteRecords) {
+          filtered = filtered.filter(r => String(r.prioridade || '').trim() !== String(pn));
+        }
       }
-      deduped.sort((a, b) => (parseInt(a.prioridade) || 0) - (parseInt(b.prioridade) || 0));
-      return deduped.map(r => ({
-        'Data do Embarque': getField(r.row, r.lists, FIELD_MAP.data) || r.data_referencia || '',
-        'Placa Veículo': getField(r.row, r.lists, FIELD_MAP.placa),
-        'Itinerário': r.prioridade || '',
-        'UF Origem': getField(r.row, r.lists, FIELD_MAP.ufOrigem),
-        'UF Destino': getField(r.row, r.lists, FIELD_MAP.ufDestino),
-        'Urbano': getField(r.row, r.lists, FIELD_MAP.urbano),
-        'Valor de mercadoria': getLastColumnValue(r.row) || (r.total_geral || 0),
-      }));
+
+      const rows = filtered.map(r => {
+        const priorityStr = String(r.prioridade || '').trim();
+        const priorityNum = parseInt(priorityStr) || 0;
+        const isUrban = (priorityNum === 90 || priorityNum === 91);
+        const itinerario = priorityStr.includes('_')
+          ? priorityStr.replace('_', '-')
+          : priorityStr;
+        const rotaNum = priorityStr.includes('_') ? parseNumber(priorityStr.split('_')[1]) : 0;
+
+        return {
+          _dia: parseInt(r.dia) || 0,
+          _priorityNum: priorityNum,
+          _rotaNum: rotaNum,
+          'Data do Embarque': r.data_referencia || '',
+          'Placa Veículo': '',
+          'Itinerário': itinerario,
+          'UF Origem': 'PR',
+          'UF Destino': 'PR',
+          'Urbano': isUrban ? 'Sim' : 'Não',
+          'Valor de mercadoria': r.total_geral || 0,
+        };
+      });
+
+      rows.sort((a, b) => {
+        if (a._dia !== b._dia) return a._dia - b._dia;
+        if (a._priorityNum !== b._priorityNum) return a._priorityNum - b._priorityNum;
+        return a._rotaNum - b._rotaNum;
+      });
+
+      return rows.map(({ _dia, _priorityNum, _rotaNum, ...rest }) => rest);
     }
   };
 
