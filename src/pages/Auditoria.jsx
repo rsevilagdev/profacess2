@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar, Mail } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar, Mail, ScrollText, Truck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import RegistrosAcesso from '@/components/auditoria/RegistrosAcesso';
 
 const PAGE_SIZE = 10;
 const CATEGORIES = [
@@ -29,6 +30,7 @@ export default function Auditoria() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [mainTab, setMainTab] = useState('auditoria');
 
   useEffect(() => {
     base44.entities.AuditLog.list('-created_date', 500).then(list => {
@@ -112,13 +114,35 @@ export default function Auditoria() {
           <h1 className="brand-title text-2xl">Auditoria</h1>
           <p className="text-sm text-muted-foreground">Log completo de ações com IP, domínio e dispositivo</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button onClick={exportCSV} variant="secondary" className="h-12 rounded-2xl"><Download className="h-4 w-4" /> Excel</Button>
-          <Button onClick={exportPDF} disabled={exporting} className="h-12 rounded-2xl">{exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF</Button>
-          <Button onClick={sendEmail} disabled={sendingEmail} variant="secondary" className="h-12 rounded-2xl">{sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Email</Button>
-        </div>
+        {mainTab === 'auditoria' && (
+          <div className="flex gap-2 flex-wrap">
+            <Button onClick={exportCSV} variant="secondary" className="h-12 rounded-2xl"><Download className="h-4 w-4" /> Excel</Button>
+            <Button onClick={exportPDF} disabled={exporting} className="h-12 rounded-2xl">{exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF</Button>
+            <Button onClick={sendEmail} disabled={sendingEmail} variant="secondary" className="h-12 rounded-2xl">{sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Email</Button>
+          </div>
+        )}
       </div>
 
+      {/* Main tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setMainTab('auditoria')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${mainTab === 'auditoria' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
+        >
+          <ScrollText className="h-4 w-4" /> Auditoria de Sistema
+        </button>
+        <button
+          onClick={() => setMainTab('acessos')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${mainTab === 'acessos' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
+        >
+          <Truck className="h-4 w-4" /> Registros de Acesso/Saída
+        </button>
+      </div>
+
+      {mainTab === 'acessos' ? (
+        <RegistrosAcesso />
+      ) : (
+        <>
       {/* Search + Quick category */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
@@ -195,6 +219,8 @@ export default function Auditoria() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
