@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Users, Building2, Shield, Cloud, Plus, Edit2, Trash2, X, UserCog, Loader2 } from 'lucide-react';
+import { Users, Building2, Shield, Cloud, Plus, Edit2, Trash2, X, UserCog, Loader2, Palette } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { maskCPF } from '@/lib/lgpd-utils.js';
+import AparenciaTab from '@/components/configuracoes/AparenciaTab';
 
 const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'];
 
@@ -78,6 +79,7 @@ export default function Configuracoes() {
         <button onClick={() => setTab('usuarios')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'usuarios' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Users className="h-4 w-4 inline mr-2" />Usuários</button>
         <button onClick={() => setTab('filiais')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'filiais' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Building2 className="h-4 w-4 inline mr-2" />Filiais</button>
         <button onClick={() => setTab('backup')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'backup' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Cloud className="h-4 w-4 inline mr-2" />Backup</button>
+        <button onClick={() => setTab('aparencia')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'aparencia' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Palette className="h-4 w-4 inline mr-2" />Aparência</button>
       </div>
 
       {/* Users Tab */}
@@ -164,6 +166,9 @@ export default function Configuracoes() {
           </div>
         </div>
       )}
+
+      {/* Aparência Tab */}
+      {tab === 'aparencia' && <AparenciaTab />}
 
       {/* User Form Modal */}
       {showForm && (

@@ -47,12 +47,17 @@
 }
 
 @layer base {
+  :root {
+    --font-size-base: 16px;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    font-size: var(--font-size-base);
   }
 }
 
