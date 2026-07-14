@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Database, Loader2, Calendar } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Database, Loader2, Calendar, ChevronDown, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import DropdownCell from './DropdownCell';
@@ -8,11 +8,24 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMes, setSelectedMes] = useState('');
-  const [selectedDia, setSelectedDia] = useState('');
+  const [selectedDias, setSelectedDias] = useState([]);
+  const [diaDropdownOpen, setDiaDropdownOpen] = useState(false);
+  const diaDropdownRef = useRef(null);
 
   useEffect(() => {
     loadRecords();
   }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (!diaDropdownOpen) return;
+    const handleClick = (e) => {
+      if (diaDropdownRef.current && !diaDropdownRef.current.contains(e.target)) {
+        setDiaDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [diaDropdownOpen]);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -29,7 +42,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
 
   const filtered = records.filter(r =>
     (!selectedMes || r.mes === selectedMes) &&
-    (!selectedDia || r.dia === selectedDia)
+    (selectedDias.length === 0 || selectedDias.includes(r.dia))
   );
 
   const parsed = filtered.map(r => {
@@ -43,6 +56,18 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
 
   const columns = parsed.length > 0 ? Object.keys(parsed[0].parsedRow) : [];
 
+  const toggleDia = (dia) => {
+    setSelectedDias(prev =>
+      prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia]
+    );
+  };
+
+  const diaLabel = selectedDias.length === 0
+    ? 'Todos os dias'
+    : selectedDias.length === 1
+      ? `Dia ${selectedDias[0]}`
+      : `${selectedDias.length} dias selecionados`;
+
   return (
     <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -55,7 +80,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
         </Button>
       </div>
 
-      {/* Search / Filters */}
+      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-4">
         <div className="flex flex-col gap-1">
           <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
@@ -63,32 +88,83 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
           </label>
           <select
             value={selectedMes}
-            onChange={e => { setSelectedMes(e.target.value); setSelectedDia(''); }}
+            onChange={e => { setSelectedMes(e.target.value); setSelectedDias([]); }}
             className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[160px]"
           >
             <option value="">Todos os meses</option>
             {meses.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
+
+        {/* Multi-select day filter */}
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-muted-foreground">Dia</label>
-          <select
-            value={selectedDia}
-            onChange={e => setSelectedDia(e.target.value)}
-            className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[120px]"
-            disabled={!selectedMes}
-          >
-            <option value="">Todos os dias</option>
-            {dias.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
+          <label className="text-xs font-medium text-muted-foreground">Dia(s)</label>
+          <div ref={diaDropdownRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setDiaDropdownOpen(!diaDropdownOpen)}
+              disabled={!selectedMes}
+              className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring min-w-[180px] flex items-center justify-between gap-2 disabled:opacity-50"
+            >
+              <span className="truncate">{diaLabel}</span>
+              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${diaDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {diaDropdownOpen && (
+              <div className="absolute z-50 top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-xl p-2 max-h-64 overflow-y-auto min-w-[200px]">
+                {dias.length === 0 ? (
+                  <p className="text-xs text-muted-foreground px-2 py-1">Nenhum dia disponível</p>
+                ) : (
+                  dias.map(d => (
+                    <label
+                      key={d}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted transition-colors ${selectedDias.includes(d) ? 'bg-primary/5' : ''}`}
+                    >
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${selectedDias.includes(d) ? 'bg-primary border-primary' : 'border-input'}`}>
+                        {selectedDias.includes(d) && <Check className="h-3 w-3 text-primary-foreground" />}
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={selectedDias.includes(d)}
+                        onChange={() => toggleDia(d)}
+                        className="hidden"
+                      />
+                      <span className="text-sm">Dia {d}</span>
+                    </label>
+                  ))
+                )}
+                {dias.length > 1 && (
+                  <>
+                    <div className="border-t border-border my-1" />
+                    <div className="flex gap-2 px-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDias([...dias])}
+                        className="flex-1 text-xs py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+                      >
+                        Selecionar todos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedDias([])}
+                        className="flex-1 text-xs py-1 rounded-lg bg-muted hover:bg-muted/80"
+                      >
+                        Limpar
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        {(selectedMes || selectedDia) && (
+
+        {(selectedMes || selectedDias.length > 0) && (
           <Button
             variant="secondary"
             className="h-10 rounded-xl mt-auto"
-            onClick={() => { setSelectedMes(''); setSelectedDia(''); }}
+            onClick={() => { setSelectedMes(''); setSelectedDias([]); }}
           >
-            Limpar
+            Limpar filtros
           </Button>
         )}
       </div>
@@ -142,7 +218,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
 
       {parsed.length > 0 && (
         <p className="text-xs text-muted-foreground mt-2">
-          {parsed.length} registro(s) · {selectedMes || 'Todos os meses'}{selectedDia ? ` · Dia ${selectedDia}` : ''}
+          {parsed.length} registro(s) · {selectedMes || 'Todos os meses'}
+          {selectedDias.length > 0 ? ` · Dias: ${selectedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
         </p>
       )}
     </div>
