@@ -84,6 +84,8 @@ export default function AverbacaoReport({ tipo, periodo }) {
   const [loading, setLoading] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [exportingExcel, setExportingExcel] = useState(false);
+  const [exportError, setExportError] = useState('');
+  const [loadError, setLoadError] = useState('');
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailTo, setEmailTo] = useState('');
   const [emailMsg, setEmailMsg] = useState('');
@@ -115,16 +117,19 @@ export default function AverbacaoReport({ tipo, periodo }) {
 
   const loadData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       let filtered = [];
       if (tipo === 'mensal') {
         filtered = await loadAllRecords({ mes: periodo });
       } else {
         const semMonths = periodo === 1 ? MESES.slice(0, 6) : MESES.slice(6);
-        filtered = await loadAllRecords({ mes: semMonths });
+        filtered = await loadAllRecords({ mes: { $in: semMonths } });
       }
       setRecords(filtered);
-    } catch (e) {}
+    } catch (e) {
+      setLoadError('Erro ao carregar dados: ' + (e.message || 'desconhecido'));
+    }
     setLoading(false);
   };
 
@@ -244,6 +249,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
   const exportPDF = () => {
     if (reportRows.length === 0) return;
     setExportingPdf(true);
+    setExportError('');
     try {
       const doc = new jsPDF({ orientation: 'landscape' });
       const pw = doc.internal.pageSize.getWidth();
@@ -331,13 +337,16 @@ export default function AverbacaoReport({ tipo, periodo }) {
       }
 
       doc.save(`averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`);
-    } catch (e) {}
+    } catch (e) {
+      setExportError('Erro ao exportar PDF: ' + (e.message || 'desconhecido'));
+    }
     setExportingPdf(false);
   };
 
   const exportExcel = () => {
     if (reportRows.length === 0) return;
     setExportingExcel(true);
+    setExportError('');
     try {
       // Build sheet with header info like the original spreadsheet
       const aoa = [];
@@ -353,7 +362,9 @@ export default function AverbacaoReport({ tipo, periodo }) {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
       XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
-    } catch (e) {}
+    } catch (e) {
+      setExportError('Erro ao exportar Excel: ' + (e.message || 'desconhecido'));
+    }
     setExportingExcel(false);
   };
 
@@ -440,6 +451,13 @@ export default function AverbacaoReport({ tipo, periodo }) {
           </div>
         )}
       </div>
+
+      {(exportError || loadError) && (
+        <div className="mb-4 p-3 rounded-xl bg-destructive/5 border border-destructive/20 text-sm text-destructive">
+          {loadError && <p>{loadError}</p>}
+          {exportError && <p>{exportError}</p>}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
