@@ -310,24 +310,53 @@ export default function Averbacao() {
         }
       }
 
-      // Delete existing records for the same months before creating new ones
-      const monthsToReplace = [...new Set(records.map(r => r.mes).filter(Boolean))];
-      for (const mes of monthsToReplace) {
-        await base44.entities.AverbacaoRecord.deleteMany({ mes });
+      // UPSERT: update existing records, create only new ones — no deletions
+      const monthsToCheck = [...new Set(records.map(r => r.mes).filter(Boolean))];
+      const existingRecords = [];
+      for (const mes of monthsToCheck) {
+        const found = await base44.entities.AverbacaoRecord.filter({ mes }, '-created_date', 2000);
+        existingRecords.push(...found);
       }
       if (records.some(r => !r.mes)) {
-        await base44.entities.AverbacaoRecord.deleteMany({ mes: '' });
+        const noMes = await base44.entities.AverbacaoRecord.filter({ mes: '' }, '-created_date', 2000);
+        existingRecords.push(...noMes);
       }
 
-      // Create records in batches of 100 to avoid bulk limits
+      // Build lookup map: mes_dia_prioridade → existing record id
+      const existingMap = {};
+      for (const ex of existingRecords) {
+        const key = `${ex.mes || ''}_${ex.dia || ''}_${String(ex.prioridade || '').trim()}`;
+        existingMap[key] = ex.id;
+      }
+
+      const toUpdate = [];
+      const toCreate = [];
+      for (const r of records) {
+        const key = `${r.mes || ''}_${r.dia || ''}_${String(r.prioridade || '').trim()}`;
+        if (existingMap[key]) {
+          toUpdate.push({ id: existingMap[key], ...r });
+        } else {
+          toCreate.push(r);
+        }
+      }
+
+      // Update existing records in batches of 100
       const BATCH_SIZE = 100;
+      let updated = 0;
+      for (let i = 0; i < toUpdate.length; i += BATCH_SIZE) {
+        const batch = toUpdate.slice(i, i + BATCH_SIZE);
+        await base44.entities.AverbacaoRecord.bulkUpdate(batch);
+        updated += batch.length;
+      }
+
+      // Create new records in batches of 100
       let created = 0;
-      for (let i = 0; i < records.length; i += BATCH_SIZE) {
-        const batch = records.slice(i, i + BATCH_SIZE);
+      for (let i = 0; i < toCreate.length; i += BATCH_SIZE) {
+        const batch = toCreate.slice(i, i + BATCH_SIZE);
         await base44.entities.AverbacaoRecord.bulkCreate(batch);
         created += batch.length;
       }
-      setSavedMsg(`${created} registro(s) atualizado(s) com sucesso!`);
+      setSavedMsg(`${updated} atualizado(s) · ${created} criado(s) com sucesso!`);
       setSavedDataVersion(v => v + 1);
       setTimeout(() => setSavedMsg(''), 6000);
     } catch (e) {
