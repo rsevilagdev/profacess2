@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, CheckCircle, Loader2, Clock, LogOut, X, Camera, PackageCheck } from 'lucide-react';
+import { Truck, CheckCircle, Loader2, Clock, LogOut, X, Camera, PackageCheck, AlertCircle, Info, ShieldCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,10 @@ export default function AcessoCRDK() {
   const [saidaObs, setSaidaObs] = useState('');
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoPreview, setFotoPreview] = useState(null);
+  const [fotoUploadUrl, setFotoUploadUrl] = useState('');
+  const [fotoVerificando, setFotoVerificando] = useState(false);
+  const [fotoStatus, setFotoStatus] = useState(null);
+  const [fotoErro, setFotoErro] = useState('');
 
   const loadRegistros = async () => {
     setLoading(true);
@@ -61,21 +65,50 @@ export default function AcessoCRDK() {
     setSaving(false);
   };
 
-  const handleFotoChange = (e) => {
+  const normalizePlaca = (p) => (p || '').replace(/[^A-Z0-9]/gi, '').toUpperCase();
+
+  const handleFotoChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setFotoFile(file);
     setFotoPreview(URL.createObjectURL(file));
+    setFotoVerificando(true);
+    setFotoStatus('verificando');
+    setFotoErro('');
+    setFotoFile(null);
+    setFotoUploadUrl('');
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: "Analise esta imagem e identifique TODAS as placas de veículo visíveis. Placas brasileiras têm formato ABC1D23 (padrão Mercosul) ou ABC1234 (padrão antigo). Retorne apenas as placas encontradas em maiúsculas, sem hífens ou espaços. Se nenhuma placa for visível na imagem, retorne uma lista vazia.",
+        file_urls: [file_url],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            placas_encontradas: { type: "array", items: { type: "string" } }
+          }
+        }
+      });
+      const registradas = [normalizePlaca(saidaItem.placa_carreta), normalizePlaca(saidaItem.placa_cavalo)].filter(Boolean);
+      const detectadas = (result.placas_encontradas || []).map(normalizePlaca);
+      const coincidiu = detectadas.some(p => registradas.includes(p));
+      if (coincidiu) {
+        setFotoFile(file);
+        setFotoUploadUrl(file_url);
+        setFotoStatus('aceita');
+      } else {
+        setFotoStatus('rejeitada');
+        setFotoErro(`Placa não reconhecida. Registrada(s): ${registradas.join(' / ')} | Detectada(s): ${detectadas.join(', ') || 'nenhuma'}.`);
+      }
+    } catch (e) {
+      setFotoStatus('rejeitada');
+      setFotoErro('Erro ao verificar a foto. Tente novamente.');
+    }
+    setFotoVerificando(false);
   };
 
   const confirmarSaida = async () => {
     setLiberando(saidaItem.id);
     try {
-      let fotoUrl = '';
-      if (fotoFile) {
-        const { file_url } = await base44.integrations.Core.UploadFile({ file: fotoFile });
-        fotoUrl = file_url;
-      }
       const now = new Date();
       const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       const placaCompleta = `${saidaItem.placa_carreta}${saidaItem.placa_cavalo ? '/' + saidaItem.placa_cavalo : ''}`;
@@ -83,18 +116,18 @@ export default function AcessoCRDK() {
         horario_saida: hora,
         data_saida: now.toISOString(),
         observacao: saidaObs.trim(),
-        foto_interior: fotoUrl,
+        foto_interior: fotoUploadUrl,
         status: 'saida'
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
-        action: 'Saída CRDK liberada', details: `Placas: ${placaCompleta} | Motorista: ${saidaItem.nome} | Foto: ${fotoUrl ? 'Sim' : 'Não'}`,
+        action: 'Saída CRDK liberada', details: `Placas: ${placaCompleta} | Motorista: ${saidaItem.nome} | Foto: ${fotoUploadUrl ? 'Sim (placa verificada)' : 'Não'}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
       await loadRegistros();
     } catch (e) {}
     setLiberando(null);
-    setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null);
+    setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null); setFotoUploadUrl(''); setFotoStatus(null); setFotoErro(''); setFotoVerificando(false);
   };
 
   const ativos = registros.filter(r => r.status === 'descarregamento');
@@ -177,7 +210,7 @@ export default function AcessoCRDK() {
                 <Truck className="h-5 w-5 text-primary" />
                 <h2 className="font-heading font-bold text-lg">Liberar Saída</h2>
               </div>
-              <button onClick={() => { setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null); }} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+              <button onClick={() => { setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null); setFotoUploadUrl(''); setFotoStatus(null); setFotoErro(''); setFotoVerificando(false); }} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -188,19 +221,73 @@ export default function AcessoCRDK() {
             {/* Foto do interior da carreta */}
             <div className="mb-4">
               <label className="text-xs font-medium text-muted-foreground mb-1 block">Foto do Interior da Carreta *</label>
-              {fotoPreview ? (
-                <div className="relative">
-                  <img src={fotoPreview} alt="Interior" className="w-full h-40 object-cover rounded-xl border border-border" />
-                  <button onClick={() => { setFotoFile(null); setFotoPreview(null); }} className="absolute top-2 right-2 h-8 w-8 rounded-lg bg-foreground/60 text-background flex items-center justify-center">
-                    <X className="h-4 w-4" />
-                  </button>
+
+              {/* Requisitos da foto */}
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-3 flex items-start gap-2">
+                <Info className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-0.5">Requisitos da foto:</p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>A placa do veículo deve aparecer visível e legível</li>
+                    <li>Tire a foto de frente para a placa, sem obstruções</li>
+                    <li>Boa iluminação para facilitar a leitura automática</li>
+                    <li>Placa esperada: <span className="font-medium text-foreground">{saidaItem.placa_carreta}{saidaItem.placa_cavalo ? ' / ' + saidaItem.placa_cavalo : ''}</span></li>
+                  </ul>
                 </div>
-              ) : (
+              </div>
+
+              {/* Sem foto */}
+              {!fotoPreview && (
                 <label className="flex flex-col items-center justify-center gap-2 h-40 border-2 border-dashed border-input rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
                   <Camera className="h-8 w-8 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Tirar foto / Selecionar imagem</span>
                   <input type="file" accept="image/*" capture="environment" onChange={handleFotoChange} className="hidden" />
                 </label>
+              )}
+
+              {/* Verificando */}
+              {fotoPreview && fotoVerificando && (
+                <div className="relative">
+                  <img src={fotoPreview} alt="Verificando" className="w-full h-40 object-cover rounded-xl border border-border opacity-60" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                    <span className="text-xs font-medium text-foreground bg-card px-3 py-1 rounded-full">Verificando placa na imagem...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Aceita */}
+              {fotoPreview && fotoStatus === 'aceita' && (
+                <div className="relative">
+                  <img src={fotoPreview} alt="Aceita" className="w-full h-40 object-cover rounded-xl border border-primary/40" />
+                  <div className="absolute top-2 right-2 flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded-lg text-xs">
+                    <ShieldCheck className="h-3 w-3" /> Placa verificada
+                  </div>
+                  <button onClick={() => { setFotoFile(null); setFotoPreview(null); setFotoStatus(null); setFotoUploadUrl(''); }} className="absolute top-2 left-2 h-8 w-8 rounded-lg bg-foreground/60 text-background flex items-center justify-center">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Rejeitada */}
+              {fotoPreview && fotoStatus === 'rejeitada' && (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <img src={fotoPreview} alt="Rejeitada" className="w-full h-40 object-cover rounded-xl border border-destructive/40 opacity-50" />
+                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-destructive text-destructive-foreground px-2 py-1 rounded-lg text-xs">
+                      <AlertCircle className="h-3 w-3" /> Não aceita
+                    </div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4">
+                      <AlertCircle className="h-8 w-8 text-destructive" />
+                      <span className="text-xs text-destructive text-center">{fotoErro}</span>
+                    </div>
+                  </div>
+                  <label className="flex items-center justify-center gap-2 h-10 border-2 border-dashed border-input rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Tirar nova foto</span>
+                    <input type="file" accept="image/*" capture="environment" onChange={handleFotoChange} className="hidden" />
+                  </label>
+                </div>
               )}
             </div>
 
@@ -217,10 +304,10 @@ export default function AcessoCRDK() {
             </div>
 
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => { setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null); }}>
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => { setSaidaItem(null); setSaidaObs(''); setFotoFile(null); setFotoPreview(null); setFotoUploadUrl(''); setFotoStatus(null); setFotoErro(''); setFotoVerificando(false); }}>
                 Cancelar
               </Button>
-              <Button className="flex-1 h-11 rounded-xl" disabled={liberando === saidaItem.id || !fotoFile} onClick={confirmarSaida}>
+              <Button className="flex-1 h-11 rounded-xl" disabled={liberando === saidaItem.id || fotoStatus !== 'aceita'} onClick={confirmarSaida}>
                 {liberando === saidaItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Confirmar Saída
               </Button>
