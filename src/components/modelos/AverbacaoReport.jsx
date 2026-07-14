@@ -96,12 +96,12 @@ export default function AverbacaoReport({ tipo, periodo }) {
   const loadData = async () => {
     setLoading(true);
     try {
-      const all = await base44.entities.AverbacaoRecord.list('-created_date', 500);
-      let filtered = all;
+      let filtered = [];
       if (tipo === 'mensal') {
-        filtered = all.filter(r => r.mes === periodo);
+        filtered = await base44.entities.AverbacaoRecord.filter({ mes: periodo }, '-created_date', 2000);
       } else {
         const semMonths = periodo === 1 ? MESES.slice(0, 6) : MESES.slice(6);
+        const all = await base44.entities.AverbacaoRecord.list('-created_date', 2000);
         filtered = all.filter(r => semMonths.includes(r.mes));
       }
       setRecords(filtered);
