@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Database, Loader2, Calendar, ChevronDown, Check } from 'lucide-react';
+import { Database, Loader2, Calendar, ChevronDown, Check, FileText, FileSpreadsheet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import DropdownCell from './DropdownCell';
@@ -73,6 +75,89 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
       ? `Dia ${selectedDias[0]}`
       : `${selectedDias.length} dias selecionados`;
 
+  const buildExportRows = () => {
+    return sortedParsed.map(r => {
+      const row = {};
+      columns.forEach(col => {
+        const cellLists = r.parsedLists[col];
+        if (cellLists && cellLists.length > 1) {
+          row[col] = cellLists.join(', ');
+        } else {
+          row[col] = r.parsedRow[col] || '';
+        }
+      });
+      return row;
+    });
+  };
+
+  const exportPDF = () => {
+    if (sortedParsed.length === 0) return;
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 10;
+    let y = 15;
+
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text('Averbação - Dados Salvos', margin, y);
+    y += 6;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    const filtroStr = `${selectedMes || 'Todos os meses'}${selectedDias.length > 0 ? ' · Dias: ' + selectedDias.sort((a, b) => Number(a) - Number(b)).join(', ') : ''}`;
+    doc.text(`Filtro: ${filtroStr}`, margin, y);
+    y += 8;
+
+    const colWidths = [];
+    const totalTextWidth = columns.reduce((acc, col) => {
+      const w = Math.max(doc.getTextWidth(col) + 6, doc.getTextWidth(String(sortedParsed[0].parsedRow[col] || '')) + 6, 30);
+      colWidths.push(w);
+      return acc + w;
+    }, 0);
+    const scale = (pageWidth - margin * 2) / totalTextWidth;
+    const scaledWidths = colWidths.map(w => w * scale);
+
+    // Header
+    doc.setFillColor(220, 220, 220);
+    doc.rect(margin, y - 4, pageWidth - margin * 2, 6, 'F');
+    doc.setFontSize(7);
+    doc.setFont(undefined, 'bold');
+    let x = margin;
+    columns.forEach((col, i) => {
+      doc.text(col.substring(0, Math.floor(scaledWidths[i] / 2)), x + 1, y);
+      x += scaledWidths[i];
+    });
+    y += 6;
+    doc.setFont(undefined, 'normal');
+
+    // Rows
+    const rowHeight = 5;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    sortedParsed.forEach(r => {
+      if (y > pageHeight - 10) { doc.addPage(); y = 15; }
+      x = margin;
+      columns.forEach((col, i) => {
+        const cellLists = r.parsedLists[col];
+        const val = cellLists && cellLists.length > 1
+          ? `${cellLists[0]} +${cellLists.length - 1}`
+          : (r.parsedRow[col] || '');
+        doc.text(String(val).substring(0, Math.floor(scaledWidths[i] / 2)), x + 1, y);
+        x += scaledWidths[i];
+      });
+      y += rowHeight;
+    });
+
+    doc.save(`averbacao_${selectedMes || 'todos'}_${Date.now()}.pdf`);
+  };
+
+  const exportExcel = () => {
+    if (sortedParsed.length === 0) return;
+    const rows = buildExportRows();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
+    XLSX.writeFile(wb, `averbacao_${selectedMes || 'todos'}_${Date.now()}.xlsx`);
+  };
+
   return (
     <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
@@ -80,9 +165,21 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
           <Database className="h-5 w-5 text-primary" />
           <h3 className="font-heading font-bold">Dados Salvos</h3>
         </div>
-        <Button onClick={loadRecords} variant="ghost" size="sm" className="h-8 rounded-xl text-xs">
-          Atualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          {sortedParsed.length > 0 && (
+            <>
+              <Button onClick={exportPDF} variant="outline" size="sm" className="h-8 rounded-xl text-xs">
+                <FileText className="h-3.5 w-3.5" /> PDF
+              </Button>
+              <Button onClick={exportExcel} variant="outline" size="sm" className="h-8 rounded-xl text-xs">
+                <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+              </Button>
+            </>
+          )}
+          <Button onClick={loadRecords} variant="ghost" size="sm" className="h-8 rounded-xl text-xs">
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
