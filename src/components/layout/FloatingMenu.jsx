@@ -50,9 +50,25 @@ const MENU_GROUPS = [
 
 export default function FloatingMenu() {
   const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(new Date());
   const { colaborador, canAccessPage } = useProfarmaAuth();
   const location = useLocation();
   const ref = useRef(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const dataHora = now.toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
   useEffect(() => {
     const handler = (e) => {
@@ -114,6 +130,10 @@ export default function FloatingMenu() {
               </div>
             </div>
           )}
+        </div>
+        <div className="bg-card border border-border shadow-lg rounded-2xl px-3 py-1.5 hidden sm:flex flex-col items-center justify-center min-w-[120px]">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground leading-tight">{dataHora.split(' ')[0]}</span>
+          <span className="text-xs font-medium text-foreground leading-tight tabular-nums">{dataHora.split(' ')[1]}</span>
         </div>
         <Link to="/perfil" className="h-12 w-12 rounded-2xl bg-card border border-border shadow-lg flex items-center justify-center hover:shadow-md transition-shadow overflow-hidden">
           {colaborador?.foto_perfil ? (
