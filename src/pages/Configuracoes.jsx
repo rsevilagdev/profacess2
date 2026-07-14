@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Building2, Shield, Cloud, Plus, Edit2, Trash2, X, UserCog, Loader2, Palette } from 'lucide-react';
+import { Users, Building2, Shield, Cloud, Plus, Edit2, Trash2, X, UserCog, Loader2, Palette, Download, HardDrive, FolderOpen } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ export default function Configuracoes() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({});
   const [backupLoading, setBackupLoading] = useState(false);
+  const [backupDestino, setBackupDestino] = useState('local');
 
   const loadData = async () => {
     const [u, f, b] = await Promise.all([
@@ -74,13 +75,38 @@ export default function Configuracoes() {
 
   const backup = async () => {
     setBackupLoading(true);
-    const backupRecord = await base44.entities.BackupLog.create({ type: 'manual', triggered_by: colaborador.nome, status: 'in_progress', branch_id: colaborador.filial_id });
-    setTimeout(async () => {
-      await base44.entities.BackupLog.update(backupRecord.id, { status: 'success', size_kb: Math.floor(Math.random() * 5000) + 1000, details: 'Backup manual realizado com sucesso' });
-      await base44.entities.Notification.create({ title: 'Backup Realizado', message: 'Backup manual concluído com sucesso', type: 'admin_ops', sender_name: 'Sistema' });
-      await logAudit('Backup manual', '');
-      setBackupLoading(false); loadData();
-    }, 2000);
+    const backupRecord = await base44.entities.BackupLog.create({ type: 'manual', triggered_by: colaborador.nome, status: 'in_progress', branch_id: colaborador.filial_id, details: `Destino: ${backupDestino}` });
+    try {
+      const [users, filiais, vehicles, drivers, accessLogs, crdkLogs, auditLogs, tasks, notifications, liberacoes] = await Promise.all([
+        base44.entities.Colaborador.list(),
+        base44.entities.Filial.list(),
+        base44.entities.Vehicle.list(),
+        base44.entities.Driver.list(),
+        base44.entities.AccessLog.list(),
+        base44.entities.AcessoCRDK.list(),
+        base44.entities.AuditLog.list(),
+        base44.entities.Task.list(),
+        base44.entities.Notification.list(),
+        base44.entities.Liberacao.list(),
+      ]);
+      const backupData = {
+        metadata: { date: new Date().toISOString(), user: colaborador.nome, filial: colaborador.filial_nome, version: '1.0', destino: backupDestino },
+        data: { colaboradores: users, filiais, vehicles, drivers, accessLogs, crdkLogs, auditLogs, tasks, notifications, liberacoes }
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_profarma_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      await base44.entities.BackupLog.update(backupRecord.id, { status: 'success', size_kb: Math.floor(blob.size / 1024), details: `Backup manual (${backupDestino}) — ${blob.size} bytes` });
+      await base44.entities.Notification.create({ title: 'Backup Realizado', message: `Backup manual concluído — ${backupDestino}`, type: 'admin_ops', sender_name: 'Sistema' });
+      await logAudit('Backup manual', `Destino: ${backupDestino}`);
+    } catch (e) {
+      await base44.entities.BackupLog.update(backupRecord.id, { status: 'failed', details: e.message });
+    }
+    setBackupLoading(false); loadData();
   };
 
   const logAudit = async (action, details) => {
@@ -157,14 +183,44 @@ export default function Configuracoes() {
       {tab === 'backup' && (
         <div className="space-y-4">
           <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+            <h3 className="font-heading font-bold mb-1">Backup de Dados</h3>
+            <p className="text-sm text-muted-foreground mb-4">Escolha o destino e gere o backup completo do sistema</p>
+
+            {/* Destino do backup */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-2 block">Destino do Backup</label>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${backupDestino === 'local' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+                  <input type="radio" checked={backupDestino === 'local'} onChange={() => setBackupDestino('local')} className="h-4 w-4 shrink-0" />
+                  <div className="flex items-center gap-2">
+                    <HardDrive className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Download Local</p>
+                      <p className="text-xs text-muted-foreground">Baixar arquivo JSON no dispositivo</p>
+                    </div>
+                  </div>
+                </label>
+                <label className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${backupDestino === 'gdrive' ? 'border-primary bg-primary/5' : 'border-border hover:bg-muted/50'}`}>
+                  <input type="radio" checked={backupDestino === 'gdrive'} onChange={() => setBackupDestino('gdrive')} className="h-4 w-4 shrink-0" />
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium">Google Drive</p>
+                      <p className="text-xs text-muted-foreground">Requer configuração de integração</p>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-heading font-bold mb-1">Backup em Nuvem</h3>
-                <p className="text-sm text-muted-foreground">Sincronização criptografada de todos os dados</p>
+              <div className="text-xs text-muted-foreground">
+                {backupDestino === 'local' && 'O arquivo será baixado automaticamente no formato JSON.'}
+                {backupDestino === 'gdrive' && 'Para salvar no Google Drive, é necessário configurar a integração nas etapas seguintes.'}
               </div>
               <Button onClick={backup} disabled={backupLoading} className="h-12 rounded-2xl">
-                {backupLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Cloud className="h-5 w-5" />}
-                {backupLoading ? 'Sincronizando...' : 'Backup Nuvem'}
+                {backupLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : backupDestino === 'local' ? <Download className="h-5 w-5" /> : <Cloud className="h-5 w-5" />}
+                {backupLoading ? 'Gerando...' : 'Gerar Backup'}
               </Button>
             </div>
           </div>

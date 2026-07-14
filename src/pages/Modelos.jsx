@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Printer, Loader2, LayoutGrid, Calendar, Truck } from 'lucide-react';
+import { Printer, Loader2, LayoutGrid, Calendar, Truck, Download } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { imageUrlToBase64 } from '@/lib/pdf-utils';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
 import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
 
@@ -27,6 +29,7 @@ export default function Modelos() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const gerar = async () => {
     setLoading(true);
@@ -47,6 +50,94 @@ export default function Modelos() {
       setLogs(filtered);
     } catch (e) {}
     setLoading(false);
+  };
+
+  const exportarPDF = async () => {
+    setExportingPdf(true);
+    try {
+      const doc = new jsPDF();
+      const pw = doc.internal.pageSize.getWidth();
+      const ph = doc.internal.pageSize.getHeight();
+      const m = 15;
+      let y = 20;
+      const isRecebimento = selectedTemplate === 'controle_veiculos_recebimento';
+      const templateName = TEMPLATES.find(t => t.id === selectedTemplate)?.name || 'Relatório';
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(0, 105, 92);
+      doc.text('PROFARMA LIBERAAUTO PRO', pw / 2, y, { align: 'center' });
+      y += 7;
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(templateName, pw / 2, y, { align: 'center' });
+      y += 5;
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      const period = `${dataInicio || 'Início'} a ${dataFim || 'Fim'}`;
+      doc.text(`Período: ${period} | Gerado em ${new Date().toLocaleString('pt-BR')}`, pw / 2, y, { align: 'center' });
+      y += 8;
+
+      for (const log of logs) {
+        if (y > ph - 50) { doc.addPage(); y = 20; }
+        doc.setDrawColor(200, 200, 200);
+        doc.line(m, y, pw - m, y);
+        y += 5;
+
+        if (isRecebimento) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(30, 30, 30);
+          doc.text(`Placa: ${log.placa_carreta || '—'}${log.placa_cavalo ? ' / ' + log.placa_cavalo : ''}`, m, y);
+          y += 5;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(70, 70, 70);
+          doc.text(`Motorista: ${log.nome || '—'}`, m, y); y += 4;
+          doc.text(`Empresa: ${log.empresa || '—'} | Destino: ${log.destino || '—'}`, m, y); y += 4;
+          doc.text(`Entrada: ${log.horario_entrada || '—'} | Saída: ${log.horario_saida || '—'}`, m, y); y += 4;
+          if (log.observacao) { const obsLines = doc.splitTextToSize(`Obs: ${log.observacao}`, pw - m * 2); for (const l of obsLines) { doc.text(l, m, y); y += 4; } }
+          if (log.foto_interior) {
+            try {
+              const dataUrl = await imageUrlToBase64(log.foto_interior);
+              if (y + 30 > ph - 15) { doc.addPage(); y = 20; }
+              doc.addImage(dataUrl, 'PNG', m, y, 50, 30);
+              doc.setFontSize(8);
+              doc.setTextColor(120, 120, 120);
+              doc.text('Foto verificada', m + 52, y + 5);
+              y += 32;
+            } catch (e) {}
+          }
+        } else {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.setTextColor(30, 30, 30);
+          doc.text(`Placa: ${log.veiculo_placa || '—'}`, m, y);
+          y += 5;
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(70, 70, 70);
+          doc.text(`Motorista: ${log.motorista_nome || '—'}`, m, y); y += 4;
+          doc.text(`Empresa: ${log.empresa || '—'} | Tipo: ${log.tipo || '—'}`, m, y); y += 4;
+          doc.text(`Operador: ${log.operador_nome || '—'}`, m, y); y += 4;
+          doc.text(`Data: ${new Date(log.created_date).toLocaleString('pt-BR')}`, m, y); y += 4;
+          if (log.observacao) { const obsLines = doc.splitTextToSize(`Obs: ${log.observacao}`, pw - m * 2); for (const l of obsLines) { doc.text(l, m, y); y += 4; } }
+          if (log.carregado) { doc.text('Veículo saiu carregado', m, y); y += 4; }
+        }
+        y += 3;
+      }
+
+      const pc = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= pc; i++) {
+        doc.setPage(i);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text(`PROFARMA LIBERAAUTO PRO — ${templateName} — Página ${i} de ${pc}`, pw / 2, ph - 8, { align: 'center' });
+      }
+      doc.save(`${templateName.replace(/\s+/g, '_')}.pdf`);
+    } catch (e) {}
+    setExportingPdf(false);
   };
 
   return (
@@ -102,9 +193,14 @@ export default function Modelos() {
             Gerar Relatório
           </Button>
           {generated && !loading && (
-            <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl ml-auto">
-              <Printer className="h-4 w-4" /> Imprimir / PDF
-            </Button>
+            <div className="flex gap-2 ml-auto">
+              <Button onClick={exportarPDF} disabled={exportingPdf} variant="secondary" className="h-10 rounded-xl">
+                {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PDF
+              </Button>
+              <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl">
+                <Printer className="h-4 w-4" /> Imprimir
+              </Button>
+            </div>
           )}
         </div>
       </div>
