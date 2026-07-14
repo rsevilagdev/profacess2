@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, Truck, X, CheckCircle, AlertTriangle, Loader2, UserPlus, User, Send } from 'lucide-react';
+import { Search, Truck, X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
+import CadastroForm from '@/components/novo-acesso/CadastroForm';
 
 export default function NovoAcesso() {
   const { colaborador } = useProfarmaAuth();
@@ -23,7 +24,7 @@ export default function NovoAcesso() {
   const [requestingAuth, setRequestingAuth] = useState(false);
   const [reviewRequests, setReviewRequests] = useState([]);
 
-  const canEditDB = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
+  const canEditDB = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
   useEffect(() => {
     loadAcessos();
@@ -38,31 +39,78 @@ export default function NovoAcesso() {
 
   const loadReviewRequests = async () => {
     try {
-      const list = await base44.entities.ReviewRequest.filter({ status: 'pendente' });
-      setReviewRequests(list);
+      const list = await base44.entities.ReviewRequest.list('-created_date', 100);
+      setReviewRequests(list.filter(r => r.status !== 'aprovado'));
     } catch (e) {}
   };
 
   const respondReview = async (review, approved) => {
     await base44.entities.ReviewRequest.update(review.id, { status: approved ? 'aprovado' : 'rejeitado' });
-    const editorName = colaborador.nome;
     if (approved) {
-      const colab = await base44.entities.Colaborador.list();
-      const recipients = colab.filter(c => c.email && c.ativo && ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(c.cargo) && (c.filial_id === colaborador.filial_id || c.cargo === 'administrador_master'));
-      for (const r of recipients) {
-        try {
-          await base44.integrations.Core.SendEmail({
-            to: r.email,
-            subject: 'Solicitação de Cadastro Aprovada | PROFARMA LIBERAAUTO PRO',
-            body: `Olá ${r.nome},\n\nA solicitação de cadastro de ${review.solicitante_nome} foi APROVADA.\n\nDetalhes:\n${review.motivo}\n\nPor favor, acesse o sistema em Editar Base de Dados para inserir os registros.\n\nPROFARMA LIBERAAUTO PRO`,
-            from_name: 'PROFARMA LIBERAAUTO PRO'
-          });
-        } catch (e) {}
+      const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
+      if (dados.veiculo) {
+        await base44.entities.Vehicle.create({
+          ...dados.veiculo,
+          status: 'validado',
+          filial_id: colaborador.filial_id,
+          filial_nome: colaborador.filial_nome
+        });
       }
+      if (dados.motorista) {
+        await base44.entities.Driver.create({
+          ...dados.motorista,
+          status: 'validado',
+          filial_id: colaborador.filial_id,
+          filial_nome: colaborador.filial_nome
+        });
+      }
+      try {
+        const colab = await base44.entities.Colaborador.list();
+        const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
+        if (solicitante) {
+          await base44.entities.Notification.create({
+            title: 'Cadastro Aprovado',
+            message: `Sua solicitação de cadastro foi APROVADA. Busque novamente a placa/CPF para registrar o acesso.`,
+            type: 'driver_docs', sender_name: colaborador.nome,
+            target_user_id: solicitante.id, branch_id: review.filial_id
+          });
+        }
+      } catch (e) {}
     }
     await base44.entities.AuditLog.create({
-      user_name: editorName, user_cpf: colaborador.cpf,
-      action: approved ? 'Solicitação de cadastro aprovada' : 'Solicitação de cadastro negada',
+      user_name: colaborador.nome, user_cpf: colaborador.cpf,
+      action: approved ? 'Solicitação de cadastro aprovada — registro criado como validado' : 'Solicitação de cadastro rejeitada',
+      details: review.motivo, ip_address: 'local', domain: window.location.hostname,
+      category: 'user_management', branch_id: colaborador.filial_id
+    });
+    await loadReviewRequests();
+  };
+
+  const cadastrarBloqueado = async (review) => {
+    const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
+    if (dados.veiculo) {
+      await base44.entities.Vehicle.create({
+        ...dados.veiculo,
+        status: 'bloqueado',
+        filial_id: colaborador.filial_id,
+        filial_nome: colaborador.filial_nome
+      });
+    }
+    if (dados.motorista) {
+      await base44.entities.Driver.create({
+        ...dados.motorista,
+        status: 'bloqueado',
+        filial_id: colaborador.filial_id,
+        filial_nome: colaborador.filial_nome
+      });
+    }
+    await base44.entities.ReviewRequest.update(review.id, {
+      status: 'aprovado',
+      observacao: 'Cadastrado como bloqueado por ' + colaborador.nome
+    });
+    await base44.entities.AuditLog.create({
+      user_name: colaborador.nome, user_cpf: colaborador.cpf,
+      action: 'Cadastro inserido como bloqueado (solicitação rejeitada)',
       details: review.motivo, ip_address: 'local', domain: window.location.hostname,
       category: 'user_management', branch_id: colaborador.filial_id
     });
@@ -134,61 +182,39 @@ export default function NovoAcesso() {
     setLoading(false);
   };
 
-  const addToDB = async (type) => {
-    if (type === 'veiculo' && !veiculo) {
-      await base44.entities.Vehicle.create({
-        placa: placa.toUpperCase(), modelo: '', status: 'pendente_revisao', status_opentech: ''
-      });
-      await logAudit('Veículo cadastrado via revisão', `Placa: ${placa.toUpperCase()}`);
-    }
-    if (type === 'motorista' && !motorista) {
-      const cpfDigits = cpf.replace(/\D/g, '');
-      await base44.entities.Driver.create({
-        nome: '', cpf: cpfDigits, status: 'pendente_revisao', status_opentech: ''
-      });
-      await logAudit('Motorista cadastrado via revisão', `CPF: ${cpfDigits}`);
-    }
-    // Re-check
-    buscar();
-  };
+  // addToDB removido — cadastros agora passam por fluxo de aprovação
 
-  const solicitarAutorizacao = async () => {
+  const solicitarAutorizacao = async (dados) => {
     setRequestingAuth(true);
     const cpfDigits = cpf.replace(/\D/g, '');
     try {
-      // Get recipients in the same filial (admin_master sees all)
       const colab = await base44.entities.Colaborador.list();
       const recipients = colab.filter(c => c.ativo && ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) && (c.filial_id === colaborador.filial_id || c.cargo === 'administrador_master'));
       const destinatariosIds = recipients.map(r => r.id).join(',');
       const destinatariosNomes = recipients.map(r => r.nome).join(', ');
 
-      // Create review request with filial and destinatarios
-      const review = await base44.entities.ReviewRequest.create({
+      const tipo = !veiculo && !motorista ? 'ambos' : (!veiculo ? 'veiculo' : 'motorista');
+
+      await base44.entities.ReviewRequest.create({
         solicitante_nome: colaborador.nome,
         solicitante_cpf: colaborador.cpf,
-        tipo: !veiculo ? 'veiculo' : 'motorista',
-        target_nome: !veiculo ? placa.toUpperCase() : cpfDigits,
+        tipo,
+        target_nome: !veiculo ? placa.toUpperCase() : (motorista?.nome || cpfDigits),
         target_cpf: !veiculo ? placa.toUpperCase() : cpfDigits,
         motivo: `Veículo não encontrado: ${!veiculo} | Motorista não encontrado: ${!motorista} | Placa: ${placa} | CPF: ${cpfDigits}`,
         status: 'pendente',
         filial_id: colaborador.filial_id,
         destinatarios: destinatariosIds,
-        destinatarios_nomes: destinatariosNomes
+        destinatarios_nomes: destinatariosNomes,
+        dados_json: JSON.stringify(dados)
       });
 
-      // Notify each recipient individually
       for (const r of recipients) {
         try {
           await base44.entities.Notification.create({
             title: 'Solicitação de Cadastro - Revisão Necessária',
             message: `${colaborador.nome} solicitou cadastramento - Placa: ${placa} | CPF: ${cpfDigits}`,
             type: 'driver_docs', sender_name: colaborador.nome, target_user_id: r.id, branch_id: colaborador.filial_id
-          });
-          await base44.integrations.Core.SendEmail({
-            to: r.email,
-            subject: 'Solicitação de Cadastro - Revisão Necessária | PROFARMA LIBERAAUTO PRO',
-            body: `Olá ${r.nome},\n\n${colaborador.nome} solicitou autorização de cadastro.\n\nDetalhes:\n- Placa: ${placa}\n- CPF Motorista: ${cpfDigits}\n- Veículo na base: ${veiculo ? 'Sim' : 'Não'}\n- Motorista na base: ${motorista ? 'Sim' : 'Não'}\n\nAcesse o sistema para aprovar ou negar a solicitação.\n\nPROFARMA LIBERAAUTO PRO`,
-            from_name: 'PROFARMA LIBERAAUTO PRO'
           });
         } catch (e) {}
       }
@@ -355,11 +381,16 @@ export default function NovoAcesso() {
               <p className="text-sm text-muted-foreground">Dados não encontrados ou não validados na base</p>
             </div>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-3 mb-3">
             <div className={`rounded-xl p-3 border ${veiculo ? 'bg-primary/5 border-primary/20' : 'bg-destructive/5 border-destructive/20'}`}>
               <p className="text-xs text-muted-foreground">Veículo — {placa.toUpperCase()}</p>
               {veiculo ? (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${veiculo.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{veiculo.status}</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${veiculo.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{veiculo.status}</span>
+                  {canEditDB && veiculo.status !== 'validado' && (
+                    <Button size="sm" className="h-7 rounded-lg text-xs" onClick={() => base44.entities.Vehicle.update(veiculo.id, { status: 'validado' }).then(buscar)}>Validar</Button>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-destructive">Não encontrado na base</p>
               )}
@@ -367,28 +398,21 @@ export default function NovoAcesso() {
             <div className={`rounded-xl p-3 border ${motorista ? 'bg-primary/5 border-primary/20' : 'bg-destructive/5 border-destructive/20'}`}>
               <p className="text-xs text-muted-foreground">Motorista — {cpf}</p>
               {motorista ? (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${motorista.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{motorista.status}</span>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${motorista.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{motorista.status}</span>
+                  {canEditDB && motorista.status !== 'validado' && (
+                    <Button size="sm" className="h-7 rounded-lg text-xs" onClick={() => base44.entities.Driver.update(motorista.id, { status: 'validado' }).then(buscar)}>Validar</Button>
+                  )}
+                </div>
               ) : (
                 <p className="text-sm text-destructive">Não encontrado na base</p>
               )}
             </div>
           </div>
 
-          <div className="mt-4 space-y-2">
-            {canEditDB ? (
-              <div className="flex flex-wrap gap-2">
-                {!veiculo && <Button onClick={() => addToDB('veiculo')} className="h-10 rounded-xl"><UserPlus className="h-4 w-4" /> Cadastrar Veículo</Button>}
-                {!motorista && <Button onClick={() => addToDB('motorista')} className="h-10 rounded-xl"><UserPlus className="h-4 w-4" /> Cadastrar Motorista</Button>}
-                {(veiculo && veiculo.status !== 'validado') && <Button onClick={() => base44.entities.Vehicle.update(veiculo.id, { status: 'validado' }).then(buscar)} className="h-10 rounded-xl">Validar Veículo</Button>}
-                {(motorista && motorista.status !== 'validado') && <Button onClick={() => base44.entities.Driver.update(motorista.id, { status: 'validado' }).then(buscar)} className="h-10 rounded-xl">Validar Motorista</Button>}
-              </div>
-            ) : (
-              <Button onClick={solicitarAutorizacao} disabled={requestingAuth} className="h-10 rounded-xl">
-                {requestingAuth ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                Solicitar Autorização de Cadastro
-              </Button>
-            )}
-          </div>
+          {(!veiculo || !motorista) && (
+            <CadastroForm veiculo={veiculo} motorista={motorista} placa={placa} cpf={cpf} onSubmit={solicitarAutorizacao} loading={requestingAuth} />
+          )}
         </div>
       )}
 
@@ -401,23 +425,37 @@ export default function NovoAcesso() {
         </div>
       )}
 
-      {/* Pending Review Requests (admin only) */}
+      {/* Review Requests (admin/encarregado only) */}
       {canEditDB && reviewRequests.length > 0 && (
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <h3 className="font-heading font-bold mb-3">Solicitações de Cadastro Pendentes ({reviewRequests.length})</h3>
+          <h3 className="font-heading font-bold mb-3">Solicitações de Cadastro ({reviewRequests.length})</h3>
           <div className="space-y-2">
-            {reviewRequests.map(rr => (
-              <div key={rr.id} className="flex items-center justify-between p-3 rounded-xl bg-orange-500/5 border border-orange-500/20">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{rr.solicitante_nome}</p>
-                  <p className="text-xs text-muted-foreground truncate">{rr.motivo}</p>
+            {reviewRequests.map(rr => {
+              const dados = rr.dados_json ? (() => { try { return JSON.parse(rr.dados_json); } catch { return {}; } })() : {};
+              return (
+                <div key={rr.id} className={`p-3 rounded-xl border ${rr.status === 'rejeitado' ? 'bg-destructive/5 border-destructive/20' : 'bg-orange-500/5 border-orange-500/20'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium">{rr.solicitante_nome} — {rr.tipo}</p>
+                      <p className="text-xs text-muted-foreground truncate">{rr.motivo}</p>
+                      {dados.veiculo && <p className="text-xs text-muted-foreground">Veículo: {dados.veiculo.placa} {dados.veiculo.modelo}</p>}
+                      {dados.motorista && <p className="text-xs text-muted-foreground">Motorista: {dados.motorista.nome} — CPF: {dados.motorista.cpf}</p>}
+                      {rr.status === 'rejeitado' && <p className="text-xs text-destructive font-medium mt-1">Rejeitado — pode cadastrar como bloqueado</p>}
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      {rr.status === 'pendente' ? (
+                        <>
+                          <Button size="sm" className="h-8 rounded-xl bg-primary" onClick={() => respondReview(rr, true)}>Aprovar</Button>
+                          <Button size="sm" variant="destructive" className="h-8 rounded-xl" onClick={() => respondReview(rr, false)}>Rejeitar</Button>
+                        </>
+                      ) : rr.status === 'rejeitado' && (
+                        <Button size="sm" variant="secondary" className="h-8 rounded-xl" onClick={() => cadastrarBloqueado(rr)}>Cadastrar Bloqueado</Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" className="h-8 rounded-xl bg-primary" onClick={() => respondReview(rr, true)}>Aprovar</Button>
-                  <Button size="sm" variant="destructive" className="h-8 rounded-xl" onClick={() => respondReview(rr, false)}>Negar</Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
