@@ -220,6 +220,12 @@ export default function ExportarDados() {
                 <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
               </tbody>
             </table>
+            <div className="p-3 border-t border-border bg-muted/50">
+              <Button onClick={() => fileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Importar Motoristas
+              </Button>
+            </div>
           </div>
           <div className="border border-border rounded-xl overflow-hidden">
             <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Aba: VEICULOS</div>
@@ -236,6 +242,12 @@ export default function ExportarDados() {
                 <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
               </tbody>
             </table>
+            <div className="p-3 border-t border-border bg-muted/50">
+              <Button onClick={() => fileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
+                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                Importar Veículos
+              </Button>
+            </div>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3">A importação inteligente detecta automaticamente se os dados são de motoristas ou veículos. Se o registro já existe na base, atualiza o status. Se não existe, cria um novo registro.</p>
