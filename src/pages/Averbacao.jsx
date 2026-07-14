@@ -362,6 +362,9 @@ export default function Averbacao() {
                     ? `${fileData.processedRows.length} prioridades · ${fileData.rows.length} registros originais`
                     : `${fileData.rows.length} registros · ${fileData.visibleColumns.length} colunas`}
                 </p>
+                <p className="text-xs text-primary font-medium flex items-center gap-1 mt-0.5">
+                  <CheckCircle className="h-3 w-3" /> Todos os dados importados
+                </p>
               </div>
               <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${fileData.processed ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                 <CheckCircle className="h-3.5 w-3.5" />
