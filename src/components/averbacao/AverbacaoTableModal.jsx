@@ -29,6 +29,9 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
   };
 
   const displayColumns = fileData.processed ? fileData.visibleColumns : fileData.headers;
+  const MAX_ROWS = 500;
+  const visibleRows = fileData.rows.slice(0, MAX_ROWS);
+  const hasMore = fileData.rows.length > MAX_ROWS;
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
@@ -83,7 +86,7 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
               </tr>
             </thead>
             <tbody>
-              {fileData.rows.map((row, idx) => (
+              {visibleRows.map((row, idx) => (
                 <tr key={idx} className="hover:bg-muted/30">
                   {displayColumns.map(col => (
                     <td key={col} className="px-3 py-1.5 border-b border-border/50 whitespace-nowrap text-xs">
@@ -100,6 +103,7 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
         <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
           <span className="text-xs text-muted-foreground">
             {displayColumns.length} colunas · {fileData.rows.length} registros
+            {hasMore && <span className="text-orange-600"> · exibindo primeiras {MAX_ROWS}</span>}
           </span>
           <div className="flex gap-2">
             {fileData.processed ? (

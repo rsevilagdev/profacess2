@@ -48,27 +48,47 @@ export default function Averbacao() {
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [error, setError] = useState('');
   const fileRef = useRef(null);
 
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setLoading(true);
+    setError('');
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target.result;
-      const parsed = parseDelimitedText(text);
-      setFileData({
-        fileName: file.name,
-        headers: parsed.headers,
-        rows: parsed.rows,
-        visibleColumns: [...parsed.headers],
-        processed: false,
-      });
+      try {
+        const text = event.target.result;
+        if (!text || !text.trim()) {
+          setError('O arquivo está vazio ou não pôde ser lido.');
+          setLoading(false);
+          return;
+        }
+        const parsed = parseDelimitedText(text);
+        if (parsed.headers.length === 0 || parsed.rows.length === 0) {
+          setError('Não foi possível identificar colunas e dados no arquivo. Verifique o formato.');
+          setLoading(false);
+          return;
+        }
+        setFileData({
+          fileName: file.name,
+          headers: parsed.headers,
+          rows: parsed.rows,
+          visibleColumns: [...parsed.headers],
+          processed: false,
+        });
+      } catch (err) {
+        setError('Erro ao processar o arquivo: ' + (err.message || 'desconhecido'));
+      }
       setLoading(false);
     };
-    reader.onerror = () => { setLoading(false); };
-    reader.readAsText(file);
+    reader.onerror = () => {
+      setError('Erro ao ler o arquivo. Tente novamente.');
+      setLoading(false);
+    };
+    // ISO-8859-1 is common for Brazilian .txt exports; falls back gracefully for UTF-8
+    reader.readAsText(file, 'ISO-8859-1');
   };
 
   const handleProcess = (selectedColumns) => {
@@ -108,6 +128,11 @@ export default function Averbacao() {
             )}
             <input type="file" accept=".txt,.csv" ref={fileRef} onChange={handleFile} className="hidden" />
           </label>
+          {error && (
+            <div className="mt-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
         </div>
       )}
 
