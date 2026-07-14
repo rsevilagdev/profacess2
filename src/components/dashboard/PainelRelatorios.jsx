@@ -45,7 +45,7 @@ export default function PainelRelatorios() {
       const name = l.filial_nome || 'Sem filial';
       if (!map[name]) map[name] = { filial: name, liberado: 0, bloqueado: 0, total: 0 };
       map[name].total++;
-      if (l.status === 'liberado') map[name].liberado++;
+      if (l.status === 'validado') map[name].liberado++;
       else if (l.status === 'bloqueado') map[name].bloqueado++;
     });
     return Object.values(map).filter(b => b.total > 0).sort((a, b) => b.total - a.total);
@@ -63,14 +63,14 @@ export default function PainelRelatorios() {
     periodLogs.forEach(l => {
       const key = new Date(l.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
       if (days[key]) {
-        if (l.status === 'liberado') days[key].liberado++;
+        if (l.status === 'validado') days[key].liberado++;
         else if (l.status === 'bloqueado') days[key].bloqueado++;
       }
     });
     return Object.values(days);
   }, [periodLogs, period]);
 
-  const totalLiberado = periodLogs.filter(l => l.status === 'liberado').length;
+  const totalLiberado = periodLogs.filter(l => l.status === 'validado').length;
 
   if (loading) {
     return (

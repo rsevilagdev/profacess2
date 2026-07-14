@@ -79,7 +79,7 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={ScanLine} label="Acessos Hoje" value={stats.acessos} color="bg-primary/10 text-primary" to="/novo-acesso" />
+        <StatCard icon={ScanLine} label="Acessos Hoje" value={stats.acessos} color="bg-primary/10 text-primary" to="/acessos" />
         <StatCard icon={ShieldAlert} label="Bloqueados" value={stats.bloqueados} color="bg-destructive/10 text-destructive" to="/painel-bloqueio" />
         <StatCard icon={Truck} label="Veículos" value={stats.veiculos} color="bg-blue-500/10 text-blue-600" to="/editar-base" />
         <StatCard icon={Users} label="Motoristas" value={stats.motoristas} color="bg-orange-500/10 text-orange-600" to="/editar-base" />
@@ -119,7 +119,7 @@ export default function Dashboard() {
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-heading font-bold text-lg">Acessos Recentes</h3>
-          <Link to="/novo-acesso" className="text-sm text-primary flex items-center gap-1 hover:underline">
+          <Link to="/acessos" className="text-sm text-primary flex items-center gap-1 hover:underline">
             Ver todos <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
@@ -130,7 +130,7 @@ export default function Dashboard() {
             {recentes.map(log => (
               <div key={log.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
                 <div className="flex items-center gap-3">
-                  <div className={`h-2 w-2 rounded-full ${log.status === 'liberado' ? 'bg-primary' : log.status === 'bloqueado' ? 'bg-destructive' : 'bg-orange-500'}`} />
+                  <div className={`h-2 w-2 rounded-full ${log.status === 'validado' ? 'bg-primary' : log.status === 'bloqueado' ? 'bg-destructive' : 'bg-orange-500'}`} />
                   <div>
                     <p className="text-sm font-medium">{maskPlaca(log.veiculo_placa)}</p>
                     <p className="text-xs text-muted-foreground">{maskCPF(log.motorista_cpf)} · {log.motorista_nome ? log.motorista_nome[0] + '***' : '—'}</p>

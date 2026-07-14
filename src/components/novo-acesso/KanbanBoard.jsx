@@ -5,8 +5,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 
 const COLUMNS = [
-  { id: 'acessado', title: 'Aguardando Autorização', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-500/10', dot: 'bg-orange-500' },
-  { id: 'liberado', title: 'Autorizado / Em Carga', icon: Truck, color: 'text-primary', bg: 'bg-primary/10', dot: 'bg-primary' },
+  { id: 'pendente_revisao', title: 'Pendente de Revisão', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-500/10', dot: 'bg-orange-500' },
+  { id: 'validado', title: 'Validado / Em Carga', icon: Truck, color: 'text-primary', bg: 'bg-primary/10', dot: 'bg-primary' },
   { id: 'bloqueado', title: 'Bloqueado', icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive' },
 ];
 
@@ -51,13 +51,13 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
     setApproving(id);
     try {
       await base44.entities.AccessLog.update(id, {
-        status: 'liberado',
+        status: 'validado',
         aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
         aprovado_por_cpf: colaborador.cpf,
         data_aprovacao: new Date().toISOString(),
         motivo_bloqueio: '',
       });
-      await logApproval(id, 'liberado', acessos, null);
+      await logApproval(id, 'validado', acessos, null);
       onRefresh();
     } catch (e) {}
     setApproving(null);
@@ -84,7 +84,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
     const log = allAcessos.find(a => a.id === id);
     if (!log) return;
     const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
-    const action = newStatus === 'liberado' ? 'Acesso autorizado' : 'Acesso bloqueado';
+    const action = newStatus === 'validado' ? 'Acesso autorizado' : 'Acesso bloqueado';
     const details = `Placa: ${log.veiculo_placa} | Motorista: ${log.motorista_nome || '—'} | Operador: ${log.operador_nome || '—'}${blockReason ? ' | Motivo: ' + blockReason : ''}`;
 
     await base44.entities.AuditLog.create({
@@ -100,9 +100,9 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
       const op = operators[0];
       if (op) {
         await base44.entities.Notification.create({
-          title: newStatus === 'liberado' ? 'Acesso Autorizado' : 'Acesso Bloqueado',
-          message: `Veículo ${log.veiculo_placa} — ${newStatus === 'liberado' ? 'autorizado' : 'bloqueado'} por ${editorName}${blockReason ? ' | Motivo: ' + blockReason : ''}`,
-          type: newStatus === 'liberado' ? 'vehicle_release' : 'admin_ops',
+          title: newStatus === 'validado' ? 'Acesso Validado' : 'Acesso Bloqueado',
+          message: `Veículo ${log.veiculo_placa} — ${newStatus === 'validado' ? 'validado' : 'bloqueado'} por ${editorName}${blockReason ? ' | Motivo: ' + blockReason : ''}`,
+          type: newStatus === 'validado' ? 'vehicle_release' : 'admin_ops',
           sender_name: editorName,
           target_user_id: op.id,
           branch_id: colaborador.filial_id,
@@ -163,7 +163,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
                               )}
 
                               {/* Approval actions on pending items */}
-                              {col.id === 'acessado' && canApprove && (
+                              {col.id === 'pendente_revisao' && canApprove && (
                                 <div className="flex gap-1.5 mt-2">
                                   <Button
                                     size="sm"
@@ -186,10 +186,10 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
                               )}
 
                               {/* Approval info on authorized/blocked items */}
-                              {col.id !== 'acessado' && item.aprovado_por && (
+                              {col.id !== 'pendente_revisao' && item.aprovado_por && (
                                 <div className="mt-2 pt-2 border-t border-border/50">
                                   <p className="text-xs text-muted-foreground">
-                                    {col.id === 'liberado' ? 'Autorizado' : 'Bloqueado'} por: <span className="font-medium text-foreground">{item.aprovado_por}</span>
+                                    {col.id === 'validado' ? 'Validado' : 'Bloqueado'} por: <span className="font-medium text-foreground">{item.aprovado_por}</span>
                                   </p>
                                   {item.data_aprovacao && (
                                     <p className="text-xs text-muted-foreground">
@@ -208,7 +208,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
                       {provided.placeholder}
                       {items.length === 0 && (
                         <p className="text-xs text-muted-foreground text-center py-4">
-                          {col.id === 'acessado' ? 'Nenhum veículo aguardando' : 'Arraste veículos para cá'}
+                          {col.id === 'pendente_revisao' ? 'Nenhum veículo aguardando' : 'Arraste veículos para cá'}
                         </p>
                       )}
                     </div>

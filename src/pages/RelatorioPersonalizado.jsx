@@ -19,7 +19,7 @@ const ALL_COLUMNS = {
   observacao: 'Observação',
 };
 
-const ALL_STATUSES = ['acessado', 'liberado', 'bloqueado'];
+const ALL_STATUSES = ['validado', 'bloqueado', 'pendente_revisao'];
 
 export default function RelatorioPersonalizado() {
   const { colaborador } = useProfarmaAuth();

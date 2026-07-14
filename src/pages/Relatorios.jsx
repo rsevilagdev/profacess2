@@ -66,7 +66,7 @@ export default function Relatorios() {
   periodLogs.forEach(l => {
     const d = new Date(l.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: dayCount <= 7 ? 'short' : '2-digit' });
     if (days[d]) {
-      if (l.status === 'liberado') days[d].liberado++;
+      if (l.status === 'validado') days[d].liberado++;
       else if (l.status === 'bloqueado') days[d].bloqueado++;
       else days[d].acessado++;
     }
@@ -80,20 +80,20 @@ export default function Relatorios() {
     const name = l.filial_nome || 'Sem filial';
     if (!branchMap[name]) branchMap[name] = { filial: name, liberado: 0, bloqueado: 0, acessado: 0, total: 0 };
     branchMap[name].total++;
-    if (l.status === 'liberado') branchMap[name].liberado++;
+    if (l.status === 'validado') branchMap[name].liberado++;
     else if (l.status === 'bloqueado') branchMap[name].bloqueado++;
     else branchMap[name].acessado++;
   });
   const branchData = Object.values(branchMap).filter(b => b.total > 0).sort((a, b) => b.total - a.total);
 
   // Status distribution
-  const liberado = periodLogs.filter(l => l.status === 'liberado').length;
+  const validado = periodLogs.filter(l => l.status === 'validado').length;
   const bloqueado = periodLogs.filter(l => l.status === 'bloqueado').length;
-  const acessado = periodLogs.filter(l => l.status === 'acessado').length;
+  const pendente = periodLogs.filter(l => l.status === 'pendente_revisao').length;
   const statusData = [
-    { name: 'Liberado', value: liberado, color: 'hsl(173 100% 21%)' },
+    { name: 'Validado', value: validado, color: 'hsl(173 100% 21%)' },
     { name: 'Bloqueado', value: bloqueado, color: 'hsl(0 62% 50%)' },
-    { name: 'Acessado', value: acessado, color: 'hsl(30 80% 50%)' },
+    { name: 'Pendente', value: pendente, color: 'hsl(30 80% 50%)' },
   ];
 
   // Entry vs Exit
@@ -105,12 +105,12 @@ export default function Relatorios() {
   ];
 
   // Compliance metrics
-  const veiculosAtivos = veiculos.filter(v => v.status === 'ativo').length;
-  const motoristasAtivos = motoristas.filter(m => m.status === 'ativo').length;
+  const veiculosAtivos = veiculos.filter(v => v.status === 'validado').length;
+  const motoristasAtivos = motoristas.filter(m => m.status === 'validado').length;
   const motoristasVerificados = motoristas.filter(m => m.documento_verificado).length;
   const complianceVeiculos = veiculos.length > 0 ? Math.round((veiculosAtivos / veiculos.length) * 100) : 0;
   const complianceMotoristas = motoristas.length > 0 ? Math.round((motoristasAtivos / motoristas.length) * 100) : 0;
-  const complianceDocs = motoristas.length > 0 ? Math.round((motoristasVerificados / motoristas.length) * 100) : 0;
+
 
   return (
     <div className="space-y-6 fade-in">
@@ -160,7 +160,7 @@ export default function Relatorios() {
         </div>
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
           <CheckCircle className="h-5 w-5 text-primary mb-2" />
-          <p className="text-2xl font-bold font-heading">{liberado}</p>
+          <p className="text-2xl font-bold font-heading">{validado}</p>
           <p className="text-sm text-muted-foreground">Liberações</p>
         </div>
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
@@ -168,11 +168,7 @@ export default function Relatorios() {
           <p className="text-2xl font-bold font-heading">{bloqueado}</p>
           <p className="text-sm text-muted-foreground">Bloqueios</p>
         </div>
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <Percent className="h-5 w-5 text-primary mb-2" />
-          <p className="text-2xl font-bold font-heading">{complianceDocs}%</p>
-          <p className="text-sm text-muted-foreground">Docs Verificados</p>
-        </div>
+
       </div>
 
       {/* Flow by period */}
@@ -266,9 +262,9 @@ export default function Relatorios() {
       {/* Resumo de Conformidade */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-4">Resumo de Conformidade</h3>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <div className="bg-muted rounded-2xl p-4">
-            <p className="text-sm text-muted-foreground mb-1">Veículos Ativos</p>
+            <p className="text-sm text-muted-foreground mb-1">Veículos Validados</p>
             <p className="text-3xl font-bold font-heading text-primary">{complianceVeiculos}%</p>
             <div className="h-2 bg-background rounded-full mt-2 overflow-hidden">
               <div className="h-full bg-primary rounded-full" style={{ width: `${complianceVeiculos}%` }} />
@@ -276,20 +272,12 @@ export default function Relatorios() {
             <p className="text-xs text-muted-foreground mt-1">{veiculosAtivos} de {veiculos.length} veículos</p>
           </div>
           <div className="bg-muted rounded-2xl p-4">
-            <p className="text-sm text-muted-foreground mb-1">Motoristas Ativos</p>
+            <p className="text-sm text-muted-foreground mb-1">Motoristas Validados</p>
             <p className="text-3xl font-bold font-heading text-primary">{complianceMotoristas}%</p>
             <div className="h-2 bg-background rounded-full mt-2 overflow-hidden">
               <div className="h-full bg-primary rounded-full" style={{ width: `${complianceMotoristas}%` }} />
             </div>
             <p className="text-xs text-muted-foreground mt-1">{motoristasAtivos} de {motoristas.length} motoristas</p>
-          </div>
-          <div className="bg-muted rounded-2xl p-4">
-            <p className="text-sm text-muted-foreground mb-1">Documentos Verificados</p>
-            <p className="text-3xl font-bold font-heading text-primary">{complianceDocs}%</p>
-            <div className="h-2 bg-background rounded-full mt-2 overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: `${complianceDocs}%` }} />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{motoristasVerificados} de {motoristas.length} motoristas</p>
           </div>
         </div>
       </div>

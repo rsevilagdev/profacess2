@@ -42,11 +42,11 @@
     "status": {
       "type": "string",
       "enum": [
-        "acessado",
-        "liberado",
-        "bloqueado"
+        "validado",
+        "bloqueado",
+        "pendente_revisao"
       ],
-      "default": "acessado",
+      "default": "validado",
       "description": "Status do acesso"
     },
     "carregado": {

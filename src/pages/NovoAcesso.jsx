@@ -80,11 +80,11 @@ export default function NovoAcesso() {
       const m = motoristas.length > 0 ? motoristas[0] : null;
       setVeiculo(v); setMotorista(m);
 
-      const vOk = v && v.status === 'ativo';
-      const mOk = m && m.status === 'ativo';
+      const vOk = v && v.status === 'validado';
+      const mOk = m && m.status === 'validado';
 
       if (vOk && mOk) {
-        // Both validated — register in access queue
+        // Both validated — register in exit release queue
         await base44.entities.AccessLog.create({
           veiculo_placa: v.placa,
           motorista_nome: m.nome + (m.sobrenome ? ' ' + m.sobrenome : ''),
@@ -92,14 +92,14 @@ export default function NovoAcesso() {
           ajudante_nome: hasAjudante ? ajudanteNome : '',
           ajudante_cpf: hasAjudante ? ajudanteCpf.replace(/\D/g, '') : '',
           filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome,
-          tipo: 'entrada', status: 'acessado',
+          tipo: 'entrada', status: 'validado',
           operador_nome: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
           operador_cpf: colaborador.cpf,
           observacao: hasAjudante ? `Acompanhante: ${ajudanteNome} - CPF: ${ajudanteCpf}` : ''
         });
         await base44.entities.AuditLog.create({
           user_name: colaborador.nome, user_cpf: colaborador.cpf,
-          action: 'Acesso liberado para fila',
+          action: 'Acesso validado para fila',
           details: `Placa: ${v.placa} | Motorista CPF: ${m.cpf} | Ajudante: ${hasAjudante ? ajudanteNome : 'N/A'}`,
           ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
         });
@@ -118,16 +118,14 @@ export default function NovoAcesso() {
   const addToDB = async (type) => {
     if (type === 'veiculo' && !veiculo) {
       await base44.entities.Vehicle.create({
-        placa: placa.toUpperCase(), modelo: '', status: 'ativo', status_opentech: '',
-        filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome
+        placa: placa.toUpperCase(), modelo: '', status: 'pendente_revisao', status_opentech: ''
       });
       await logAudit('Veículo cadastrado via revisão', `Placa: ${placa.toUpperCase()}`);
     }
     if (type === 'motorista' && !motorista) {
       const cpfDigits = cpf.replace(/\D/g, '');
       await base44.entities.Driver.create({
-        nome: '', sobrenome: '', cpf: cpfDigits, status: 'ativo', status_opentech: '',
-        filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome
+        nome: '', cpf: cpfDigits, status: 'pendente_revisao', status_opentech: ''
       });
       await logAudit('Motorista cadastrado via revisão', `CPF: ${cpfDigits}`);
     }
@@ -182,7 +180,7 @@ export default function NovoAcesso() {
   };
 
   const liberarSaida = async (log) => {
-    await base44.entities.AccessLog.update(log.id, { status: 'liberado', tipo: 'saida' });
+    await base44.entities.AccessLog.update(log.id, { tipo: 'saida' });
     await base44.entities.AuditLog.create({
       user_name: colaborador.nome, user_cpf: colaborador.cpf,
       action: 'Saída liberada', details: `Placa: ${log.veiculo_placa}`,
@@ -199,7 +197,7 @@ export default function NovoAcesso() {
   return (
     <div className="space-y-6 fade-in">
       <div>
-        <h1 className="brand-title text-2xl">Novo Acesso</h1>
+        <h1 className="brand-title text-2xl">Acessos</h1>
         <p className="text-sm text-muted-foreground">Registro de acesso com verificação de placa e CPF do motorista</p>
       </div>
 
@@ -258,13 +256,13 @@ export default function NovoAcesso() {
               <p className="text-xs text-muted-foreground">Veículo</p>
               <p className="font-medium">{veiculo.placa}</p>
               <p className="text-sm">{veiculo.modelo || '—'}</p>
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Ativo</span>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Validado</span>
             </div>
             <div className="bg-card rounded-xl p-3">
               <p className="text-xs text-muted-foreground">Motorista</p>
               <p className="font-medium">{motorista.nome} {motorista.sobrenome || ''}</p>
               <p className="text-sm">{motorista.cpf}</p>
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Ativo</span>
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Validado</span>
             </div>
           </div>
           {hasAjudante && (
@@ -290,7 +288,7 @@ export default function NovoAcesso() {
             <div className={`rounded-xl p-3 border ${veiculo ? 'bg-primary/5 border-primary/20' : 'bg-destructive/5 border-destructive/20'}`}>
               <p className="text-xs text-muted-foreground">Veículo — {placa.toUpperCase()}</p>
               {veiculo ? (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${veiculo.status === 'ativo' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{veiculo.status}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${veiculo.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{veiculo.status}</span>
               ) : (
                 <p className="text-sm text-destructive">Não encontrado na base</p>
               )}
@@ -298,7 +296,7 @@ export default function NovoAcesso() {
             <div className={`rounded-xl p-3 border ${motorista ? 'bg-primary/5 border-primary/20' : 'bg-destructive/5 border-destructive/20'}`}>
               <p className="text-xs text-muted-foreground">Motorista — {cpf}</p>
               {motorista ? (
-                <span className={`text-xs px-2 py-0.5 rounded-full ${motorista.status === 'ativo' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{motorista.status}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${motorista.status === 'validado' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{motorista.status}</span>
               ) : (
                 <p className="text-sm text-destructive">Não encontrado na base</p>
               )}
@@ -310,8 +308,8 @@ export default function NovoAcesso() {
               <div className="flex flex-wrap gap-2">
                 {!veiculo && <Button onClick={() => addToDB('veiculo')} className="h-10 rounded-xl"><UserPlus className="h-4 w-4" /> Cadastrar Veículo</Button>}
                 {!motorista && <Button onClick={() => addToDB('motorista')} className="h-10 rounded-xl"><UserPlus className="h-4 w-4" /> Cadastrar Motorista</Button>}
-                {(veiculo && veiculo.status !== 'ativo') && <Button onClick={() => base44.entities.Vehicle.update(veiculo.id, { status: 'ativo' }).then(buscar)} className="h-10 rounded-xl">Ativar Veículo</Button>}
-                {(motorista && motorista.status !== 'ativo') && <Button onClick={() => base44.entities.Driver.update(motorista.id, { status: 'ativo' }).then(buscar)} className="h-10 rounded-xl">Ativar Motorista</Button>}
+                {(veiculo && veiculo.status !== 'validado') && <Button onClick={() => base44.entities.Vehicle.update(veiculo.id, { status: 'validado' }).then(buscar)} className="h-10 rounded-xl">Validar Veículo</Button>}
+                {(motorista && motorista.status !== 'validado') && <Button onClick={() => base44.entities.Driver.update(motorista.id, { status: 'validado' }).then(buscar)} className="h-10 rounded-xl">Validar Motorista</Button>}
               </div>
             ) : (
               <Button onClick={solicitarAutorizacao} disabled={requestingAuth} className="h-10 rounded-xl">
@@ -359,11 +357,11 @@ export default function NovoAcesso() {
       {/* Queue List */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-3">Fila de Liberação de Saída</h3>
-        {acessos.filter(a => a.status === 'acessado').length === 0 ? (
+        {acessos.filter(a => a.status === 'validado' && a.tipo === 'entrada').length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum veículo aguardando liberação</p>
         ) : (
           <div className="space-y-2">
-            {acessos.filter(a => a.status === 'acessado').map(log => (
+            {acessos.filter(a => a.status === 'validado' && a.tipo === 'entrada').map(log => (
               <div key={log.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
                 <div className="flex items-center gap-3">
                   <Truck className="h-5 w-5 text-primary" />

@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.31';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.38';
 
 Deno.serve(async (req) => {
   try {
@@ -23,18 +23,16 @@ Deno.serve(async (req) => {
     const firstRecord = rawRecords[0];
     const columns = Object.keys(firstRecord).map(k => k.toUpperCase().trim());
     const hasVehicleCols = columns.some(c => c.includes('PLACA') || c.includes('VEIC'));
-    const hasDriverCols = columns.some(c => c.includes('CPF') || c.includes('MOTORISTA') || c.includes('CNH') || c.includes('NOME'));
+    const hasDriverCols = columns.some(c => c.includes('CPF') || c.includes('MOTORISTA') || c.includes('NOME'));
     const isVehicle = hasVehicleCols && !hasDriverCols;
     const isDriver = hasDriverCols && !hasVehicleCols;
 
-    // If ambiguous, check more
     let entityType;
     if (isVehicle) entityType = 'Vehicle';
     else if (isDriver) entityType = 'Driver';
     else if (hasVehicleCols && hasDriverCols) entityType = 'Vehicle';
     else entityType = 'Driver';
 
-    // Normalize column names
     const normalizeKey = (key) => key.toUpperCase().trim();
     const findValue = (record, possibleKeys) => {
       for (const key of Object.keys(record)) {
@@ -46,9 +44,19 @@ Deno.serve(async (req) => {
       return '';
     };
 
+    // Map Excel status text to enum
+    const mapStatus = (raw) => {
+      const s = String(raw || '').toUpperCase().trim();
+      if (s.includes('BLOQ')) return 'bloqueado';
+      if (s.includes('VALID')) return 'validado';
+      if (s.includes('PEND') || s.includes('REVIS')) return 'pendente_revisao';
+      return 'pendente_revisao';
+    };
+
     let created = 0, updated = 0, errors = 0;
 
     if (entityType === 'Vehicle') {
+      // Excel format: A1=PLACA, B1=MODELO, C1=EST. VEICULO (status)
       const existing = await base44.asServiceRole.entities.Vehicle.list('-created_date', 5000);
       const placaMap = {};
       existing.forEach(v => { if (v.placa) placaMap[v.placa.toUpperCase()] = v; });
@@ -58,20 +66,22 @@ Deno.serve(async (req) => {
           const placa = String(findValue(record, ['PLACA']) || '').toUpperCase().trim();
           if (!placa) { errors++; continue; }
           const modelo = String(findValue(record, ['MODELO']) || '').trim();
-          const statusOpentech = String(findValue(record, ['EST', 'STATUS', 'OPENTECH']) || '').trim();
+          const statusRaw = String(findValue(record, ['EST', 'STATUS', 'OPENTECH', 'VEICULO']) || '').trim();
+          const status = mapStatus(statusRaw);
 
           if (placaMap[placa]) {
-            await base44.asServiceRole.entities.Vehicle.update(placaMap[placa].id, { status_opentech: statusOpentech });
+            await base44.asServiceRole.entities.Vehicle.update(placaMap[placa].id, { modelo, status, status_opentech: statusRaw });
             updated++;
           } else {
             await base44.asServiceRole.entities.Vehicle.create({
-              placa, modelo, status_opentech: statusOpentech, status: 'ativo'
+              placa, modelo, status, status_opentech: statusRaw
             });
             created++;
           }
         } catch (e) { errors++; }
       }
     } else {
+      // Excel format: A1=CPF, B1=NOME E SOBRENOME, C1=EST. DE MOTORISTA (status)
       const existing = await base44.asServiceRole.entities.Driver.list('-created_date', 5000);
       const cpfMap = {};
       existing.forEach(d => { if (d.cpf) cpfMap[String(d.cpf).replace(/\D/g, '')] = d; });
@@ -80,16 +90,16 @@ Deno.serve(async (req) => {
         try {
           const cpf = String(findValue(record, ['CPF']) || '').replace(/\D/g, '');
           if (!cpf) { errors++; continue; }
-          const nome = String(findValue(record, ['NOME', 'MOTORISTA']) || '').trim();
-          const sobrenome = String(findValue(record, ['SOBRENOME', 'SOBRENOME DO MOTORISTA']) || '').trim();
-          const statusOpentech = String(findValue(record, ['EST', 'STATUS', 'OPENTECH']) || '').trim();
+          const nomeCompleto = String(findValue(record, ['NOME', 'MOTORISTA', 'NOME E SOBRENOME']) || '').trim();
+          const statusRaw = String(findValue(record, ['EST', 'STATUS', 'OPENTECH', 'MOTORISTA']) || '').trim();
+          const status = mapStatus(statusRaw);
 
           if (cpfMap[cpf]) {
-            await base44.asServiceRole.entities.Driver.update(cpfMap[cpf].id, { status_opentech: statusOpentech });
+            await base44.asServiceRole.entities.Driver.update(cpfMap[cpf].id, { nome: nomeCompleto, status, status_opentech: statusRaw });
             updated++;
           } else {
             await base44.asServiceRole.entities.Driver.create({
-              nome, sobrenome, cpf, status_opentech: statusOpentech, status: 'ativo'
+              nome: nomeCompleto, cpf, status, status_opentech: statusRaw
             });
             created++;
           }

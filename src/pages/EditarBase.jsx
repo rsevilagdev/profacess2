@@ -34,7 +34,7 @@ export default function EditarBase() {
     if (!search) return true;
     const term = search.toLowerCase();
     if (tab === 'veiculos') return item.placa?.toLowerCase().includes(term) || item.modelo?.toLowerCase().includes(term) || item.status_opentech?.toLowerCase().includes(term);
-    return item.nome?.toLowerCase().includes(term) || item.sobrenome?.toLowerCase().includes(term) || item.cpf?.includes(search);
+    return item.nome?.toLowerCase().includes(term) || item.cpf?.includes(search);
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -42,8 +42,8 @@ export default function EditarBase() {
   const openNew = () => {
     setEditing(null);
     setForm(tab === 'veiculos'
-      ? { placa: '', modelo: '', status: 'ativo', status_opentech: '', observacao: '' }
-      : { nome: '', sobrenome: '', cpf: '', status: 'ativo', status_opentech: '', cnh: '', cnh_validade: '', telefone: '', observacao: '' });
+      ? { placa: '', modelo: '', status: 'pendente_revisao' }
+      : { nome: '', cpf: '', status: 'pendente_revisao' });
     setShowForm(true);
   };
 
@@ -53,7 +53,7 @@ export default function EditarBase() {
     setSaving(true);
     const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
     if (tab === 'veiculos') {
-      const data = { ...form, placa: form.placa?.toUpperCase(), filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome };
+      const data = { ...form, placa: form.placa?.toUpperCase() };
       if (editing) {
         await base44.entities.Vehicle.update(editing.id, data);
         await logAudit('Veículo editado', `Placa: ${data.placa} | Editado por: ${editorName}`);
@@ -62,13 +62,13 @@ export default function EditarBase() {
         await logAudit('Veículo cadastrado', `Placa: ${data.placa} | Cadastrado por: ${editorName}`);
       }
     } else {
-      const data = { ...form, filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome };
+      const data = { ...form };
       if (editing) {
         await base44.entities.Driver.update(editing.id, data);
-        await logAudit('Motorista editado', `Nome: ${data.nome} ${data.sobrenome || ''} | Editado por: ${editorName}`);
+        await logAudit('Motorista editado', `Nome: ${data.nome} | Editado por: ${editorName}`);
       } else {
         await base44.entities.Driver.create(data);
-        await logAudit('Motorista cadastrado', `Nome: ${data.nome} ${data.sobrenome || ''} | Cadastrado por: ${editorName}`);
+        await logAudit('Motorista cadastrado', `Nome: ${data.nome} | Cadastrado por: ${editorName}`);
       }
     }
     setSaving(false); setShowForm(false); loadData();
@@ -82,7 +82,7 @@ export default function EditarBase() {
       await logAudit('Veículo excluído', `Placa: ${item.placa} | Excluído por: ${editorName}`);
     } else {
       await base44.entities.Driver.delete(item.id);
-      await logAudit('Motorista excluído', `Nome: ${item.nome} ${item.sobrenome || ''} | Excluído por: ${editorName}`);
+      await logAudit('Motorista excluído', `Nome: ${item.nome} | Excluído por: ${editorName}`);
     }
     loadData();
   };
@@ -137,20 +137,18 @@ export default function EditarBase() {
                     {tab === 'veiculos' ? (
                       <>
                         <p className="text-sm font-medium">{item.placa}</p>
-                        <p className="text-xs text-muted-foreground">{item.modelo || '—'} · {item.transportadora || '—'}</p>
-                        {item.status_opentech && <p className="text-xs text-muted-foreground">Opentech: {item.status_opentech}</p>}
+                        <p className="text-xs text-muted-foreground">{item.modelo || '—'}</p>
                       </>
                     ) : (
                       <>
-                        <p className="text-sm font-medium">{item.nome} {item.sobrenome || ''}</p>
+                        <p className="text-sm font-medium">{item.nome}</p>
                         <p className="text-xs text-muted-foreground">{item.cpf}</p>
-                        {item.status_opentech && <p className="text-xs text-muted-foreground">Opentech: {item.status_opentech}</p>}
                       </>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${item.status === 'ativo' ? 'bg-primary/10 text-primary' : item.status === 'bloqueado' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>{item.status}</span>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${item.status === 'validado' ? 'bg-primary/10 text-primary' : item.status === 'bloqueado' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>{item.status === 'pendente_revisao' ? 'Pendente' : item.status}</span>
                   <button onClick={() => openEdit(item)} className="h-8 w-8 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-4 w-4" /></button>
                   <button onClick={() => remove(item)} className="h-8 w-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
                 </div>
@@ -182,26 +180,17 @@ export default function EditarBase() {
                 <>
                   <Field label="Placa *" value={form.placa || ''} onChange={v => setForm({...form, placa: v.toUpperCase()})} />
                   <Field label="Modelo" value={form.modelo || ''} onChange={v => setForm({...form, modelo: v})} />
-                  <Field label="Status Opentech" value={form.status_opentech || ''} onChange={v => setForm({...form, status_opentech: v})} />
-                  <SelectField label="Status" value={form.status || 'ativo'} options={['ativo', 'bloqueado', 'manutencao']} onChange={v => setForm({...form, status: v})} />
-                  <Field label="Transportadora" value={form.transportadora || ''} onChange={v => setForm({...form, transportadora: v})} />
-                  <Field label="Observação" value={form.observacao || ''} onChange={v => setForm({...form, observacao: v})} />
+                  <SelectField label="Status" value={form.status || 'pendente_revisao'} options={['validado', 'bloqueado', 'pendente_revisao']} onChange={v => setForm({...form, status: v})} />
                 </>
               ) : (
                 <>
-                  <Field label="Nome *" value={form.nome || ''} onChange={v => setForm({...form, nome: v})} />
-                  <Field label="Sobrenome" value={form.sobrenome || ''} onChange={v => setForm({...form, sobrenome: v})} />
+                  <Field label="Nome e Sobrenome *" value={form.nome || ''} onChange={v => setForm({...form, nome: v})} />
                   <Field label="CPF *" value={form.cpf || ''} onChange={v => setForm({...form, cpf: v})} />
-                  <Field label="CNH" value={form.cnh || ''} onChange={v => setForm({...form, cnh: v})} />
-                  <DateField label="Validade CNH" value={form.cnh_validade || ''} onChange={v => setForm({...form, cnh_validade: v})} />
-                  <Field label="Telefone" value={form.telefone || ''} onChange={v => setForm({...form, telefone: v})} />
-                  <Field label="Status Opentech" value={form.status_opentech || ''} onChange={v => setForm({...form, status_opentech: v})} />
-                  <SelectField label="Status" value={form.status || 'ativo'} options={['ativo', 'bloqueado', 'pendente']} onChange={v => setForm({...form, status: v})} />
-                  <Field label="Observação" value={form.observacao || ''} onChange={v => setForm({...form, observacao: v})} />
+                  <SelectField label="Status" value={form.status || 'pendente_revisao'} options={['validado', 'bloqueado', 'pendente_revisao']} onChange={v => setForm({...form, status: v})} />
                 </>
               )}
               <div className="text-xs text-muted-foreground bg-muted rounded-xl p-2 flex items-center gap-2">
-                <User className="h-3 w-3" /> Modificado por: {colaborador.nome} {colaborador.sobrenome || ''}
+                <User className="h-3 w-3" /> Modificado por: {colaborador.nome}
               </div>
               <Button onClick={save} disabled={saving} className="w-full h-12 rounded-2xl">
                 {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Check className="h-4 w-4" />} Salvar

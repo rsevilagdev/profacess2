@@ -23,15 +23,11 @@ import Auditoria from '@/pages/Auditoria';
 import GerenciamentoFiliais from '@/pages/GerenciamentoFiliais';
 import Configuracoes from '@/pages/Configuracoes';
 import ConfiguracoesSeguranca from '@/pages/ConfiguracoesSeguranca';
-import VerificarCNH from '@/pages/VerificarCNH';
 import ExportarDados from '@/pages/ExportarDados';
 import Suporte from '@/pages/Suporte';
 import TermosUso from '@/pages/TermosUso';
 import Perfil from '@/pages/Perfil';
-import GestaoVeiculos from '@/pages/GestaoVeiculos';
-import VerificacaoMotoristas from '@/pages/VerificacaoMotoristas';
 import AuditoriaSistema from '@/pages/AuditoriaSistema';
-import GestaoBackups from '@/pages/GestaoBackups';
 import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
 import AppLayout from '@/components/layout/AppLayout';
 
@@ -48,7 +44,7 @@ function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route element={<AppLayout />}>
                 <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/novo-acesso" element={<NovoAcesso />} />
+                <Route path="/acessos" element={<NovoAcesso />} />
                 <Route path="/painel-bloqueio" element={<PainelBloqueio />} />
                 <Route path="/editar-base" element={<EditarBase />} />
                 <Route path="/relatorios" element={<Relatorios />} />
@@ -59,15 +55,11 @@ function App() {
                 <Route path="/gerenciamento-filiais" element={<GerenciamentoFiliais />} />
                 <Route path="/configuracoes" element={<Configuracoes />} />
                 <Route path="/configuracoes-seguranca" element={<ConfiguracoesSeguranca />} />
-                <Route path="/verificar-cnh" element={<VerificarCNH />} />
                 <Route path="/exportar-dados" element={<ExportarDados />} />
                 <Route path="/suporte" element={<Suporte />} />
                 <Route path="/termos-uso" element={<TermosUso />} />
                 <Route path="/perfil" element={<Perfil />} />
-                <Route path="/gestao-veiculos" element={<GestaoVeiculos />} />
-                <Route path="/verificacao-motoristas" element={<VerificacaoMotoristas />} />
                 <Route path="/auditoria-sistema" element={<AuditoriaSistema />} />
-                <Route path="/gestao-backups" element={<GestaoBackups />} />
                 <Route path="/configuracoes-notificacoes" element={<ConfiguracoesNotificacoes />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />

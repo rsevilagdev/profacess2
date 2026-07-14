@@ -4,11 +4,7 @@
   "properties": {
     "nome": {
       "type": "string",
-      "description": "Nome do motorista"
-    },
-    "sobrenome": {
-      "type": "string",
-      "description": "Sobrenome do motorista"
+      "description": "Nome e sobrenome do motorista"
     },
     "cpf": {
       "type": "string",
@@ -42,11 +38,11 @@
     "status": {
       "type": "string",
       "enum": [
-        "ativo",
+        "validado",
         "bloqueado",
-        "pendente"
+        "pendente_revisao"
       ],
-      "default": "ativo",
+      "default": "pendente_revisao",
       "description": "Status do motorista"
     },
     "status_opentech": {
@@ -65,6 +61,10 @@
     "observacao": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"
+    },
+    "comprovante_foto": {
+      "type": "string",
+      "description": "URL da foto comprovante de atualiza\u00e7\u00e3o no Opentech"
     }
   },
   "required": [
