@@ -136,16 +136,16 @@ export default function Averbacao() {
             {loading ? (
               <>
                 <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <span className="text-sm text-muted-foreground">Processando planilha...</span>
+                <span className="text-sm text-muted-foreground">Processando arquivo...</span>
               </>
             ) : (
               <>
                 <FileSpreadsheet className="h-8 w-8 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Selecione a planilha de averbação (.xlsx)</span>
-                <span className="text-xs text-muted-foreground/70">Clique para selecionar o arquivo</span>
+                <span className="text-sm text-muted-foreground">Selecione o arquivo de averbação (.txt ou .xlsx)</span>
+                <span className="text-xs text-muted-foreground/70">Serão eliminados duplicados por NumNf e ordenados por data</span>
               </>
             )}
-            <input type="file" accept=".xlsx,.xls" ref={fileRef} onChange={handleFile} className="hidden" />
+            <input type="file" accept=".txt,.csv,.xlsx,.xls" ref={fileRef} onChange={handleFile} className="hidden" />
           </label>
         </div>
       </div>
@@ -162,7 +162,10 @@ export default function Averbacao() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="brand-title text-2xl">Averbação</h1>
-          <p className="text-sm text-muted-foreground">{data.total} registros processados</p>
+          <p className="text-sm text-muted-foreground">
+            {data.total} registros processados
+            {data.duplicates_removed > 0 && <span className="text-orange-600"> · {data.duplicates_removed} duplicados removidos</span>}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button onClick={resetFile} variant="secondary" className="h-12 rounded-2xl">
@@ -254,9 +257,8 @@ export default function Averbacao() {
                     ? formatDate(dayRecords[0].data_embarque)
                     : MESES[Number(key)];
                   const groupTotal = dayRecords.reduce((s, r) => s + (r.valor || 0), 0);
-                  const sorted = [...dayRecords].sort((a, b) => a.itinerario - b.itinerario);
                   return (
-                    <FragmentGroup key={key} label={groupLabel} records={sorted} total={groupTotal} isMonth={view === 'semestral'} />
+                    <FragmentGroup key={key} label={groupLabel} records={dayRecords} total={groupTotal} isMonth={view === 'semestral'} />
                   );
                 })
               )}
