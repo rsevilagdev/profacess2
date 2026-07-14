@@ -6,6 +6,8 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import DropdownCell from './DropdownCell';
 
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
 export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,8 +41,14 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   };
 
   const meses = [...new Set(records.map(r => r.mes).filter(Boolean))];
-  const dias = [...new Set(records.filter(r => r.mes === selectedMes).map(r => r.dia).filter(Boolean))]
-    .sort((a, b) => Number(a) - Number(b));
+  const dias = (() => {
+    if (!selectedMes) return [];
+    const monthIdx = MESES.indexOf(selectedMes);
+    if (monthIdx < 0) return [];
+    const year = new Date().getFullYear();
+    const count = new Date(year, monthIdx + 1, 0).getDate();
+    return Array.from({ length: count }, (_, i) => String(i + 1).padStart(2, '0'));
+  })();
 
   const filtered = records.filter(r =>
     (!selectedMes || r.mes === selectedMes) &&

@@ -98,11 +98,12 @@ function parseDate(val) {
 function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
   const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
-  const colVlNf = headers.length > 0 ? headers[headers.length - 1] : null;
+  const colNumNf = findColumn(headers, ['NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUNF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
+  const lastCol = headers.length > 0 ? headers[headers.length - 1] : null;
 
-  if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: colVlNf, priorityColumn: null };
+  if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: lastCol, priorityColumn: null };
 
-  const vlNfIndex = colVlNf ? headers.indexOf(colVlNf) : -1;
+  const vlNfIndex = colNumNf ? headers.indexOf(colNumNf) : (lastCol ? headers.indexOf(lastCol) : -1);
 
   const groups = {};
   const groupKeys = [];
@@ -142,7 +143,7 @@ function groupByPriority(rows, headers) {
       if (vlNfIndex >= 0 && idx >= vlNfIndex) {
         const sum = groupRows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
         groupedRow[h] = formatNumber(sum);
-        if (h === colVlNf) totalGeral += sum;
+        if (h === lastCol) totalGeral += sum;
       } else {
         const uniqueValues = [...new Set(groupRows.map(r => String(r[h] || '').trim()).filter(Boolean))];
         groupedRow[h] = uniqueValues.length > 1 ? `${uniqueValues[0]} +${uniqueValues.length - 1}` : (uniqueValues[0] || '');
@@ -153,7 +154,7 @@ function groupByPriority(rows, headers) {
     groupedRows.push({ row: groupedRow, lists, count: groupRows.length });
   }
 
-  return { groupedRows, totalGeral, vlNfColumn: colVlNf, priorityColumn: colPrioridade };
+  return { groupedRows, totalGeral, vlNfColumn: lastCol, priorityColumn: colPrioridade };
 }
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -240,7 +241,7 @@ export default function Averbacao() {
     try {
       const colPrioridade = fileData.processedMeta?.priorityColumn || findColumn(fileData.headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
       const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
-      const colVlNf = fileData.processedMeta?.vlNfColumn;
+      const colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
 
       const records = [];
       for (const item of fileData.processedRows) {
