@@ -91,11 +91,9 @@ function groupSavedByPriority(records) {
           : (uniqueValues[0] || '');
         mergedLists[col] = uniqueValues;
       } else {
-        let sum = 0;
-        for (const r of groupRecords) {
-          sum += parseNum(r.parsedRow?.[col]);
-        }
-        mergedRow[col] = formatNum(sum);
+        // Each record's dados_json already contains the TOTAL sum for that priority.
+        // Do NOT re-sum across per-date records — use the first record's value.
+        mergedRow[col] = groupRecords[0].parsedRow?.[col] || '';
       }
     }
 

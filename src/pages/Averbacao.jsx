@@ -103,7 +103,11 @@ function groupByPriority(rows, headers) {
 
   if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: lastCol, priorityColumn: null };
 
-  const vlNfIndex = colNumNf ? headers.indexOf(colNumNf) : (lastCol ? headers.indexOf(lastCol) : -1);
+  // Sum columns from the column AFTER NumNf (NumNf is a note number, not a value)
+  const numNfIdx = colNumNf ? headers.indexOf(colNumNf) : -1;
+  const vlNfIndex = (numNfIdx >= 0 && numNfIdx + 1 < headers.length)
+    ? numNfIdx + 1
+    : (lastCol ? headers.indexOf(lastCol) : -1);
 
   const groups = {};
   const groupKeys = [];
