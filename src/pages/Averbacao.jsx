@@ -77,13 +77,21 @@ function formatNumber(val) {
 function parseDate(val) {
   if (!val) return null;
   const str = String(val).trim();
-  let d = new Date(str);
-  if (!isNaN(d)) return d;
-  const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  // Formato BR: DD[sep]MM[sep]YYYY (sep = / - . ou espaço)
+  const brMatch = str.match(/^(\d{1,2})[/\s.-](\d{1,2})[/\s.-](\d{4})/);
   if (brMatch) {
-    d = new Date(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
+    const d = new Date(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
     if (!isNaN(d)) return d;
   }
+  // Formato ISO: YYYY-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (isoMatch) {
+    const d = new Date(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
+    if (!isNaN(d)) return d;
+  }
+  // Fallback
+  const d = new Date(str);
+  if (!isNaN(d)) return d;
   return null;
 }
 
@@ -224,12 +232,15 @@ export default function Averbacao() {
 
       const records = fileData.processedRows.map(item => {
         let mes = '', dia = '', dataRef = '';
-        if (colData && item.lists?.[colData]?.[0]) {
-          const d = parseDate(item.lists[colData][0]);
-          if (d) {
-            mes = MESES[d.getMonth()];
-            dia = String(d.getDate());
-            dataRef = d.toLocaleDateString('pt-BR');
+        if (colData && item.lists?.[colData]) {
+          for (const dateStr of item.lists[colData]) {
+            const d = parseDate(dateStr);
+            if (d) {
+              mes = MESES[d.getMonth()];
+              dia = String(d.getDate()).padStart(2, '0');
+              dataRef = d.toLocaleDateString('pt-BR');
+              break;
+            }
           }
         }
         return {
