@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Loader2, FileText, FileSpreadsheet, Mail, Database } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Loader2, FileText, FileSpreadsheet, Mail, Database, ChevronDown, Check } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
@@ -82,10 +82,15 @@ export default function AverbacaoReport({ tipo, periodo }) {
   const [emailMsg, setEmailMsg] = useState('');
   const [sendingManagers, setSendingManagers] = useState(false);
   const [managersMsg, setManagersMsg] = useState('');
+  const [managersList, setManagersList] = useState([]);
+  const [selectedManagerIds, setSelectedManagerIds] = useState([]);
+  const [managerDropdownOpen, setManagerDropdownOpen] = useState(false);
+  const managerDropdownRef = useRef(null);
 
   useEffect(() => {
     if (!periodo) { setRecords([]); return; }
     loadData();
+    loadManagers();
   }, [tipo, periodo]);
 
   const loadData = async () => {
@@ -103,6 +108,33 @@ export default function AverbacaoReport({ tipo, periodo }) {
     } catch (e) {}
     setLoading(false);
   };
+
+  const loadManagers = async () => {
+    try {
+      const colaboradores = await base44.entities.Colaborador.list('-created_date', 500);
+      const managers = colaboradores.filter(c =>
+        ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) && c.email && c.ativo
+      );
+      setManagersList(managers);
+    } catch (e) {}
+  };
+
+  const toggleManager = (id) => {
+    setSelectedManagerIds(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  useEffect(() => {
+    if (!managerDropdownOpen) return;
+    const handleClick = (e) => {
+      if (managerDropdownRef.current && !managerDropdownRef.current.contains(e.target)) {
+        setManagerDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [managerDropdownOpen]);
 
   // Parse records and build report rows
   const buildReportRows = () => {
@@ -318,25 +350,24 @@ export default function AverbacaoReport({ tipo, periodo }) {
   };
 
   const sendToManagers = async () => {
-    if (reportRows.length === 0) return;
+    if (reportRows.length === 0 || selectedManagerIds.length === 0) return;
     setSendingManagers(true);
     setManagersMsg('');
     try {
-      const colaboradores = await base44.entities.Colaborador.list('-created_date', 500);
-      const managers = colaboradores.filter(c =>
-        ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) && c.email && c.ativo
-      );
-      if (managers.length === 0) {
-        setManagersMsg('Nenhum gestor cadastrado com e-mail encontrado.');
+      const recipients = managersList.filter(m => selectedManagerIds.includes(m.id));
+      if (recipients.length === 0) {
+        setManagersMsg('Nenhum gestor selecionado.');
         setSendingManagers(false);
         return;
       }
       const subject = `${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}`;
       const body = buildEmailBody();
-      await Promise.all(managers.map(m =>
+      await Promise.all(recipients.map(m =>
         base44.integrations.Core.SendEmail({ to: m.email, subject, body })
       ));
-      setManagersMsg(`Enviado para ${managers.length} gestor(es)!`);
+      setManagersMsg(`Enviado para ${recipients.length} gestor(es)!`);
+      setSelectedManagerIds([]);
+      setManagerDropdownOpen(false);
       setTimeout(() => setManagersMsg(''), 6000);
     } catch (e) {
       setManagersMsg('Erro: ' + (e.message || 'desconhecido'));
@@ -433,10 +464,81 @@ export default function AverbacaoReport({ tipo, periodo }) {
                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                 Enviar
               </Button>
-              <Button onClick={sendToManagers} disabled={sendingManagers} variant="default" className="h-9 rounded-xl">
-                {sendingManagers ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
-                Enviar para gestores
-              </Button>
+            </div>
+            {/* Manager multi-select */}
+            <div ref={managerDropdownRef} className="mt-3 relative">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-muted-foreground">Enviar para gestores selecionados</span>
+              </div>
+              <div className="flex gap-2 flex-wrap items-start">
+                <div className="relative flex-1 min-w-[200px]">
+                  <button
+                    type="button"
+                    onClick={() => setManagerDropdownOpen(!managerDropdownOpen)}
+                    className="h-9 w-full px-3 rounded-xl border border-input bg-transparent text-sm flex items-center justify-between gap-2"
+                  >
+                    <span className="truncate">
+                      {selectedManagerIds.length === 0
+                        ? 'Selecionar gestores...'
+                        : `${selectedManagerIds.length} gestor(es) selecionado(s)`}
+                    </span>
+                    <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${managerDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {managerDropdownOpen && (
+                    <div className="absolute z-50 top-full left-0 mt-1 bg-card border border-border rounded-xl shadow-xl p-2 max-h-64 overflow-y-auto min-w-full w-full">
+                      {managersList.length === 0 ? (
+                        <p className="text-xs text-muted-foreground px-2 py-1">Nenhum gestor cadastrado</p>
+                      ) : (
+                        managersList.map(m => (
+                          <label
+                            key={m.id}
+                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-muted transition-colors ${selectedManagerIds.includes(m.id) ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${selectedManagerIds.includes(m.id) ? 'bg-primary border-primary' : 'border-input'}`}>
+                              {selectedManagerIds.includes(m.id) && <Check className="h-3 w-3 text-primary-foreground" />}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={selectedManagerIds.includes(m.id)}
+                              onChange={() => toggleManager(m.id)}
+                              className="hidden"
+                            />
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-sm truncate">{m.nome}</span>
+                              <span className="text-xs text-muted-foreground truncate">{m.email}</span>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                      {managersList.length > 1 && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          <div className="flex gap-2 px-1">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedManagerIds(managersList.map(m => m.id))}
+                              className="flex-1 text-xs py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20"
+                            >
+                              Selecionar todos
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedManagerIds([])}
+                              className="flex-1 text-xs py-1 rounded-lg bg-muted hover:bg-muted/80"
+                            >
+                              Limpar
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <Button onClick={sendToManagers} disabled={sendingManagers || selectedManagerIds.length === 0} className="h-9 rounded-xl">
+                  {sendingManagers ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                  Enviar
+                </Button>
+              </div>
             </div>
             {emailMsg && (
               <p className={`mt-2 text-xs ${emailMsg.includes('Erro') ? 'text-destructive' : 'text-primary'}`}>{emailMsg}</p>
