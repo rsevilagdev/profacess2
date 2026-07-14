@@ -183,7 +183,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       for (const r of parsed) {
         const key = `${r.mes}__${r.prioridade}`;
         if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
-        groups[key].total += (r.total_geral || getValorAfterVlLiquido(r.row) || 0);
+        groups[key].total += (Number(r.total_geral) || 0);
       }
       // Sort by month order then priority
       return Object.values(groups).sort((a, b) => {
@@ -233,7 +233,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
           'UF Origem': 'PR',
           'UF Destino': 'PR',
           'Urbano': isUrban ? 'Sim' : 'Não',
-          'Valor de mercadoria': r.total_geral || getValorAfterVlLiquido(r.row) || 0,
+          'Valor de mercadoria': Number(r.total_geral) || 0,
         };
       });
 

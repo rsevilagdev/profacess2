@@ -265,24 +265,7 @@ export default function Averbacao() {
       const colPrioridade = fileData.processedMeta?.priorityColumn || findColumn(fileData.headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
       const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
       const colRota = findColumn(fileData.headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
-      // Find the column after "Vl Lito" — the first column without header (synthetic __col_X) after it
-      const colVlLito = findColumn(fileData.headers, ['VL LITO', 'VL LIT', 'VLLITO', 'VL_LITO', 'VALOR LÍQUIDO', 'VALOR LIQUIDO', 'VLLIQUIDO', 'VL_LIQUIDO', 'LIQUIDO', 'LÍQUIDO', 'VL. LÍQ', 'VL LIQ', 'VL LÍQ']);
-      let colVlNf = null;
-      if (colVlLito) {
-        const vlLitoIdx = fileData.headers.indexOf(colVlLito);
-        for (let i = vlLitoIdx + 1; i < fileData.headers.length; i++) {
-          if (fileData.headers[i].startsWith('__col_')) {
-            colVlNf = fileData.headers[i];
-            break;
-          }
-        }
-        if (!colVlNf && vlLitoIdx + 1 < fileData.headers.length) {
-          colVlNf = fileData.headers[vlLitoIdx + 1];
-        }
-      }
-      if (!colVlNf) {
-        colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
-      }
+      const colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
 
       const records = [];
       for (const item of fileData.processedRows) {
