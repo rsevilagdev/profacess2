@@ -37,9 +37,17 @@ function parseDelimitedText(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length === 0) return { headers: [], rows: [] };
   const headers = parseDelimitedLine(lines[0], delimiter);
+  // Replace empty headers with synthetic names so data isn't lost
+  for (let i = 0; i < headers.length; i++) {
+    if (!headers[i]) headers[i] = `__col_${i}`;
+  }
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
     const values = parseDelimitedLine(lines[i], delimiter);
+    // Extend headers for extra columns without headers in the header line
+    while (headers.length < values.length) {
+      headers.push(`__col_${headers.length}`);
+    }
     const row = {};
     headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
     rows.push(row);
