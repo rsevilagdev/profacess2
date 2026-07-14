@@ -97,6 +97,7 @@ function parseDate(val) {
 
 function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
+  const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
   const colVlNf = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VL NFE', 'VALOR NF', 'VALOR_NF', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA', 'VALOR', 'VL MERCADORIA', 'VLMERCADORIA', 'VL_MERCADORIA']);
 
   if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: colVlNf, priorityColumn: null };
@@ -104,25 +105,36 @@ function groupByPriority(rows, headers) {
   const vlNfIndex = colVlNf ? headers.indexOf(colVlNf) : -1;
 
   const groups = {};
-  const priorityOrder = [];
+  const groupKeys = [];
 
   for (const row of rows) {
     const priority = String(row[colPrioridade] || '').trim();
-    if (!groups[priority]) {
-      groups[priority] = [];
-      priorityOrder.push(priority);
+    const priorityNum = parseInt(priority) || 0;
+    let groupKey;
+    let groupRota = '';
+    if ((priorityNum === 90 || priorityNum === 91) && colRota) {
+      groupRota = String(row[colRota] || '').trim();
+      groupKey = `${priority}_${groupRota}`;
+    } else {
+      groupKey = priority;
     }
-    groups[priority].push(row);
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+      groupKeys.push({ key: groupKey, priority: priorityNum, rota: groupRota });
+    }
+    groups[groupKey].push(row);
   }
 
-  priorityOrder.sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
+  groupKeys.sort((a, b) => {
+    if (a.priority !== b.priority) return a.priority - b.priority;
+    return (parseInt(a.rota) || 0) - (parseInt(b.rota) || 0);
+  });
 
   const groupedRows = [];
   let totalGeral = 0;
 
-  for (const priority of priorityOrder) {
-    const groupRows = groups[priority];
-    const firstRow = groupRows[0];
+  for (const gk of groupKeys) {
+    const groupRows = groups[gk.key];
     const groupedRow = {};
     const lists = {};
 
