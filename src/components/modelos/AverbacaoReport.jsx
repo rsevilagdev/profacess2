@@ -165,7 +165,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       for (const r of parsed) {
         const key = `${r.mes}__${r.prioridade}`;
         if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
-        groups[key].total += getLastColumnValue(r.row) || (r.total_geral || 0);
+        groups[key].total += (r.total_geral || 0);
       }
       // Sort by month order then priority
       return Object.values(groups).sort((a, b) => {
