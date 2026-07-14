@@ -5,6 +5,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import AverbacaoTableModal from '@/components/averbacao/AverbacaoTableModal';
 import AverbacaoSavedData from '@/components/averbacao/AverbacaoSavedData';
+import AverbacaoDashboard from '@/components/dashboard/AverbacaoDashboard';
 
 function detectDelimiter(text) {
   const firstLine = (text.split('\n')[0] || '').trim();
@@ -497,6 +498,8 @@ export default function Averbacao() {
           )}
         </div>
       )}
+
+      <AverbacaoDashboard />
 
       <AverbacaoSavedData refreshTrigger={savedDataVersion} />
 

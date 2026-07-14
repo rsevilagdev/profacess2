@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { ScanLine, ShieldAlert, Truck, Users, Cloud, Smartphone, ArrowRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { maskPlaca, maskCPF } from '@/lib/lgpd-utils.js';
 import PainelRelatorios from '@/components/dashboard/PainelRelatorios';
+import SmartDashboard from '@/components/dashboard/SmartDashboard';
 
 function StatCard({ icon: Icon, label, value, color, to }) {
   const card = (
@@ -25,7 +25,6 @@ function StatCard({ icon: Icon, label, value, color, to }) {
 export default function Dashboard() {
   const { colaborador } = useProfarmaAuth();
   const [stats, setStats] = useState({ acessos: 0, bloqueados: 0, veiculos: 0, veiculosTotal: 0, motoristas: 0, motoristasTotal: 0 });
-  const [chartData, setChartData] = useState([]);
   const [recentes, setRecentes] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,14 +37,6 @@ export default function Dashboard() {
     const today = new Date().toDateString();
     const todayLogs = logs.filter(l => new Date(l.created_date).toDateString() === today);
     const bloqueados = veiculos.filter(v => v.status === 'bloqueado').length + motoristas.filter(m => m.status === 'bloqueado').length;
-
-    const hours = {};
-    for (let h = 0; h < 24; h++) hours[`${h}h`] = 0;
-    todayLogs.forEach(l => {
-      const h = new Date(l.created_date).getHours();
-      hours[`${h}h`] = (hours[`${h}h`] || 0) + 1;
-    });
-    setChartData(Object.entries(hours).map(([hour, count]) => ({ hour, count })));
 
     setStats({
       acessos: todayLogs.length,
@@ -96,32 +87,8 @@ export default function Dashboard() {
         <StatCard icon={Users} label={`Motoristas Ativos (${stats.motoristasTotal})`} value={stats.motoristas} color="bg-orange-500/10 text-orange-600" to="/editar-base" />
       </div>
 
-      {/* Chart + Connected Devices */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <h3 className="font-heading font-bold text-lg mb-4">Fluxo de Saída por Hora</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={chartData}>
-              <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={2} />
-              <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
-              <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid hsl(var(--border))' }} />
-              <Bar dataKey="count" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-          <h3 className="font-heading font-bold text-lg mb-4">Dispositivos Conectados</h3>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="relative">
-              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center pulse-teal">
-                <Smartphone className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-            <p className="text-3xl font-bold font-heading mt-4">1</p>
-            <p className="text-sm text-muted-foreground">Celular ativo</p>
-          </div>
-        </div>
-      </div>
+      {/* Smart Dashboard with selectable charts */}
+      <SmartDashboard />
 
       {/* Painel de Relatórios */}
       <PainelRelatorios />
