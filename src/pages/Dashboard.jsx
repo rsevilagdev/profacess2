@@ -24,7 +24,7 @@ function StatCard({ icon: Icon, label, value, color, to }) {
 
 export default function Dashboard() {
   const { colaborador } = useProfarmaAuth();
-  const [stats, setStats] = useState({ acessos: 0, bloqueados: 0, veiculos: 0, motoristas: 0 });
+  const [stats, setStats] = useState({ acessos: 0, bloqueados: 0, veiculos: 0, veiculosTotal: 0, motoristas: 0, motoristasTotal: 0 });
   const [chartData, setChartData] = useState([]);
   const [recentes, setRecentes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -50,8 +50,10 @@ export default function Dashboard() {
       setStats({
         acessos: todayLogs.length,
         bloqueados,
-        veiculos: veiculos.length,
-        motoristas: motoristas.length,
+        veiculos: veiculos.filter(v => v.status === 'validado').length,
+        veiculosTotal: veiculos.length,
+        motoristas: motoristas.filter(m => m.status === 'validado').length,
+        motoristasTotal: motoristas.length,
       });
       setRecentes(logs.slice(0, 5));
       setLoading(false);
@@ -81,8 +83,8 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={ScanLine} label="Acessos Hoje" value={stats.acessos} color="bg-primary/10 text-primary" to="/acessos" />
         <StatCard icon={ShieldAlert} label="Bloqueados" value={stats.bloqueados} color="bg-destructive/10 text-destructive" to="/painel-bloqueio" />
-        <StatCard icon={Truck} label="Veículos" value={stats.veiculos} color="bg-blue-500/10 text-blue-600" to="/editar-base" />
-        <StatCard icon={Users} label="Motoristas" value={stats.motoristas} color="bg-orange-500/10 text-orange-600" to="/editar-base" />
+        <StatCard icon={Truck} label={`Veículos Ativos (${stats.veiculosTotal})`} value={stats.veiculos} color="bg-blue-500/10 text-blue-600" to="/editar-base" />
+        <StatCard icon={Users} label={`Motoristas Ativos (${stats.motoristasTotal})`} value={stats.motoristas} color="bg-orange-500/10 text-orange-600" to="/editar-base" />
       </div>
 
       {/* Chart + Connected Devices */}

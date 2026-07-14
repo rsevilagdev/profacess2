@@ -87,13 +87,13 @@ export default function NovoAcesso() {
         // Both validated — register in exit release queue
         await base44.entities.AccessLog.create({
           veiculo_placa: v.placa,
-          motorista_nome: m.nome + (m.sobrenome ? ' ' + m.sobrenome : ''),
+          motorista_nome: m.nome,
           motorista_cpf: m.cpf,
           ajudante_nome: hasAjudante ? ajudanteNome : '',
           ajudante_cpf: hasAjudante ? ajudanteCpf.replace(/\D/g, '') : '',
           filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome,
           tipo: 'entrada', status: 'validado',
-          operador_nome: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+          operador_nome: colaborador.nome,
           operador_cpf: colaborador.cpf,
           observacao: hasAjudante ? `Acompanhante: ${ajudanteNome} - CPF: ${ajudanteCpf}` : ''
         });
@@ -139,7 +139,7 @@ export default function NovoAcesso() {
     try {
       // Create review request
       const review = await base44.entities.ReviewRequest.create({
-        solicitante_nome: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+        solicitante_nome: colaborador.nome,
         solicitante_cpf: colaborador.cpf,
         tipo: !veiculo ? 'veiculo' : 'motorista',
         target_nome: !veiculo ? placa.toUpperCase() : cpfDigits,
