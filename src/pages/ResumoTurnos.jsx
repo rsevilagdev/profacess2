@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Users, Mail, Download, Loader2, Filter, Calendar, FileText } from 'lucide-react';
+import { Clock, Users, Download, Loader2, Filter, Calendar, FileText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,6 @@ export default function ResumoTurnos() {
   const [logs, setLogs] = useState([]);
   const [operadores, setOperadores] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [filterStatus, setFilterStatus] = useState(['validado', 'bloqueado', 'pendente_revisao']);
   const [filterOp, setFilterOp] = useState('all');
@@ -72,19 +71,6 @@ export default function ResumoTurnos() {
   const dateFilteredOps = Object.values(dateOpStats).sort((a, b) => b.total - a.total);
   const displayOps = filterOp === 'all' ? dateFilteredOps : dateFilteredOps.filter(o => o.nome === filterOp);
 
-  const sendEmail = async () => {
-    setSending(true);
-    const summary = displayOps.map(o => `${o.nome}: ${o.total} validações (${o.validados} validados, ${o.bloqueados} bloqueados, ${o.pendentes} pendentes)`).join('\n');
-    try {
-      await base44.integrations.Core.SendEmail({
-        to: colaborador?.email || 'admin@profarma.com',
-        subject: 'Resumo de Turnos - ' + new Date().toLocaleDateString('pt-BR'),
-        body: `RESUMO DE TURNOS\nPeríodo: ${dateFrom || 'Início'} a ${dateTo || 'Hoje'}\n\nTotal de validações: ${filteredLogs.length}\n\nPor operador:\n${summary}\n\nPROFARMA LIBERAAUTO PRO`
-      });
-    } catch (e) {}
-    setSending(false);
-  };
-
   const exportCSV = () => {
     const headers = ['Operador', 'Total', 'Validados', 'Bloqueados', 'Pendentes'];
     const rows = displayOps.map(o => [o.nome, o.total, o.validados, o.bloqueados, o.pendentes]);
@@ -138,7 +124,6 @@ export default function ResumoTurnos() {
         <div className="flex gap-2 flex-wrap">
           <Button onClick={exportCSV} variant="secondary" className="h-12 rounded-2xl"><Download className="h-4 w-4" /> Excel</Button>
           <Button onClick={exportPDF} disabled={exporting} variant="secondary" className="h-12 rounded-2xl">{exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} PDF</Button>
-          <Button onClick={sendEmail} disabled={sending} className="h-12 rounded-2xl">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Email</Button>
         </div>
       </div>
 
