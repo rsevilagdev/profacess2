@@ -136,8 +136,16 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.AverbacaoRecord.list('-created_date', 2000);
-      setRecords(list);
+      const all = [];
+      const PAGE_SIZE = 5000;
+      let skip = 0;
+      while (true) {
+        const batch = await base44.entities.AverbacaoRecord.list('-created_date', PAGE_SIZE, skip);
+        all.push(...batch);
+        if (batch.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+      }
+      setRecords(all);
     } catch (e) {}
     setLoading(false);
   };
