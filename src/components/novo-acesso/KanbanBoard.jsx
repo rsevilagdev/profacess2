@@ -10,16 +10,20 @@ const COLUMNS = [
   { id: 'bloqueado', title: 'Bloqueado', icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive' },
 ];
 
-export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
+export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberarSaida }) {
   const [moving, setMoving] = useState(null);
   const [blocking, setBlocking] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [approving, setApproving] = useState(null);
+  const [liberando, setLiberando] = useState(null);
 
   const canApprove = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
+  // Itens liberados (tipo='saida') saem do kanban de fluxo
+  const activeAcessos = acessos.filter(a => a.tipo !== 'saida');
+
   const grouped = COLUMNS.reduce((acc, col) => {
-    acc[col.id] = acessos.filter(a => a.status === col.id);
+    acc[col.id] = activeAcessos.filter(a => a.status === col.id);
     return acc;
   }, {});
 
@@ -200,6 +204,23 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador }) {
                                     <p className="text-xs text-destructive mt-1">Motivo: {item.motivo_bloqueio}</p>
                                   )}
                                 </div>
+                              )}
+
+                              {/* Liberar saída — remove do kanban e notifica todos os dispositivos */}
+                              {col.id === 'validado' && canApprove && (
+                                <Button
+                                  size="sm"
+                                  className="h-7 w-full rounded-lg text-xs mt-2"
+                                  disabled={liberando === item.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setLiberando(item.id);
+                                    onLiberarSaida(item).finally(() => setLiberando(null));
+                                  }}
+                                >
+                                  {liberando === item.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
+                                  Liberar Saída
+                                </Button>
                               )}
                             </div>
                           )}

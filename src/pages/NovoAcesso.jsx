@@ -203,12 +203,30 @@ export default function NovoAcesso() {
   };
 
   const liberarSaida = async (log) => {
-    await base44.entities.AccessLog.update(log.id, { tipo: 'saida' });
+    await base44.entities.AccessLog.update(log.id, {
+      tipo: 'saida',
+      data_aprovacao: new Date().toISOString(),
+      aprovado_por: colaborador.nome,
+      aprovado_por_cpf: colaborador.cpf,
+    });
     await base44.entities.AuditLog.create({
       user_name: colaborador.nome, user_cpf: colaborador.cpf,
-      action: 'Saída liberada', details: `Placa: ${log.veiculo_placa}`,
+      action: 'Saída liberada', details: `Placa: ${log.veiculo_placa} | Motorista: ${log.motorista_nome || '—'}`,
       ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
     });
+    // Notificar todos os operadores da filial em tempo real
+    try {
+      const colab = await base44.entities.Colaborador.list();
+      const recipients = colab.filter(c => c.ativo && c.filial_id === colaborador.filial_id && c.id !== colaborador.id);
+      for (const r of recipients) {
+        await base44.entities.Notification.create({
+          title: 'Veículo Liberado para Saída',
+          message: `Veículo ${log.veiculo_placa} — Motorista: ${log.motorista_nome || '—'} liberado por ${colaborador.nome}`,
+          type: 'vehicle_release', sender_name: colaborador.nome,
+          target_user_id: r.id, branch_id: colaborador.filial_id
+        });
+      }
+    } catch (e) {}
     await loadAcessos();
   };
 
@@ -375,7 +393,7 @@ export default function NovoAcesso() {
       )}
 
       {/* Kanban */}
-      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} />
+      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} onLiberarSaida={liberarSaida} />
 
       {/* Queue List */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
