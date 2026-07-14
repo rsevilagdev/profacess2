@@ -1,0 +1,50 @@
+{
+  "name": "AverbacaoRecord",
+  "type": "object",
+  "properties": {
+    "mes": {
+      "type": "string",
+      "description": "M\u00eas de refer\u00eancia"
+    },
+    "dia": {
+      "type": "string",
+      "description": "Dia de refer\u00eancia"
+    },
+    "data_referencia": {
+      "type": "string",
+      "description": "Data de refer\u00eancia"
+    },
+    "prioridade": {
+      "type": "string",
+      "description": "Prioridade agrupada"
+    },
+    "arquivo_origem": {
+      "type": "string",
+      "description": "Nome do arquivo de origem"
+    },
+    "dados_json": {
+      "type": "string",
+      "description": "JSON com dados agrupados (listas para colunas n\u00e3o somadas, somas para colunas num\u00e9ricas)"
+    },
+    "total_geral": {
+      "type": "number",
+      "description": "Soma total de VL NF"
+    },
+    "operador_nome": {
+      "type": "string",
+      "description": "Nome do operador"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    }
+  },
+  "required": [
+    "mes",
+    "prioridade"
+  ]
+}

@@ -1,7 +1,10 @@
 import { useState, useRef } from 'react';
-import { Upload, FileText, Eye, Loader2, CheckCircle, Trash2 } from 'lucide-react';
+import { Upload, FileText, Eye, Loader2, CheckCircle, Trash2, Database } from 'lucide-react';
+import { base44 } from '@/api/base44Client';
+import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import AverbacaoTableModal from '@/components/averbacao/AverbacaoTableModal';
+import AverbacaoSavedData from '@/components/averbacao/AverbacaoSavedData';
 
 function detectDelimiter(text) {
   const firstLine = (text.split('\n')[0] || '').trim();
@@ -71,11 +74,24 @@ function formatNumber(val) {
   return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function parseDate(val) {
+  if (!val) return null;
+  const str = String(val).trim();
+  let d = new Date(str);
+  if (!isNaN(d)) return d;
+  const brMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (brMatch) {
+    d = new Date(Number(brMatch[3]), Number(brMatch[2]) - 1, Number(brMatch[1]));
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
 function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
   const colVlNf = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VL NFE', 'VALOR NF', 'VALOR_NF', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA', 'VALOR', 'VL MERCADORIA', 'VLMERCADORIA', 'VL_MERCADORIA']);
 
-  if (!colPrioridade) return rows;
+  if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: colVlNf, priorityColumn: null };
 
   const vlNfIndex = colVlNf ? headers.indexOf(colVlNf) : -1;
 
@@ -91,38 +107,46 @@ function groupByPriority(rows, headers) {
     groups[priority].push(row);
   }
 
-  priorityOrder.sort((a, b) => {
-    const na = parseInt(a) || 0;
-    const nb = parseInt(b) || 0;
-    return na - nb;
-  });
+  priorityOrder.sort((a, b) => (parseInt(a) || 0) - (parseInt(b) || 0));
 
   const groupedRows = [];
+  let totalGeral = 0;
+
   for (const priority of priorityOrder) {
     const groupRows = groups[priority];
     const firstRow = groupRows[0];
     const groupedRow = {};
+    const lists = {};
 
     headers.forEach((h, idx) => {
       if (vlNfIndex >= 0 && idx >= vlNfIndex) {
         const sum = groupRows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
         groupedRow[h] = formatNumber(sum);
+        if (h === colVlNf) totalGeral += sum;
       } else {
-        groupedRow[h] = firstRow[h];
+        const uniqueValues = [...new Set(groupRows.map(r => String(r[h] || '').trim()).filter(Boolean))];
+        groupedRow[h] = uniqueValues.length > 1 ? `${uniqueValues[0]} +${uniqueValues.length - 1}` : (uniqueValues[0] || '');
+        lists[h] = uniqueValues;
       }
     });
 
-    groupedRows.push(groupedRow);
+    groupedRows.push({ row: groupedRow, lists, count: groupRows.length });
   }
 
-  return groupedRows;
+  return { groupedRows, totalGeral, vlNfColumn: colVlNf, priorityColumn: colPrioridade };
 }
 
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
 export default function Averbacao() {
+  const { colaborador } = useProfarmaAuth();
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [savedMsg, setSavedMsg] = useState('');
+  const [savedDataVersion, setSavedDataVersion] = useState(0);
   const fileRef = useRef(null);
 
   const handleFile = (e) => {
@@ -130,6 +154,7 @@ export default function Averbacao() {
     if (!file) return;
     setLoading(true);
     setError('');
+    setSavedMsg('');
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -161,18 +186,19 @@ export default function Averbacao() {
       setError('Erro ao ler o arquivo. Tente novamente.');
       setLoading(false);
     };
-    // ISO-8859-1 is common for Brazilian .txt exports; falls back gracefully for UTF-8
     reader.readAsText(file, 'ISO-8859-1');
   };
 
   const handleProcess = (selectedColumns) => {
-    const grouped = groupByPriority(fileData.rows, fileData.headers);
+    const result = groupByPriority(fileData.rows, fileData.headers);
     setFileData(prev => ({
       ...prev,
       visibleColumns: selectedColumns,
       processed: true,
-      processedRows: grouped,
+      processedRows: result.groupedRows,
+      processedMeta: { totalGeral: result.totalGeral, vlNfColumn: result.vlNfColumn, priorityColumn: result.priorityColumn },
     }));
+    setSavedMsg('');
   };
 
   const handleRestore = () => {
@@ -181,11 +207,59 @@ export default function Averbacao() {
       visibleColumns: [...prev.headers],
       processed: false,
       processedRows: null,
+      processedMeta: null,
     }));
+    setSavedMsg('');
+  };
+
+  const handleSaveToDatabase = async () => {
+    if (!fileData?.processedRows) return;
+    setSaving(true);
+    setError('');
+    setSavedMsg('');
+    try {
+      const colPrioridade = fileData.processedMeta?.priorityColumn || findColumn(fileData.headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
+      const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
+      const colVlNf = fileData.processedMeta?.vlNfColumn;
+
+      const records = fileData.processedRows.map(item => {
+        let mes = '', dia = '', dataRef = '';
+        if (colData && item.lists?.[colData]?.[0]) {
+          const d = parseDate(item.lists[colData][0]);
+          if (d) {
+            mes = MESES[d.getMonth()];
+            dia = String(d.getDate());
+            dataRef = d.toLocaleDateString('pt-BR');
+          }
+        }
+        return {
+          mes,
+          dia,
+          data_referencia: dataRef,
+          prioridade: colPrioridade ? String(item.row[colPrioridade] || '') : '',
+          arquivo_origem: fileData.fileName,
+          dados_json: JSON.stringify({ row: item.row, lists: item.lists, count: item.count }),
+          total_geral: colVlNf ? parseNumber(item.row[colVlNf]) : 0,
+          operador_nome: colaborador?.nome || '',
+          filial_id: colaborador?.filial_id || '',
+          filial_nome: colaborador?.filial_nome || '',
+        };
+      });
+
+      await base44.entities.AverbacaoRecord.bulkCreate(records);
+      setSavedMsg(`${records.length} registro(s) salvo(s) com sucesso!`);
+      setSavedDataVersion(v => v + 1);
+      setTimeout(() => setSavedMsg(''), 6000);
+    } catch (e) {
+      setError('Erro ao salvar: ' + (e.message || 'desconhecido'));
+    }
+    setSaving(false);
   };
 
   const removeFile = () => {
     setFileData(null);
+    setSavedMsg('');
+    setError('');
     if (fileRef.current) fileRef.current.value = '';
   };
 
@@ -193,7 +267,7 @@ export default function Averbacao() {
     <div className="space-y-6 fade-in">
       <div>
         <h1 className="brand-title text-2xl">Averbação</h1>
-        <p className="text-sm text-muted-foreground">Importe um arquivo .txt para visualizar como tabela</p>
+        <p className="text-sm text-muted-foreground">Importe, processe e salve dados de averbação</p>
       </div>
 
       {!fileData && (
@@ -230,14 +304,24 @@ export default function Averbacao() {
               </div>
               <div>
                 <p className="font-heading font-bold text-sm">{fileData.fileName}</p>
-                <p className="text-xs text-muted-foreground">{fileData.rows.length} registros · {fileData.visibleColumns.length} colunas</p>
+                <p className="text-xs text-muted-foreground">
+                  {fileData.processed && fileData.processedRows
+                    ? `${fileData.processedRows.length} prioridades · ${fileData.rows.length} registros originais`
+                    : `${fileData.rows.length} registros · ${fileData.visibleColumns.length} colunas`}
+                </p>
               </div>
-              <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-medium">
+              <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${fileData.processed ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
                 <CheckCircle className="h-3.5 w-3.5" />
-                Importado
+                {fileData.processed ? 'Processado' : 'Importado'}
               </div>
             </div>
             <div className="flex gap-2">
+              {fileData.processed && (
+                <Button onClick={handleSaveToDatabase} disabled={saving} className="h-11 rounded-2xl">
+                  {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Database className="h-5 w-5" />}
+                  Salvar na Base de Dados
+                </Button>
+              )}
               <Button onClick={() => setModalOpen(true)} className="h-11 rounded-2xl">
                 <Eye className="h-5 w-5" /> Visualizar
               </Button>
@@ -246,8 +330,20 @@ export default function Averbacao() {
               </Button>
             </div>
           </div>
+          {savedMsg && (
+            <div className="mt-3 bg-primary/5 border border-primary/20 rounded-xl p-3 text-sm text-primary">
+              {savedMsg}
+            </div>
+          )}
+          {error && (
+            <div className="mt-3 bg-destructive/5 border border-destructive/20 rounded-xl p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
         </div>
       )}
+
+      <AverbacaoSavedData refreshTrigger={savedDataVersion} />
 
       {modalOpen && fileData && (
         <AverbacaoTableModal
@@ -255,6 +351,8 @@ export default function Averbacao() {
           onClose={() => setModalOpen(false)}
           onProcess={handleProcess}
           onRestore={handleRestore}
+          onSave={handleSaveToDatabase}
+          saving={saving}
         />
       )}
     </div>

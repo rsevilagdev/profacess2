@@ -1,16 +1,16 @@
 import { useState, useRef, useLayoutEffect, useCallback } from 'react';
-import { X, CheckCircle, RotateCcw, Settings2, Loader2 } from 'lucide-react';
+import { X, CheckCircle, RotateCcw, Settings2, Loader2, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DropdownCell from './DropdownCell';
 
 const ROW_HEIGHT = 32;
 const BUFFER = 8;
 
-export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRestore }) {
+export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRestore, onSave, saving }) {
   const [selectedColumns, setSelectedColumns] = useState([...fileData.visibleColumns]);
   const [showSelector, setShowSelector] = useState(!fileData.processed);
   const [processing, setProcessing] = useState(false);
 
-  // Virtual scroll
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(500);
   const scrollRef = useRef(null);
@@ -65,6 +65,9 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
   const visibleRows = rows.slice(startIndex, endIndex);
   const topSpacer = startIndex * ROW_HEIGHT;
   const bottomSpacer = Math.max(0, totalHeight - endIndex * ROW_HEIGHT);
+
+  const getCellValue = (item, col) => fileData.processed ? item.row?.[col] : item[col];
+  const getCellLists = (item, col) => fileData.processed ? (item.lists?.[col] || null) : null;
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
@@ -122,13 +125,21 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
               {topSpacer > 0 && (
                 <tr><td colSpan={displayColumns.length} style={{ height: topSpacer, padding: 0, border: 'none' }} /></tr>
               )}
-              {visibleRows.map((row, i) => (
+              {visibleRows.map((item, i) => (
                 <tr key={startIndex + i} className="hover:bg-muted/30" style={{ height: ROW_HEIGHT }}>
-                  {displayColumns.map(col => (
-                    <td key={col} className="px-3 py-1.5 border-b border-border/50 whitespace-nowrap text-xs">
-                      {row[col] || '—'}
-                    </td>
-                  ))}
+                  {displayColumns.map(col => {
+                    const cellLists = getCellLists(item, col);
+                    const cellValue = getCellValue(item, col);
+                    return (
+                      <td key={col} className="px-3 py-1.5 border-b border-border/50 whitespace-nowrap text-xs align-top">
+                        {cellLists && cellLists.length > 1 ? (
+                          <DropdownCell values={cellLists} displayValue={cellValue} />
+                        ) : (
+                          <span>{cellValue || '—'}</span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
               {bottomSpacer > 0 && (
@@ -139,16 +150,22 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0 flex-wrap gap-2">
           <span className="text-xs text-muted-foreground">
             {displayColumns.length} colunas · {totalRows} registros
             {fileData.processed && <span className="text-primary font-medium"> · agrupado por prioridade</span>}
           </span>
           <div className="flex gap-2">
             {fileData.processed ? (
-              <Button onClick={handleRestore} variant="secondary" className="h-10 rounded-xl">
-                <RotateCcw className="h-4 w-4" /> Restaurar
-              </Button>
+              <>
+                <Button onClick={onSave} disabled={saving} className="h-10 rounded-xl">
+                  {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                  Salvar na Base de Dados
+                </Button>
+                <Button onClick={handleRestore} variant="secondary" className="h-10 rounded-xl">
+                  <RotateCcw className="h-4 w-4" /> Restaurar
+                </Button>
+              </>
             ) : (
               <Button onClick={handleProcess} disabled={selectedColumns.length === 0 || processing} className="h-10 rounded-xl">
                 {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
