@@ -98,7 +98,7 @@ function parseDate(val) {
 function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
   const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
-  const colVlNf = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VL NFE', 'VALOR NF', 'VALOR_NF', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA', 'VALOR', 'VL MERCADORIA', 'VLMERCADORIA', 'VL_MERCADORIA']);
+  const colVlNf = headers.length > 0 ? headers[headers.length - 1] : null;
 
   if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: colVlNf, priorityColumn: null };
 

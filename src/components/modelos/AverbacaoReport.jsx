@@ -48,6 +48,20 @@ function formatCurrency(val) {
   return Number(val || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function parseNumber(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const cleaned = String(val).replace(/[^\d,-]/g, '').replace('.', '').replace(',', '.');
+  return Number(cleaned) || 0;
+}
+
+function getLastColumnValue(row) {
+  const keys = Object.keys(row);
+  if (keys.length === 0) return 0;
+  const lastKey = keys[keys.length - 1];
+  return parseNumber(row[lastKey]);
+}
+
 const FIELD_MAP = {
   data: { names: ['DATA DO EMBARQUE', 'DATA EMBARQUE', 'DATA', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE'] },
   placa: { names: ['PLACA VEÍCULO', 'PLACA VEICULO', 'PLACA', 'VEICULO', 'VEÍCULO'] },
@@ -66,6 +80,8 @@ export default function AverbacaoReport({ tipo, periodo }) {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailTo, setEmailTo] = useState('');
   const [emailMsg, setEmailMsg] = useState('');
+  const [sendingManagers, setSendingManagers] = useState(false);
+  const [managersMsg, setManagersMsg] = useState('');
 
   useEffect(() => {
     if (!periodo) { setRecords([]); return; }
@@ -105,7 +121,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       for (const r of parsed) {
         const key = `${r.mes}__${r.prioridade}`;
         if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
-        groups[key].total += (r.total_geral || 0);
+        groups[key].total += getLastColumnValue(r.row) || (r.total_geral || 0);
       }
       // Sort by month order then priority
       return Object.values(groups).sort((a, b) => {
@@ -138,7 +154,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
         'UF Origem': getField(r.row, r.lists, FIELD_MAP.ufOrigem),
         'UF Destino': getField(r.row, r.lists, FIELD_MAP.ufDestino),
         'Urbano': getField(r.row, r.lists, FIELD_MAP.urbano),
-        'Valor de mercadoria': r.total_geral || 0,
+        'Valor de mercadoria': getLastColumnValue(r.row) || (r.total_geral || 0),
       }));
     }
   };
@@ -269,23 +285,11 @@ export default function AverbacaoReport({ tipo, periodo }) {
     setSendingEmail(true);
     setEmailMsg('');
     try {
-      const htmlTable = `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:11px;font-family:Arial">
-        <thead><tr>${REPORT_COLUMNS.map(c => `<th style="background:#00695C;color:#fff">${c}</th>`).join('')}</tr></thead>
-        <tbody>${reportRows.map(r => `<tr>${REPORT_COLUMNS.map(c => `<td>${c === 'Valor de mercadoria' ? formatCurrency(r[c]) : (r[c] || '')}</td>`).join('')}</tr>`).join('')}</tbody>
-        <tfoot><tr><td colspan="6" style="font-weight:bold;background:#00695C;color:#fff">TOTAL GERAL</td><td style="font-weight:bold;background:#00695C;color:#fff">R$ ${formatCurrency(totalGeral)}</td></tr></tfoot>
-      </table>`;
-      const body = `
-        <h2 style="color:#00695C">PROFARMA LIBERAAUTO PRO</h2>
-        <p><strong>Razão Social Segurado:</strong> PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA</p>
-        <p><strong>CNPJ:</strong> 45.453.214/0002-86 | <strong>Filial:</strong> ${filialNome}</p>
-        <h3>${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}</h3>
-        <p>Gerado em ${new Date().toLocaleString('pt-BR')}</p>
-        <p><strong>Total Geral:</strong> R$ ${formatCurrency(totalGeral)}</p>
-        ${htmlTable}
-      `;
+      const subject = `${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}`;
+      const body = buildEmailBody();
       await base44.integrations.Core.SendEmail({
         to: emailTo,
-        subject: `${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}`,
+        subject,
         body,
       });
       setEmailMsg('E-mail enviado com sucesso!');
@@ -294,6 +298,50 @@ export default function AverbacaoReport({ tipo, periodo }) {
       setEmailMsg('Erro ao enviar: ' + (e.message || 'desconhecido'));
     }
     setSendingEmail(false);
+  };
+
+  const buildEmailBody = () => {
+    const htmlTable = `<table border="1" cellpadding="4" cellspacing="0" style="border-collapse:collapse;font-size:11px;font-family:Arial">
+      <thead><tr>${REPORT_COLUMNS.map(c => `<th style="background:#00695C;color:#fff">${c}</th>`).join('')}</tr></thead>
+      <tbody>${reportRows.map(r => `<tr>${REPORT_COLUMNS.map(c => `<td>${c === 'Valor de mercadoria' ? formatCurrency(r[c]) : (r[c] || '')}</td>`).join('')}</tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="6" style="font-weight:bold;background:#00695C;color:#fff">TOTAL GERAL</td><td style="font-weight:bold;background:#00695C;color:#fff">R$ ${formatCurrency(totalGeral)}</td></tr></tfoot>
+    </table>`;
+    return `
+      <h2 style="color:#00695C">PROFARMA LIBERAAUTO PRO</h2>
+      <p><strong>Razão Social Segurado:</strong> PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA</p>
+      <p><strong>CNPJ:</strong> 45.453.214/0002-86 | <strong>Filial:</strong> ${filialNome}</p>
+      <h3>${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}</h3>
+      <p>Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+      <p><strong>Total Geral:</strong> R$ ${formatCurrency(totalGeral)}</p>
+      ${htmlTable}
+    `;
+  };
+
+  const sendToManagers = async () => {
+    if (reportRows.length === 0) return;
+    setSendingManagers(true);
+    setManagersMsg('');
+    try {
+      const colaboradores = await base44.entities.Colaborador.list('-created_date', 500);
+      const managers = colaboradores.filter(c =>
+        ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) && c.email && c.ativo
+      );
+      if (managers.length === 0) {
+        setManagersMsg('Nenhum gestor cadastrado com e-mail encontrado.');
+        setSendingManagers(false);
+        return;
+      }
+      const subject = `${tipo === 'mensal' ? 'Averbação Mensal' : 'Averbação Semestral'} — ${periodoLabel}`;
+      const body = buildEmailBody();
+      await Promise.all(managers.map(m =>
+        base44.integrations.Core.SendEmail({ to: m.email, subject, body })
+      ));
+      setManagersMsg(`Enviado para ${managers.length} gestor(es)!`);
+      setTimeout(() => setManagersMsg(''), 6000);
+    } catch (e) {
+      setManagersMsg('Erro: ' + (e.message || 'desconhecido'));
+    }
+    setSendingManagers(false);
   };
 
   return (
@@ -385,9 +433,16 @@ export default function AverbacaoReport({ tipo, periodo }) {
                 {sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                 Enviar
               </Button>
+              <Button onClick={sendToManagers} disabled={sendingManagers} variant="default" className="h-9 rounded-xl">
+                {sendingManagers ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                Enviar para gestores
+              </Button>
             </div>
             {emailMsg && (
               <p className={`mt-2 text-xs ${emailMsg.includes('Erro') ? 'text-destructive' : 'text-primary'}`}>{emailMsg}</p>
+            )}
+            {managersMsg && (
+              <p className={`mt-2 text-xs ${managersMsg.includes('Erro') ? 'text-destructive' : 'text-primary'}`}>{managersMsg}</p>
             )}
           </div>
         </>
