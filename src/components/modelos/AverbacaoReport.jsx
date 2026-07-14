@@ -55,11 +55,18 @@ function parseNumber(val) {
   return Number(cleaned) || 0;
 }
 
-function getLastColumnValue(row) {
+function getValorAfterVlLiquido(row) {
   const keys = Object.keys(row);
   if (keys.length === 0) return 0;
-  const lastKey = keys[keys.length - 1];
-  return parseNumber(row[lastKey]);
+  const vlLiquidoKey = findColumnInRow(row, ['VL LITO', 'VL LIT', 'VLLITO', 'VL_LITO', 'VALOR LÍQUIDO', 'VALOR LIQUIDO', 'VLLIQUIDO', 'VL_LIQUIDO', 'LIQUIDO', 'LÍQUIDO', 'VL. LÍQ', 'VL LIQ', 'VL LÍQ']);
+  if (vlLiquidoKey) {
+    const idx = keys.indexOf(vlLiquidoKey);
+    if (idx >= 0 && idx + 1 < keys.length) {
+      return parseNumber(row[keys[idx + 1]]);
+    }
+  }
+  // Fallback to last column
+  return parseNumber(row[keys[keys.length - 1]]);
 }
 
 const FIELD_MAP = {
@@ -165,7 +172,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       for (const r of parsed) {
         const key = `${r.mes}__${r.prioridade}`;
         if (!groups[key]) groups[key] = { mes: r.mes, prioridade: r.prioridade, total: 0, first: r };
-        groups[key].total += (r.total_geral || 0);
+        groups[key].total += (r.total_geral || getValorAfterVlLiquido(r.row) || 0);
       }
       // Sort by month order then priority
       return Object.values(groups).sort((a, b) => {
@@ -215,7 +222,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
           'UF Origem': 'PR',
           'UF Destino': 'PR',
           'Urbano': isUrban ? 'Sim' : 'Não',
-          'Valor de mercadoria': r.total_geral || 0,
+          'Valor de mercadoria': r.total_geral || getValorAfterVlLiquido(r.row) || 0,
         };
       });
 

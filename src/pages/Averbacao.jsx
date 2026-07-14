@@ -107,20 +107,15 @@ function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
   const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
   const colNumNf = findColumn(headers, ['NU-NF', 'NU NF', 'NUNF', 'NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
-  const colVlLiquido = findColumn(headers, ['VL LITO', 'VL LIT', 'VLLITO', 'VL_LITO', 'VALOR LÍQUIDO', 'VALOR LIQUIDO', 'VLLIQUIDO', 'VL_LIQUIDO', 'LIQUIDO', 'LÍQUIDO', 'VL. LÍQ', 'VL LIQ', 'VL LÍQ']);
   const lastCol = headers.length > 0 ? headers[headers.length - 1] : null;
 
-  // Value column = column AFTER "Vl Lito" (fallback to lastCol)
-  const vlLiquidoIdx = colVlLiquido ? headers.indexOf(colVlLiquido) : -1;
-  const valorCol = (vlLiquidoIdx >= 0 && vlLiquidoIdx + 1 < headers.length) ? headers[vlLiquidoIdx + 1] : lastCol;
-
-  if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: valorCol, priorityColumn: null };
+  if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: lastCol, priorityColumn: null };
 
   // Sum columns from the column AFTER NumNf (NumNf is a note number, not a value)
   const numNfIdx = colNumNf ? headers.indexOf(colNumNf) : -1;
   const vlNfIndex = (numNfIdx >= 0 && numNfIdx + 1 < headers.length)
     ? numNfIdx + 1
-    : (valorCol ? headers.indexOf(valorCol) : -1);
+    : (lastCol ? headers.indexOf(lastCol) : -1);
 
   const groups = {};
   const groupKeys = [];
@@ -160,7 +155,7 @@ function groupByPriority(rows, headers) {
       if (vlNfIndex >= 0 && idx >= vlNfIndex) {
         const sum = groupRows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
         groupedRow[h] = formatNumber(sum);
-        if (h === valorCol) totalGeral += sum;
+        if (h === lastCol) totalGeral += sum;
       } else {
         const uniqueValues = [...new Set(groupRows.map(r => String(r[h] || '').trim()).filter(Boolean))];
         groupedRow[h] = uniqueValues.length > 1 ? `${uniqueValues[0]} +${uniqueValues.length - 1}` : (uniqueValues[0] || '');
@@ -171,7 +166,7 @@ function groupByPriority(rows, headers) {
     groupedRows.push({ row: groupedRow, lists, count: groupRows.length });
   }
 
-  return { groupedRows, totalGeral, vlNfColumn: valorCol, priorityColumn: colPrioridade };
+  return { groupedRows, totalGeral, vlNfColumn: lastCol, priorityColumn: colPrioridade };
 }
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -270,11 +265,7 @@ export default function Averbacao() {
       const colPrioridade = fileData.processedMeta?.priorityColumn || findColumn(fileData.headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
       const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
       const colRota = findColumn(fileData.headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
-      const colVlLiquidoFallback = findColumn(fileData.headers, ['VL LITO', 'VL LIT', 'VLLITO', 'VL_LITO', 'VALOR LÍQUIDO', 'VALOR LIQUIDO', 'VLLIQUIDO', 'VL_LIQUIDO', 'LIQUIDO', 'LÍQUIDO', 'VL. LÍQ', 'VL LIQ', 'VL LÍQ']);
-      const vlLiqIdxFallback = colVlLiquidoFallback ? fileData.headers.indexOf(colVlLiquidoFallback) : -1;
-      const colVlNf = fileData.processedMeta?.vlNfColumn
-        || (vlLiqIdxFallback >= 0 && vlLiqIdxFallback + 1 < fileData.headers.length ? fileData.headers[vlLiqIdxFallback + 1] : null)
-        || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
+      const colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
 
       const records = [];
       for (const item of fileData.processedRows) {
