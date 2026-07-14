@@ -5,6 +5,7 @@ import { ScanLine, ShieldAlert, Truck, Users, Cloud, Smartphone, ArrowRight } fr
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { maskPlaca, maskCPF } from '@/lib/lgpd-utils.js';
+import PainelRelatorios from '@/components/dashboard/PainelRelatorios';
 
 function StatCard({ icon: Icon, label, value, color, to }) {
   const card = (
@@ -110,6 +111,9 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Painel de Relatórios */}
+      <PainelRelatorios />
 
       {/* Recent Accesses */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
