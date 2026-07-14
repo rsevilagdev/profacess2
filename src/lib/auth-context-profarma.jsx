@@ -34,9 +34,12 @@ export function ProfarmaAuthProvider({ children }) {
     setColaborador(updated);
   };
 
+  const OPERATOR_ALWAYS_PAGES = ['/acessos', '/acesso-crdk', '/verificacao-rapida'];
+
   const canAccessPage = (pagePath) => {
     if (!colaborador) return false;
     if (colaborador.cargo === 'administrador_master' || colaborador.cargo === 'administrador') return true;
+    if (colaborador.cargo === 'operador' && OPERATOR_ALWAYS_PAGES.includes(pagePath)) return true;
     if (!colaborador.paginas_permitidas || colaborador.paginas_permitidas.length === 0) return true;
     const pages = colaborador.paginas_permitidas.split(',').map(p => p.trim());
     return pages.includes(pagePath);
