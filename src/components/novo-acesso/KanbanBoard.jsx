@@ -17,6 +17,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   const [approving, setApproving] = useState(null);
   const [liberando, setLiberando] = useState(null);
   const [liberandoItem, setLiberandoItem] = useState(null);
+  const [liberandoObs, setLiberandoObs] = useState('');
 
   const canApprove = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
@@ -247,13 +248,23 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                 <Truck className="h-5 w-5 text-primary" />
                 <h2 className="font-heading font-bold text-lg">Liberar Saída</h2>
               </div>
-              <button onClick={() => setLiberandoItem(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+              <button onClick={() => { setLiberandoItem(null); setLiberandoObs(''); }} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground mb-3">
               O veículo <span className="font-medium text-foreground">{liberandoItem.veiculo_placa}</span> está saindo vazio ou carregado?
             </p>
+            <div className="mb-4">
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Observações (opcional)</label>
+              <textarea
+                value={liberandoObs}
+                onChange={e => setLiberandoObs(e.target.value)}
+                placeholder="Motorista ou segurança podem declarar algo..."
+                rows={2}
+                className="w-full p-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="secondary"
@@ -261,9 +272,8 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                 disabled={liberando === liberandoItem.id}
                 onClick={async () => {
                   setLiberando(liberandoItem.id);
-                  await onLiberarSaida({ ...liberandoItem, carregado: false });
-                  setLiberando(null);
-                  setLiberandoItem(null);
+                  await onLiberarSaida({ ...liberandoItem, carregado: false, observacao_saida: liberandoObs.trim() });
+                  setLiberando(null); setLiberandoItem(null); setLiberandoObs('');
                 }}
               >
                 <Truck className="h-5 w-5" />
@@ -274,9 +284,8 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                 disabled={liberando === liberandoItem.id}
                 onClick={async () => {
                   setLiberando(liberandoItem.id);
-                  await onLiberarSaida({ ...liberandoItem, carregado: true });
-                  setLiberando(null);
-                  setLiberandoItem(null);
+                  await onLiberarSaida({ ...liberandoItem, carregado: true, observacao_saida: liberandoObs.trim() });
+                  setLiberando(null); setLiberandoItem(null); setLiberandoObs('');
                 }}
               >
                 {liberando === liberandoItem.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}

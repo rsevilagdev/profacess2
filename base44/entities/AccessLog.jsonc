@@ -14,6 +14,10 @@
       "type": "string",
       "description": "CPF do motorista"
     },
+    "empresa": {
+      "type": "string",
+      "description": "Empresa/transportadora do motorista"
+    },
     "ajudante_nome": {
       "type": "string",
       "description": "Nome do acompanhante/ajudante"

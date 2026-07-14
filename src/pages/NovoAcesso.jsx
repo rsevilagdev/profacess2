@@ -99,6 +99,7 @@ export default function NovoAcesso() {
           ajudante_cpf: hasAjudante ? ajudanteCpf.replace(/\D/g, '') : '',
           filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome,
           tipo: 'entrada', status: 'validado',
+          empresa: m.transportadora || v.transportadora || '',
           operador_nome: colaborador.nome,
           operador_cpf: colaborador.cpf,
           observacao: hasAjudante ? `Acompanhante: ${ajudanteNome} - CPF: ${ajudanteCpf}` : ''
@@ -204,9 +205,13 @@ export default function NovoAcesso() {
   };
 
   const liberarSaida = async (log) => {
+    const obsSaida = log.observacao_saida || '';
+    const existingObs = log.observacao || '';
+    const finalObs = [existingObs, obsSaida].filter(Boolean).join(' | ');
     await base44.entities.AccessLog.update(log.id, {
       tipo: 'saida',
       carregado: log.carregado || false,
+      observacao: finalObs || existingObs,
       data_aprovacao: new Date().toISOString(),
       aprovado_por: colaborador.nome,
       aprovado_por_cpf: colaborador.cpf,
