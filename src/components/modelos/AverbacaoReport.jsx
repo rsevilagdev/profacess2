@@ -61,6 +61,13 @@ function getValorAfterVlLiquido(row) {
   const vlLiquidoKey = findColumnInRow(row, ['VL LITO', 'VL LIT', 'VLLITO', 'VL_LITO', 'VALOR LÍQUIDO', 'VALOR LIQUIDO', 'VLLIQUIDO', 'VL_LIQUIDO', 'LIQUIDO', 'LÍQUIDO', 'VL. LÍQ', 'VL LIQ', 'VL LÍQ']);
   if (vlLiquidoKey) {
     const idx = keys.indexOf(vlLiquidoKey);
+    // Find first column without header (__col_X) after Vl Lito
+    for (let i = idx + 1; i < keys.length; i++) {
+      if (keys[i].startsWith('__col_')) {
+        return parseNumber(row[keys[i]]);
+      }
+    }
+    // If no synthetic column found, use the column immediately after Vl Lito
     if (idx >= 0 && idx + 1 < keys.length) {
       return parseNumber(row[keys[idx + 1]]);
     }
