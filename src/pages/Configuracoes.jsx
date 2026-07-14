@@ -12,6 +12,7 @@ const PAGES = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/acessos', label: 'Acessos' },
   { path: '/painel-bloqueio', label: 'Painel de Bloqueio' },
+  { path: '/monitor-filiais', label: 'Monitor de Filiais' },
   { path: '/editar-base', label: 'Editar Base de Dados' },
   { path: '/relatorios', label: 'Relatórios' },
   { path: '/relatorio-personalizado', label: 'Relatório Personalizado' },
