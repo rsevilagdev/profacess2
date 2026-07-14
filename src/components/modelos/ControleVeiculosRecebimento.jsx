@@ -28,21 +28,24 @@ export default function ControleVeiculosRecebimento({ logs, loading }) {
             </tr>
           </thead>
           <tbody>
-            {logs.map(log => (
-              <tr key={log.id}>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{formatData(log.created_date)}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap font-medium">{log.placa}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.nome || '—'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.empresa || '—'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.destino || 'PR'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.rg_cpf || '—'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.horario_entrada || '—'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.horario_saida || ''}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.cracha || '—'}</td>
-                <td className="border border-black px-2 py-1 whitespace-nowrap">{log.autorizacao_contato || '—'}</td>
-                <td className="border border-black px-2 py-1">{log.observacao || ''}</td>
-              </tr>
-            ))}
+            {logs.map(log => {
+              const placa = `${log.placa_carreta || ''}${log.placa_cavalo ? '/' + log.placa_cavalo : ''}`;
+              return (
+                <tr key={log.id}>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{formatData(log.created_date)}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap font-medium">{placa}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.nome || '—'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.empresa || '—'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.destino || 'PR'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.rg_cpf || '—'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.horario_entrada || '—'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.horario_saida || ''}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.cracha || '—'}</td>
+                  <td className="border border-black px-2 py-1 whitespace-nowrap">{log.autorizacao_contato || '—'}</td>
+                  <td className="border border-black px-2 py-1">{log.observacao || ''}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

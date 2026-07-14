@@ -2,9 +2,13 @@
   "name": "AcessoCRDK",
   "type": "object",
   "properties": {
-    "placa": {
+    "placa_carreta": {
       "type": "string",
-      "description": "Placa do ve\u00edculo"
+      "description": "Placa da carreta"
+    },
+    "placa_cavalo": {
+      "type": "string",
+      "description": "Placa do cavalo"
     },
     "nome": {
       "type": "string",
@@ -31,6 +35,11 @@
       "type": "string",
       "description": "Hor\u00e1rio de sa\u00edda"
     },
+    "data_saida": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data e hora da sa\u00edda"
+    },
     "cracha": {
       "type": "string",
       "description": "N\u00famero do crach\u00e1"
@@ -41,7 +50,11 @@
     },
     "observacao": {
       "type": "string",
-      "description": "Observa\u00e7\u00f5es"
+      "description": "Observa\u00e7\u00f5es preenchidas na sa\u00edda"
+    },
+    "foto_interior": {
+      "type": "string",
+      "description": "URL da foto do interior da carreta"
     },
     "filial_id": {
       "type": "string",
@@ -58,15 +71,15 @@
     "status": {
       "type": "string",
       "enum": [
-        "entrada",
+        "descarregamento",
         "saida"
       ],
-      "default": "entrada",
+      "default": "descarregamento",
       "description": "Status do acesso"
     }
   },
   "required": [
-    "placa",
+    "placa_carreta",
     "nome"
   ]
 }
