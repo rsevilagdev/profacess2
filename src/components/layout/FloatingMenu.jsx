@@ -22,6 +22,7 @@ const MENU_GROUPS = [
       { path: '/relatorio-personalizado', label: 'Relatório Personalizado', icon: FileSpreadsheet },
       { path: '/resumo-turnos', label: 'Resumo de Turnos', icon: Clock },
       { path: '/modelos', label: 'Modelos Corporativos', icon: LayoutGrid },
+      { path: '/averbacao', label: 'Averbação', icon: FileSpreadsheet },
     ]
   },
   {

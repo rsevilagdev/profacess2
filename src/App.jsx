@@ -33,6 +33,7 @@ import PlanoTrabalho from '@/pages/PlanoTrabalho';
 import MonitorFiliais from '@/pages/MonitorFiliais';
 import Modelos from '@/pages/Modelos';
 import AcessoCRDK from '@/pages/AcessoCRDK';
+import Averbacao from '@/pages/Averbacao';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/monitor-filiais" element={<MonitorFiliais />} />
                 <Route path="/modelos" element={<Modelos />} />
                 <Route path="/acesso-crdk" element={<AcessoCRDK />} />
+                <Route path="/averbacao" element={<Averbacao />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>
