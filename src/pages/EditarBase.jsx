@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Plus, Truck, Users, Edit2, Trash2, X, ChevronLeft, ChevronRight, Check, User, Loader2 } from 'lucide-react';
+import { Search, Plus, Truck, Users, Edit2, Trash2, X, ChevronLeft, ChevronRight, Check, User, Loader2, Filter, ArrowUpDown, Building2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,11 @@ export default function EditarBase() {
   const [motoristas, setMotoristas] = useState([]);
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [filialFilter, setFilialFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('created_date');
+  const [sortDir, setSortDir] = useState('desc');
+  const [filiais, setFiliais] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -21,11 +26,12 @@ export default function EditarBase() {
 
   const loadData = async () => {
     setLoading(true);
-    const [v, m] = await Promise.all([
+    const [v, m, f] = await Promise.all([
       base44.entities.Vehicle.list('-created_date', 500).catch(() => []),
       base44.entities.Driver.list('-created_date', 500).catch(() => []),
+      base44.entities.Filial.list().catch(() => []),
     ]);
-    setVeiculos(v); setMotoristas(m); setLoading(false);
+    setVeiculos(v); setMotoristas(m); setFiliais(f); setLoading(false);
   };
 
   useEffect(() => { loadData(); }, []);
@@ -37,12 +43,29 @@ export default function EditarBase() {
     return () => { unsubV(); unsubD(); };
   }, []);
 
-  const filtered = (tab === 'veiculos' ? veiculos : motoristas).filter(item => {
-    if (!search) return true;
-    const term = search.toLowerCase();
-    if (tab === 'veiculos') return item.placa?.toLowerCase().includes(term) || item.modelo?.toLowerCase().includes(term) || item.status_opentech?.toLowerCase().includes(term);
-    return item.nome?.toLowerCase().includes(term) || item.cpf?.includes(search);
-  });
+  const filtered = (tab === 'veiculos' ? veiculos : motoristas)
+    .filter(item => {
+      if (search) {
+        const term = search.toLowerCase();
+        if (tab === 'veiculos') {
+          if (!item.placa?.toLowerCase().includes(term) && !item.modelo?.toLowerCase().includes(term) && !item.status_opentech?.toLowerCase().includes(term)) return false;
+        } else {
+          if (!item.nome?.toLowerCase().includes(term) && !item.cpf?.includes(search)) return false;
+        }
+      }
+      if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+      if (filialFilter !== 'all' && item.filial_id !== filialFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      let valA, valB;
+      if (sortBy === 'created_date') { valA = new Date(a.created_date || 0); valB = new Date(b.created_date || 0); }
+      else if (sortBy === 'name') { valA = tab === 'veiculos' ? (a.placa || '') : (a.nome || ''); valB = tab === 'veiculos' ? (b.placa || '') : (b.nome || ''); valA = valA.toLowerCase(); valB = valB.toLowerCase(); }
+      else if (sortBy === 'status') { valA = a.status || ''; valB = b.status || ''; }
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageData = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
@@ -128,6 +151,34 @@ export default function EditarBase() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
         <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar..." className="w-full h-12 pl-10 pr-4 rounded-2xl border border-input bg-card text-base focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
+
+      {/* Filters & Sort */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0"><Filter className="h-3.5 w-3.5" />Filtros:</div>
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(0); }} className="h-9 px-3 rounded-xl border border-input bg-card text-sm">
+          <option value="all">Todos os status</option>
+          <option value="validado">Validado</option>
+          <option value="bloqueado">Bloqueado</option>
+          <option value="pendente_revisao">Pendente</option>
+        </select>
+        <select value={filialFilter} onChange={e => { setFilialFilter(e.target.value); setPage(0); }} className="h-9 px-3 rounded-xl border border-input bg-card text-sm max-w-[160px]">
+          <option value="all">Todas as filiais</option>
+          {filiais.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+        </select>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 ml-1"><ArrowUpDown className="h-3.5 w-3.5" />Ordenar:</div>
+        <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="h-9 px-3 rounded-xl border border-input bg-card text-sm">
+          <option value="created_date">Data</option>
+          <option value="name">{tab === 'veiculos' ? 'Placa' : 'Nome'}</option>
+          <option value="status">Status</option>
+        </select>
+        <button onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')} className="h-9 px-3 rounded-xl border border-input bg-card text-sm font-medium hover:bg-accent transition-colors">
+          {sortDir === 'asc' ? '↑ Asc' : '↓ Desc'}
+        </button>
+        {(statusFilter !== 'all' || filialFilter !== 'all' || search) && (
+          <button onClick={() => { setStatusFilter('all'); setFilialFilter('all'); setSearch(''); setPage(0); }} className="h-9 px-3 rounded-xl text-sm text-destructive hover:bg-destructive/10 transition-colors">Limpar</button>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">{filtered.length} registro(s) encontrado(s)</p>
 
       {/* List */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
