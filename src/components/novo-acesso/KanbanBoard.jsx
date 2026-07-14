@@ -16,6 +16,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   const [motivo, setMotivo] = useState('');
   const [approving, setApproving] = useState(null);
   const [liberando, setLiberando] = useState(null);
+  const [liberandoItem, setLiberandoItem] = useState(null);
 
   const canApprove = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
@@ -206,17 +207,13 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                                 </div>
                               )}
 
-                              {/* Liberar saída — remove do kanban e notifica todos os dispositivos */}
+                              {/* Liberar saída — pergunta se vazio ou carregado */}
                               {col.id === 'validado' && canApprove && (
                                 <Button
                                   size="sm"
                                   className="h-7 w-full rounded-lg text-xs mt-2"
                                   disabled={liberando === item.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setLiberando(item.id);
-                                    onLiberarSaida(item).finally(() => setLiberando(null));
-                                  }}
+                                  onClick={(e) => { e.stopPropagation(); setLiberandoItem(item); }}
                                 >
                                   {liberando === item.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
                                   Liberar Saída
@@ -240,6 +237,55 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
           })}
         </div>
       </DragDropContext>
+
+      {/* Liberar saída — vazio ou carregado */}
+      {liberandoItem && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5 text-primary" />
+                <h2 className="font-heading font-bold text-lg">Liberar Saída</h2>
+              </div>
+              <button onClick={() => setLiberandoItem(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              O veículo <span className="font-medium text-foreground">{liberandoItem.veiculo_placa}</span> está saindo vazio ou carregado?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="secondary"
+                className="h-14 rounded-2xl flex-col gap-1"
+                disabled={liberando === liberandoItem.id}
+                onClick={async () => {
+                  setLiberando(liberandoItem.id);
+                  await onLiberarSaida({ ...liberandoItem, carregado: false });
+                  setLiberando(null);
+                  setLiberandoItem(null);
+                }}
+              >
+                <Truck className="h-5 w-5" />
+                <span className="text-xs">Vazio</span>
+              </Button>
+              <Button
+                className="h-14 rounded-2xl flex-col gap-1"
+                disabled={liberando === liberandoItem.id}
+                onClick={async () => {
+                  setLiberando(liberandoItem.id);
+                  await onLiberarSaida({ ...liberandoItem, carregado: true });
+                  setLiberando(null);
+                  setLiberandoItem(null);
+                }}
+              >
+                {liberando === liberandoItem.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
+                <span className="text-xs">Carregado</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Block reason modal */}
       {blocking && (

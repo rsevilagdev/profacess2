@@ -205,6 +205,7 @@ export default function NovoAcesso() {
   const liberarSaida = async (log) => {
     await base44.entities.AccessLog.update(log.id, {
       tipo: 'saida',
+      carregado: log.carregado || false,
       data_aprovacao: new Date().toISOString(),
       aprovado_por: colaborador.nome,
       aprovado_por_cpf: colaborador.cpf,
@@ -221,7 +222,7 @@ export default function NovoAcesso() {
       for (const r of recipients) {
         await base44.entities.Notification.create({
           title: 'Veículo Liberado para Saída',
-          message: `Veículo ${log.veiculo_placa} — Motorista: ${log.motorista_nome || '—'} liberado por ${colaborador.nome}`,
+          message: `Veículo ${log.veiculo_placa} — Motorista: ${log.motorista_nome || '—'} | Saindo ${log.carregado ? 'CARREGADO' : 'VAZIO'} | Liberado por ${colaborador.nome}`,
           type: 'vehicle_release', sender_name: colaborador.nome,
           target_user_id: r.id, branch_id: colaborador.filial_id
         });
