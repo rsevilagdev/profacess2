@@ -70,7 +70,7 @@ export default function ConfiguracoesNotificacoes() {
       );
       await Promise.all(updates);
       await base44.entities.AuditLog.create({
-        user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+        user_name: colaborador.nome,
         user_cpf: colaborador.cpf, action: 'Configurações de notificação atualizadas',
         details: `Notificações de ${users.length} usuários atualizadas | Resumo de turnos: ${emailShiftSummary ? 'ativo' : 'inativo'} (${shiftTimes.morning}, ${shiftTimes.evening})`,
         ip_address: 'local', domain: window.location.hostname, category: 'user_management', branch_id: colaborador.filial_id
@@ -153,7 +153,7 @@ export default function ConfiguracoesNotificacoes() {
               {users.map(u => (
                 <tr key={u.id} className="border-b border-border/50">
                   <td className="p-2">
-                    <p className="text-sm font-medium">{u.nome} {u.sobrenome || ''}</p>
+                    <p className="text-sm font-medium">{u.nome}</p>
                     <p className="text-xs text-muted-foreground">{u.cargo}</p>
                   </td>
                   {NOTIF_TYPES.map(t => (

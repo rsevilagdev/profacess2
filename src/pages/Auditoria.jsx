@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2 } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,9 @@ export default function Auditoria() {
   const [page, setPage] = useState(0);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('all');
+  const [selectedCats, setSelectedCats] = useState([]);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
@@ -32,8 +35,16 @@ export default function Auditoria() {
     });
   }, []);
 
+  const toggleCat = (cat) => {
+    setSelectedCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+    setPage(0);
+  };
+
   const filtered = logs.filter(l => {
+    if (selectedCats.length > 0 && !selectedCats.includes(l.category)) return false;
     if (category !== 'all' && l.category !== category) return false;
+    if (dateFrom && new Date(l.created_date) < new Date(dateFrom + 'T00:00:00')) return false;
+    if (dateTo && new Date(l.created_date) > new Date(dateTo + 'T23:59:59')) return false;
     if (!search) return true;
     const term = search.toLowerCase();
     return l.action?.toLowerCase().includes(term) || l.user_name?.toLowerCase().includes(term) || l.details?.toLowerCase().includes(term) || l.ip_address?.includes(search) || l.domain?.includes(search);
@@ -43,7 +54,7 @@ export default function Auditoria() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pageData = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const exportLogs = async () => {
+  const exportPDF = async () => {
     setExporting(true);
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
@@ -64,19 +75,34 @@ export default function Auditoria() {
     setExporting(false);
   };
 
+  const exportCSV = () => {
+    const headers = ['Data', 'Usuário', 'CPF', 'Ação', 'Categoria', 'Detalhes', 'IP', 'Domínio'];
+    const rows = filtered.map(l => [
+      new Date(l.created_date).toLocaleString('pt-BR'),
+      l.user_name || '—', l.user_cpf || '—', l.action || '—', l.category || '—',
+      l.details || '—', l.ip_address || '—', l.domain || '—'
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `auditoria_${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6 fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="brand-title text-2xl">Auditoria</h1>
           <p className="text-sm text-muted-foreground">Log completo de ações com IP, domínio e dispositivo</p>
         </div>
-        <Button onClick={exportLogs} disabled={exporting} variant="secondary" className="h-12 rounded-2xl">
-          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PDF
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportCSV} variant="secondary" className="h-12 rounded-2xl"><Download className="h-4 w-4" /> Excel</Button>
+          <Button onClick={exportPDF} disabled={exporting} className="h-12 rounded-2xl">{exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF</Button>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* Search + Quick category */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -85,6 +111,32 @@ export default function Auditoria() {
         <select value={category} onChange={e => { setCategory(e.target.value); setPage(0); }} className="h-12 px-4 rounded-2xl border border-input bg-card text-sm">
           {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
+      </div>
+
+      {/* Multi-filters */}
+      <div className="bg-card rounded-2xl border border-border p-4 shadow-sm space-y-3">
+        <div className="flex items-center gap-2"><Filter className="h-4 w-4 text-muted-foreground" /><p className="text-sm font-medium">Filtros Avançados</p></div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-1.5">Categorias (multi-seleção)</p>
+          <div className="flex gap-2 flex-wrap">
+            {CATEGORIES.filter(c => c.value !== 'all').map(c => (
+              <button key={c.value} onClick={() => toggleCat(c.value)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-medium ${selectedCats.includes(c.value) ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}>
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1"><Calendar className="h-3 w-3" /> Data inicial</p>
+            <input type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); setPage(0); }} className="w-full h-10 px-3 rounded-xl border border-input bg-card text-sm" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1"><Calendar className="h-3 w-3" /> Data final</p>
+            <input type="date" value={dateTo} onChange={e => { setDateTo(e.target.value); setPage(0); }} className="w-full h-10 px-3 rounded-xl border border-input bg-card text-sm" />
+          </div>
+        </div>
       </div>
 
       {/* Log List */}

@@ -29,6 +29,7 @@ import TermosUso from '@/pages/TermosUso';
 import Perfil from '@/pages/Perfil';
 import AuditoriaSistema from '@/pages/AuditoriaSistema';
 import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
+import PlanoTrabalho from '@/pages/PlanoTrabalho';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
                 <Route path="/perfil" element={<Perfil />} />
                 <Route path="/auditoria-sistema" element={<AuditoriaSistema />} />
                 <Route path="/configuracoes-notificacoes" element={<ConfiguracoesNotificacoes />} />
+                <Route path="/plano-trabalho" element={<PlanoTrabalho />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>

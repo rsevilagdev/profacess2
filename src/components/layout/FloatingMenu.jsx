@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing } from 'lucide-react';
+import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing, Calendar } from 'lucide-react';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 
 const MENU_GROUPS = [
@@ -37,6 +37,7 @@ const MENU_GROUPS = [
   {
     label: 'Ajuda',
     items: [
+      { path: '/plano-trabalho', label: 'Plano de Trabalho', icon: Calendar },
       { path: '/suporte', label: 'Suporte & Manual', icon: LifeBuoy },
       { path: '/termos-uso', label: 'Termos de Uso', icon: FileText },
       { path: '/perfil', label: 'Perfil', icon: User },
