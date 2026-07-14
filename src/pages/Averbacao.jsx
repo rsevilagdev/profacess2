@@ -44,6 +44,80 @@ function parseDelimitedText(text) {
   return { headers, rows };
 }
 
+function findColumn(headers, possibleNames) {
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const h of headers) {
+      if (h.toUpperCase().trim() === upper) return h;
+    }
+  }
+  for (const name of possibleNames) {
+    const upper = name.toUpperCase().trim();
+    for (const h of headers) {
+      if (h.toUpperCase().trim().includes(upper)) return h;
+    }
+  }
+  return null;
+}
+
+function parseNumber(val) {
+  if (val == null) return 0;
+  if (typeof val === 'number') return val;
+  const cleaned = String(val).replace(/[^\d,-]/g, '').replace('.', '').replace(',', '.');
+  return Number(cleaned) || 0;
+}
+
+function formatNumber(val) {
+  return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function groupByPriority(rows, headers) {
+  const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
+  const colVlNf = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VL NFE', 'VALOR NF', 'VALOR_NF', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA', 'VALOR', 'VL MERCADORIA', 'VLMERCADORIA', 'VL_MERCADORIA']);
+
+  if (!colPrioridade) return rows;
+
+  const vlNfIndex = colVlNf ? headers.indexOf(colVlNf) : -1;
+
+  const groups = {};
+  const priorityOrder = [];
+
+  for (const row of rows) {
+    const priority = String(row[colPrioridade] || '').trim();
+    if (!groups[priority]) {
+      groups[priority] = [];
+      priorityOrder.push(priority);
+    }
+    groups[priority].push(row);
+  }
+
+  priorityOrder.sort((a, b) => {
+    const na = parseInt(a) || 0;
+    const nb = parseInt(b) || 0;
+    return na - nb;
+  });
+
+  const groupedRows = [];
+  for (const priority of priorityOrder) {
+    const groupRows = groups[priority];
+    const firstRow = groupRows[0];
+    const groupedRow = {};
+
+    headers.forEach((h, idx) => {
+      if (vlNfIndex >= 0 && idx >= vlNfIndex) {
+        const sum = groupRows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
+        groupedRow[h] = formatNumber(sum);
+      } else {
+        groupedRow[h] = firstRow[h];
+      }
+    });
+
+    groupedRows.push(groupedRow);
+  }
+
+  return groupedRows;
+}
+
 export default function Averbacao() {
   const [fileData, setFileData] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -92,11 +166,22 @@ export default function Averbacao() {
   };
 
   const handleProcess = (selectedColumns) => {
-    setFileData(prev => ({ ...prev, visibleColumns: selectedColumns, processed: true }));
+    const grouped = groupByPriority(fileData.rows, fileData.headers);
+    setFileData(prev => ({
+      ...prev,
+      visibleColumns: selectedColumns,
+      processed: true,
+      processedRows: grouped,
+    }));
   };
 
   const handleRestore = () => {
-    setFileData(prev => ({ ...prev, visibleColumns: [...prev.headers], processed: false }));
+    setFileData(prev => ({
+      ...prev,
+      visibleColumns: [...prev.headers],
+      processed: false,
+      processedRows: null,
+    }));
   };
 
   const removeFile = () => {

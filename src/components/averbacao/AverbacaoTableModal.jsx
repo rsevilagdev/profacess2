@@ -56,12 +56,13 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
   };
 
   const displayColumns = fileData.processed ? fileData.visibleColumns : fileData.headers;
-  const totalRows = fileData.rows.length;
+  const rows = fileData.processed && fileData.processedRows ? fileData.processedRows : fileData.rows;
+  const totalRows = rows.length;
   const totalHeight = totalRows * ROW_HEIGHT;
   const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - BUFFER);
   const visibleCount = Math.ceil(viewportHeight / ROW_HEIGHT) + BUFFER * 2;
   const endIndex = Math.min(totalRows, startIndex + visibleCount);
-  const visibleRows = fileData.rows.slice(startIndex, endIndex);
+  const visibleRows = rows.slice(startIndex, endIndex);
   const topSpacer = startIndex * ROW_HEIGHT;
   const bottomSpacer = Math.max(0, totalHeight - endIndex * ROW_HEIGHT);
 
@@ -141,6 +142,7 @@ export default function AverbacaoTableModal({ fileData, onClose, onProcess, onRe
         <div className="flex items-center justify-between px-5 py-3 border-t border-border shrink-0">
           <span className="text-xs text-muted-foreground">
             {displayColumns.length} colunas · {totalRows} registros
+            {fileData.processed && <span className="text-primary font-medium"> · agrupado por prioridade</span>}
           </span>
           <div className="flex gap-2">
             {fileData.processed ? (
