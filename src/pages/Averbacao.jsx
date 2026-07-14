@@ -98,7 +98,7 @@ function parseDate(val) {
 function groupByPriority(rows, headers) {
   const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
   const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
-  const colNumNf = findColumn(headers, ['NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUNF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
+  const colNumNf = findColumn(headers, ['NU-NF', 'NU NF', 'NUNF', 'NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
   const lastCol = headers.length > 0 ? headers[headers.length - 1] : null;
 
   if (!colPrioridade) return { groupedRows: rows.map(r => ({ row: r, lists: {}, count: 1 })), totalGeral: 0, vlNfColumn: lastCol, priorityColumn: null };
@@ -196,7 +196,7 @@ export default function Averbacao() {
           return;
         }
         // Remove duplicate NumNf — keep only one record per nota fiscal
-        const colNumNfDedup = findColumn(parsed.headers, ['NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUNF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
+        const colNumNfDedup = findColumn(parsed.headers, ['NU-NF', 'NU NF', 'NUNF', 'NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
         if (colNumNfDedup) {
           const seen = new Set();
           parsed.rows = parsed.rows.filter(r => {
