@@ -130,16 +130,25 @@ export default function ExportarDados() {
         }
         setImportResult({ success: true, count: totalImported });
       } else {
-        const res = await base44.functions.invoke('importarExcelInteligente', { file_url });
-        const d = res.data;
-        if (d.success) {
-          setImportResult({ success: true, count: d.created + d.updated, detail: `${d.entityType === 'Vehicle' ? 'Veículos' : 'Motoristas'}: ${d.created} criados, ${d.updated} atualizados, ${d.errors} erros` });
-        } else {
-          setImportResult({ success: false, error: d.error || 'Erro na importação' });
+        try {
+          const res = await base44.functions.invoke('importarExcelInteligente', { file_url });
+          const d = res.data;
+          if (d.success) {
+            setImportResult({ success: true, count: d.created + d.updated, detail: `${d.entityType === 'Vehicle' ? 'Veículos' : 'Motoristas'}: ${d.created} criados, ${d.updated} atualizados, ${d.errors} erros` });
+          } else {
+            setImportResult({ success: false, error: d.error || 'Erro na importação' });
+          }
+        } catch (invokeErr) {
+          const errData = invokeErr.response?.data || {};
+          setImportResult({ success: false, error: errData.error || invokeErr.message || 'Erro ao processar o arquivo' });
         }
       }
-      await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action: `Importação: ${file.name}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
-    } catch (err) { setImportResult({ success: false, error: err.message }); }
+      try {
+        await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action: `Importação: ${file.name}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
+      } catch (e) {}
+    } catch (err) {
+      setImportResult({ success: false, error: err.response?.data?.error || err.message || 'Erro na importação' });
+    }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = '';
   };

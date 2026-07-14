@@ -8,15 +8,40 @@ Deno.serve(async (req) => {
     let body = {};
     try { body = await req.json(); } catch (e) {}
     const fileUrl = body.file_url;
-    if (!fileUrl) return Response.json({ error: 'file_url é obrigatório' }, { status: 400 });
+    if (!fileUrl) return Response.json({ success: false, error: 'file_url é obrigatório' });
 
-    // Extract data from Excel/CSV — generic schema to capture all columns
-    const schema = { type: 'object', properties: { data: { type: 'array', items: { type: 'object' } } } };
+    // Extract data from Excel/CSV — generic schema to capture all rows
+    const schema = {
+      type: 'object',
+      properties: {
+        rows: {
+          type: 'array',
+          items: { type: 'object' }
+        }
+      },
+      required: ['rows']
+    };
     const result = await base44.asServiceRole.integrations.Core.ExtractDataFromUploadedFile({ file_url: fileUrl, json_schema: schema });
-    const rawRecords = result.output?.data || (Array.isArray(result.output) ? result.output : []);
+
+    // Handle multiple possible output formats from the extraction
+    let rawRecords = [];
+    const output = result.output;
+    if (Array.isArray(output)) {
+      rawRecords = output;
+    } else if (output && typeof output === 'object') {
+      if (Array.isArray(output.rows)) rawRecords = output.rows;
+      else if (Array.isArray(output.data)) rawRecords = output.data;
+      else if (Array.isArray(output.items)) rawRecords = output.items;
+      else {
+        // Single object that looks like a record — wrap it
+        const keys = Object.keys(output);
+        const hasMeaningfulKeys = keys.some(k => !['status', 'details'].includes(k));
+        if (hasMeaningfulKeys) rawRecords = [output];
+      }
+    }
 
     if (rawRecords.length === 0) {
-      return Response.json({ error: 'Nenhum registro encontrado no arquivo' }, { status: 400 });
+      return Response.json({ success: false, error: 'Nenhum registro encontrado no arquivo. Verifique se o arquivo contém colunas com cabeçalhos (PLACA, CPF, NOME, etc.).' });
     }
 
     // Analyze columns to determine entity type
@@ -37,8 +62,10 @@ Deno.serve(async (req) => {
     const findValue = (record, possibleKeys) => {
       for (const key of Object.keys(record)) {
         const upper = normalizeKey(key);
-        if (possibleKeys.some(pk => upper === pk || upper.includes(pk))) {
-          return record[key];
+        for (const pk of possibleKeys) {
+          if (upper === pk || upper.includes(pk)) {
+            return record[key];
+          }
         }
       }
       return '';
@@ -54,9 +81,9 @@ Deno.serve(async (req) => {
     };
 
     let created = 0, updated = 0, errors = 0;
+    const errorDetails = [];
 
     if (entityType === 'Vehicle') {
-      // Excel format: A1=PLACA, B1=MODELO, C1=EST. VEICULO (status)
       const existing = await base44.asServiceRole.entities.Vehicle.list('-created_date', 5000);
       const placaMap = {};
       existing.forEach(v => { if (v.placa) placaMap[v.placa.toUpperCase()] = v; });
@@ -73,15 +100,12 @@ Deno.serve(async (req) => {
             await base44.asServiceRole.entities.Vehicle.update(placaMap[placa].id, { modelo, status, status_opentech: statusRaw });
             updated++;
           } else {
-            await base44.asServiceRole.entities.Vehicle.create({
-              placa, modelo, status, status_opentech: statusRaw
-            });
+            await base44.asServiceRole.entities.Vehicle.create({ placa, modelo, status, status_opentech: statusRaw });
             created++;
           }
-        } catch (e) { errors++; }
+        } catch (e) { errors++; errorDetails.push(e.message); }
       }
     } else {
-      // Excel format: A1=CPF, B1=NOME E SOBRENOME, C1=EST. DE MOTORISTA (status)
       const existing = await base44.asServiceRole.entities.Driver.list('-created_date', 5000);
       const cpfMap = {};
       existing.forEach(d => { if (d.cpf) cpfMap[String(d.cpf).replace(/\D/g, '')] = d; });
@@ -90,36 +114,36 @@ Deno.serve(async (req) => {
         try {
           const cpf = String(findValue(record, ['CPF']) || '').replace(/\D/g, '');
           if (!cpf) { errors++; continue; }
-          const nomeCompleto = String(findValue(record, ['NOME', 'MOTORISTA', 'NOME E SOBRENOME']) || '').trim();
-          const statusRaw = String(findValue(record, ['EST', 'STATUS', 'OPENTECH', 'MOTORISTA']) || '').trim();
+          const nomeCompleto = String(findValue(record, ['NOME E SOBRENOME', 'NOME', 'MOTORISTA']) || '').trim();
+          const statusRaw = String(findValue(record, ['EST. DE MOTORISTA', 'EST DE MOTORISTA', 'EST', 'STATUS', 'OPENTECH']) || '').trim();
           const status = mapStatus(statusRaw);
 
           if (cpfMap[cpf]) {
             await base44.asServiceRole.entities.Driver.update(cpfMap[cpf].id, { nome: nomeCompleto, status, status_opentech: statusRaw });
             updated++;
           } else {
-            await base44.asServiceRole.entities.Driver.create({
-              nome: nomeCompleto, cpf, status, status_opentech: statusRaw
-            });
+            await base44.asServiceRole.entities.Driver.create({ nome: nomeCompleto, cpf, status, status_opentech: statusRaw });
             created++;
           }
-        } catch (e) { errors++; }
+        } catch (e) { errors++; errorDetails.push(e.message); }
       }
     }
 
     if (user) {
-      await base44.asServiceRole.entities.AuditLog.create({
-        user_name: user.full_name || 'Sistema',
-        action: `Importação Excel inteligente: ${entityType}`,
-        details: `${created} criados, ${updated} atualizados, ${errors} erros`,
-        category: 'export',
-        ip_address: 'system',
-        domain: 'automated'
-      });
+      try {
+        await base44.asServiceRole.entities.AuditLog.create({
+          user_name: user.full_name || 'Sistema',
+          action: `Importação Excel inteligente: ${entityType}`,
+          details: `${created} criados, ${updated} atualizados, ${errors} erros`,
+          category: 'export',
+          ip_address: 'system',
+          domain: 'automated'
+        });
+      } catch (e) {}
     }
 
-    return Response.json({ success: true, entityType, created, updated, errors, totalProcessed: rawRecords.length });
+    return Response.json({ success: true, entityType, created, updated, errors, totalProcessed: rawRecords.length, errorDetails: errorDetails.slice(0, 5) });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ success: false, error: error.message });
   }
 });
