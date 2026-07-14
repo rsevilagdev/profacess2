@@ -59,6 +59,17 @@ function groupSavedByPriority(records) {
     groups[priority].push(r);
   }
 
+  // Remove aggregated 90/91 records (without route) when individual route records exist
+  for (const pn of [90, 91]) {
+    const hasRouteRecords = groupKeys.some(gk => gk.priority === pn && gk.key.includes('_'));
+    if (hasRouteRecords) {
+      const plainKey = String(pn);
+      delete groups[plainKey];
+      const idx = groupKeys.findIndex(gk => gk.key === plainKey);
+      if (idx >= 0) groupKeys.splice(idx, 1);
+    }
+  }
+
   groupKeys.sort((a, b) => {
     if (a.priority !== b.priority) return a.priority - b.priority;
     return a.rota - b.rota;
