@@ -6,6 +6,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { imageUrlToBase64 } from '@/lib/pdf-utils';
 import { formatCPF } from '@/lib/cpf-utils.js';
+import { getCuritibaISO, getCuritibaTime } from '@/lib/curitiba-time.js';
 
 export default function AcessoCRDK() {
   const { colaborador } = useProfarmaAuth();
@@ -49,7 +50,7 @@ export default function AcessoCRDK() {
     if (!form.placa_carreta || !form.nome) return;
     setSaving(true);
     try {
-      const now = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const now = getCuritibaTime();
       await base44.entities.AcessoCRDK.create({
         ...form,
         placa_carreta: form.placa_carreta.toUpperCase(),
@@ -121,12 +122,11 @@ export default function AcessoCRDK() {
   const confirmarSaida = async () => {
     setLiberando(saidaItem.id);
     try {
-      const now = new Date();
-      const hora = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const hora = getCuritibaTime();
       const placaCompleta = `${saidaItem.placa_carreta}${saidaItem.placa_cavalo ? '/' + saidaItem.placa_cavalo : ''}`;
       await base44.entities.AcessoCRDK.update(saidaItem.id, {
         horario_saida: hora,
-        data_saida: now.toISOString(),
+        data_saida: getCuritibaISO(),
         observacao: saidaObs.trim(),
         foto_interior: fotoUploadUrl,
         status: 'saida'

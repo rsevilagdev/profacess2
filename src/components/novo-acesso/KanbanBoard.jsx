@@ -3,6 +3,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { getCuritibaISO, formatCuritiba } from '@/lib/curitiba-time.js';
 
 const COLUMNS = [
   { id: 'pendente_revisao', title: 'Pendente de Revisão', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-500/10', dot: 'bg-orange-500' },
@@ -45,7 +46,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
         status: newStatus,
         aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
         aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: new Date().toISOString(),
+        data_aprovacao: getCuritibaISO(),
       });
       await logApproval(draggableId, newStatus, acessos, null);
       onRefresh();
@@ -60,7 +61,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
         status: 'validado',
         aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
         aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: new Date().toISOString(),
+        data_aprovacao: getCuritibaISO(),
         motivo_bloqueio: '',
       });
       await logApproval(id, 'validado', acessos, null);
@@ -77,7 +78,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
         status: 'bloqueado',
         aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
         aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: new Date().toISOString(),
+        data_aprovacao: getCuritibaISO(),
         motivo_bloqueio: motivo.trim(),
       });
       await logApproval(blocking.id, 'bloqueado', acessos, motivo.trim());
@@ -199,7 +200,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                                   </p>
                                   {item.data_aprovacao && (
                                     <p className="text-xs text-muted-foreground">
-                                      {new Date(item.data_aprovacao).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                      {formatCuritiba(item.data_aprovacao, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                                     </p>
                                   )}
                                   {item.motivo_bloqueio && (

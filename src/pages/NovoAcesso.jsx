@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
+import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
 
 export default function NovoAcesso() {
@@ -212,7 +213,7 @@ export default function NovoAcesso() {
       tipo: 'saida',
       carregado: log.carregado || false,
       observacao: finalObs || existingObs,
-      data_aprovacao: new Date().toISOString(),
+      data_aprovacao: getCuritibaISO(),
       aprovado_por: colaborador.nome,
       aprovado_por_cpf: colaborador.cpf,
     });
@@ -241,7 +242,7 @@ export default function NovoAcesso() {
       try {
         await base44.functions.invoke('enviarParaGoogleSheets', {
           spreadsheet_id: spreadsheetId,
-          dados: [log.veiculo_placa, log.motorista_nome || '—', log.motorista_cpf || '—', log.empresa || '—', 'Saída', log.carregado ? 'Carregado' : 'Vazio', new Date().toLocaleString('pt-BR'), colaborador.nome, finalObs || '—']
+          dados: [log.veiculo_placa, log.motorista_nome || '—', log.motorista_cpf || '—', log.empresa || '—', 'Saída', log.carregado ? 'Carregado' : 'Vazio', getCuritibaDateTime(), colaborador.nome, finalObs || '—']
         });
       } catch (e) {}
     }

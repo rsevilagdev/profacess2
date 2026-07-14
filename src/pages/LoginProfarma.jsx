@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
+import { getCuritibaISO } from '@/lib/curitiba-time.js';
 import ParticleBackground from '@/components/ParticleBackground';
 
 export default function LoginProfarma() {
@@ -58,7 +59,7 @@ export default function LoginProfarma() {
         const hasAccess = colab.cargo === 'administrador_master' || colab.cargo === 'administrador' || filiaisPermitidas.includes(filialId);
         if (!hasAccess) { setError('Você não tem permissão para acessar esta filial'); setLoading(false); return; }
 
-        const now = new Date().toISOString();
+        const now = getCuritibaISO();
         await base44.entities.Colaborador.update(colab.id, { ultimo_acesso: now });
         await base44.entities.AuditLog.create({
           user_name: colab.nome, user_cpf: colab.cpf, action: 'Login realizado',

@@ -6,6 +6,7 @@ import NotificationBanner from '@/components/NotificationBanner.jsx';
 import { Loader2, LogOut } from 'lucide-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
+import { getCuritibaHour, getCuritibaMinute } from '@/lib/curitiba-time.js';
 
 export default function AppLayout() {
   const { colaborador, loading, logout } = useProfarmaAuth();
@@ -21,9 +22,8 @@ export default function AppLayout() {
   useEffect(() => {
     if (!colaborador) return;
     const checkTurno = () => {
-      const now = new Date();
-      const hh = now.getHours();
-      const mm = now.getMinutes();
+      const hh = getCuritibaHour();
+      const mm = getCuritibaMinute();
       const key = `${hh}:${mm}`;
       if (lastCheckRef.current === key) return;
       lastCheckRef.current = key;
