@@ -5,6 +5,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { maskCPF } from '@/lib/lgpd-utils.js';
 import AparenciaTab from '@/components/configuracoes/AparenciaTab';
+import IntegracoesGoogle from '@/components/configuracoes/IntegracoesGoogle';
 
 const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'];
 
@@ -129,6 +130,7 @@ export default function Configuracoes() {
         <button onClick={() => setTab('filiais')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'filiais' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Building2 className="h-4 w-4 inline mr-2" />Filiais</button>
         <button onClick={() => setTab('backup')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'backup' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Cloud className="h-4 w-4 inline mr-2" />Backup</button>
         <button onClick={() => setTab('aparencia')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'aparencia' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Palette className="h-4 w-4 inline mr-2" />Aparência</button>
+        <button onClick={() => setTab('integracoes')} className={`px-4 py-2 rounded-2xl text-sm font-medium whitespace-nowrap ${tab === 'integracoes' ? 'bg-primary text-primary-foreground' : 'bg-card border border-border'}`}><Cloud className="h-4 w-4 inline mr-2" />Integrações</button>
       </div>
 
       {/* Users Tab */}
@@ -248,6 +250,9 @@ export default function Configuracoes() {
 
       {/* Aparência Tab */}
       {tab === 'aparencia' && <AparenciaTab />}
+
+      {/* Integrações Tab */}
+      {tab === 'integracoes' && <IntegracoesGoogle />}
 
       {/* User Form Modal */}
       {showForm && (

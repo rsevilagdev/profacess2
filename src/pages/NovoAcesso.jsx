@@ -234,6 +234,28 @@ export default function NovoAcesso() {
         });
       }
     } catch (e) {}
+
+    // Integrar com Google Sheets e Calendar (silencioso se não conectado)
+    const spreadsheetId = localStorage.getItem('google_sheets_id');
+    if (spreadsheetId) {
+      try {
+        await base44.functions.invoke('enviarParaGoogleSheets', {
+          spreadsheet_id: spreadsheetId,
+          dados: [log.veiculo_placa, log.motorista_nome || '—', log.motorista_cpf || '—', log.empresa || '—', 'Saída', log.carregado ? 'Carregado' : 'Vazio', new Date().toLocaleString('pt-BR'), colaborador.nome, finalObs || '—']
+        });
+      } catch (e) {}
+    }
+    try {
+      const entradaDate = new Date(log.created_date);
+      const saidaDate = new Date();
+      await base44.functions.invoke('enviarParaGoogleCalendar', {
+        titulo: `Saída - ${log.veiculo_placa}`,
+        descricao: `Motorista: ${log.motorista_nome || '—'} | Empresa: ${log.empresa || '—'} | Saindo: ${log.carregado ? 'CARREGADO' : 'VAZIO'} | Operador: ${colaborador.nome}`,
+        inicio: entradaDate.toISOString(),
+        fim: saidaDate.toISOString()
+      });
+    } catch (e) {}
+
     await loadAcessos();
   };
 

@@ -135,6 +135,28 @@ export default function AcessoCRDK() {
         action: 'Saída CRDK liberada', details: `Placas: ${placaCompleta} | Motorista: ${saidaItem.nome} | Foto: ${fotoUploadUrl ? 'Sim (placa verificada)' : 'Não'}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
+
+      // Integrar com Google Sheets e Calendar (silencioso se não conectado)
+      const spreadsheetId = localStorage.getItem('google_sheets_id');
+      if (spreadsheetId) {
+        try {
+          await base44.functions.invoke('enviarParaGoogleSheets', {
+            spreadsheet_id: spreadsheetId,
+            dados: [placaCompleta, saidaItem.nome, saidaItem.empresa || '—', saidaItem.destino || '—', saidaItem.horario_entrada || '—', hora, saidaObs.trim(), new Date().toLocaleString('pt-BR')]
+          });
+        } catch (e) {}
+      }
+      try {
+        const entradaDate = new Date(saidaItem.created_date);
+        const saidaDate = new Date();
+        await base44.functions.invoke('enviarParaGoogleCalendar', {
+          titulo: `CRDK Saída - ${placaCompleta}`,
+          descricao: `Motorista: ${saidaItem.nome} | Empresa: ${saidaItem.empresa || '—'} | Destino: ${saidaItem.destino || '—'} | Operador: ${colaborador.nome}`,
+          inicio: entradaDate.toISOString(),
+          fim: saidaDate.toISOString()
+        });
+      } catch (e) {}
+
       await loadRegistros();
     } catch (e) {}
     setLiberando(null);
