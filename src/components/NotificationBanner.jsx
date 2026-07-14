@@ -16,9 +16,12 @@ export default function NotificationBanner() {
       const mine = list.filter(n => {
         if (n.read) return false;
         if (seenIds.has(n.id)) return false;
-        // Targeted to me, or broadcast (no target)
-        if (!n.target_user_id) return true;
-        return n.target_user_id === colaborador.id;
+        // Directly targeted to me
+        if (n.target_user_id) return n.target_user_id === colaborador.id;
+        // Targeted to my filial
+        if (n.branch_id) return n.branch_id === colaborador.filial_id;
+        // Global broadcast (no target, no branch)
+        return true;
       });
       if (mine.length > 0) {
         const prefMap = {

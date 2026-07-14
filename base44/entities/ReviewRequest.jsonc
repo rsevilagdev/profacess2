@@ -49,6 +49,10 @@
       "type": "string",
       "description": "Nomes dos destinat\u00e1rios"
     },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial do solicitante"
+    },
     "observacao": {
       "type": "string",
       "description": "Observa\u00e7\u00f5es"

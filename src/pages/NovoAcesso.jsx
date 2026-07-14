@@ -38,10 +38,10 @@ export default function NovoAcesso() {
 
   const respondReview = async (review, approved) => {
     await base44.entities.ReviewRequest.update(review.id, { status: approved ? 'aprovado' : 'rejeitado' });
-    const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
+    const editorName = colaborador.nome;
     if (approved) {
       const colab = await base44.entities.Colaborador.list();
-      const recipients = colab.filter(c => c.email && c.ativo && ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(c.cargo));
+      const recipients = colab.filter(c => c.email && c.ativo && ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(c.cargo) && (c.filial_id === colaborador.filial_id || c.cargo === 'administrador_master'));
       for (const r of recipients) {
         try {
           await base44.integrations.Core.SendEmail({
@@ -137,7 +137,13 @@ export default function NovoAcesso() {
     setRequestingAuth(true);
     const cpfDigits = cpf.replace(/\D/g, '');
     try {
-      // Create review request
+      // Get recipients in the same filial (admin_master sees all)
+      const colab = await base44.entities.Colaborador.list();
+      const recipients = colab.filter(c => c.ativo && ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) && (c.filial_id === colaborador.filial_id || c.cargo === 'administrador_master'));
+      const destinatariosIds = recipients.map(r => r.id).join(',');
+      const destinatariosNomes = recipients.map(r => r.nome).join(', ');
+
+      // Create review request with filial and destinatarios
       const review = await base44.entities.ReviewRequest.create({
         solicitante_nome: colaborador.nome,
         solicitante_cpf: colaborador.cpf,
@@ -145,12 +151,13 @@ export default function NovoAcesso() {
         target_nome: !veiculo ? placa.toUpperCase() : cpfDigits,
         target_cpf: !veiculo ? placa.toUpperCase() : cpfDigits,
         motivo: `Veículo não encontrado: ${!veiculo} | Motorista não encontrado: ${!motorista} | Placa: ${placa} | CPF: ${cpfDigits}`,
-        status: 'pendente'
+        status: 'pendente',
+        filial_id: colaborador.filial_id,
+        destinatarios: destinatariosIds,
+        destinatarios_nomes: destinatariosNomes
       });
 
-      // Notify admins, supervisors, support
-      const colab = await base44.entities.Colaborador.list();
-      const recipients = colab.filter(c => c.email && c.ativo && ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo));
+      // Notify each recipient individually
       for (const r of recipients) {
         try {
           await base44.entities.Notification.create({
