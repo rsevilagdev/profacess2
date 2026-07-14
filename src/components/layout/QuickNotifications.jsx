@@ -15,7 +15,7 @@ export default function QuickNotifications() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [tasks, vehicles, drivers, accessLogs, reviews, liberacoes, filaLiberacao] = await Promise.all([
+      const [tasks, vehicles, drivers, accessLogs, reviews, liberacoes, crdkDescarga, accessValidados] = await Promise.all([
         base44.entities.Task.filter({ status: 'pendente' }).catch(() => []),
         base44.entities.Vehicle.filter({ status: 'pendente_revisao' }).catch(() => []),
         base44.entities.Driver.filter({ status: 'pendente_revisao' }).catch(() => []),
@@ -23,6 +23,7 @@ export default function QuickNotifications() {
         base44.entities.ReviewRequest.filter({ status: 'pendente' }).catch(() => []),
         base44.entities.Liberacao.filter({ status: 'pendente' }).catch(() => []),
         base44.entities.AcessoCRDK.filter({ status: 'descarregamento' }).catch(() => []),
+        base44.entities.AccessLog.filter({ status: 'validado' }).catch(() => []),
       ]);
       setData({
         tasks: tasks.length,
@@ -31,7 +32,7 @@ export default function QuickNotifications() {
         accessLogs: accessLogs.length,
         reviews: reviews.length,
         liberacoes: liberacoes.length,
-        filaLiberacao: filaLiberacao.length,
+        filaLiberacao: crdkDescarga.length + accessValidados.filter(a => a.tipo !== 'saida').length,
       });
     } catch (e) {}
     setLoading(false);
@@ -59,7 +60,7 @@ export default function QuickNotifications() {
   const total = data.tasks + data.vehicles + data.drivers + data.accessLogs + data.reviews + data.liberacoes + data.filaLiberacao;
 
   const items = [
-    { label: 'Fila de Liberação', count: data.filaLiberacao, icon: PackageCheck, path: '/acesso-crdk', color: 'text-teal-600 bg-teal-500/10' },
+    { label: 'Fila de Liberação', count: data.filaLiberacao, icon: PackageCheck, path: '/acessos', color: 'text-teal-600 bg-teal-500/10' },
     { label: 'Tarefas Pendentes', count: data.tasks, icon: ClipboardList, path: '/plano-trabalho', color: 'text-blue-600 bg-blue-500/10' },
     { label: 'Veículos p/ Liberação', count: data.vehicles, icon: Truck, path: '/editar-base', color: 'text-orange-600 bg-orange-500/10' },
     { label: 'Motoristas p/ Revisão', count: data.drivers, icon: Users, path: '/editar-base', color: 'text-purple-600 bg-purple-500/10' },

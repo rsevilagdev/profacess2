@@ -34,6 +34,7 @@ import MonitorFiliais from '@/pages/MonitorFiliais';
 import SupervisaoFiliais from '@/pages/SupervisaoFiliais';
 import Modelos from '@/pages/Modelos';
 import AcessoCRDK from '@/pages/AcessoCRDK';
+import VerificacaoRapida from '@/pages/VerificacaoRapida';
 import Averbacao from '@/pages/Averbacao';
 import AppLayout from '@/components/layout/AppLayout';
 
@@ -72,6 +73,7 @@ function App() {
                 <Route path="/supervisao-filiais" element={<SupervisaoFiliais />} />
                 <Route path="/modelos" element={<Modelos />} />
                 <Route path="/acesso-crdk" element={<AcessoCRDK />} />
+                <Route path="/verificacao-rapida" element={<VerificacaoRapida />} />
                 <Route path="/averbacao" element={<Averbacao />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />

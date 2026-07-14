@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing, Calendar, Activity, LayoutGrid, Truck, DollarSign } from 'lucide-react';
+import { Menu, LayoutDashboard, ScanLine, ShieldAlert, Database, BarChart3, FileSpreadsheet, Clock, Bell, ScrollText, Building2, Settings, Lock, Download, LifeBuoy, FileText, User, LogOut, X, BellRing, Calendar, Activity, LayoutGrid, Truck, DollarSign, Search } from 'lucide-react';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 
 const MENU_GROUPS = [
@@ -11,6 +11,7 @@ const MENU_GROUPS = [
       { path: '/acessos', label: 'Acessos', icon: ScanLine },
       { path: '/acesso-crdk', label: 'Acesso CRDK', icon: Truck },
       { path: '/painel-bloqueio', label: 'Painel de Bloqueio', icon: ShieldAlert },
+      { path: '/verificacao-rapida', label: 'Verificação Rápida', icon: Search },
       { path: '/monitor-filiais', label: 'Monitor de Filiais', icon: Activity },
       { path: '/supervisao-filiais', label: 'Supervisão de Filiais', icon: DollarSign, supervisorOnly: true },
       { path: '/editar-base', label: 'Editar Base de Dados', icon: Database },

@@ -5,6 +5,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { imageUrlToBase64 } from '@/lib/pdf-utils';
+import { formatCPF } from '@/lib/cpf-utils.js';
 
 export default function AcessoCRDK() {
   const { colaborador } = useProfarmaAuth();
@@ -261,7 +262,7 @@ export default function AcessoCRDK() {
           <Field label="Nome *" value={form.nome} onChange={v => setForm({...form, nome: v})} placeholder="Nome do motorista" />
           <Field label="Empresa" value={form.empresa} onChange={v => setForm({...form, empresa: v})} placeholder="Transportadora" />
           <Field label="Destino" value={form.destino} onChange={v => setForm({...form, destino: v})} placeholder="PR" />
-          <Field label="RG / CPF" value={form.rg_cpf} onChange={v => setForm({...form, rg_cpf: v})} placeholder="RG ou CPF" />
+          <Field label="RG / CPF" value={form.rg_cpf} onChange={v => setForm({...form, rg_cpf: formatCPF(v)})} placeholder="000.000.000-00" maxLength={14} />
           <Field label="Crachá" value={form.cracha} onChange={v => setForm({...form, cracha: v})} placeholder="Nº do crachá" />
           <Field label="Autorização / Contato" value={form.autorizacao_contato} onChange={v => setForm({...form, autorizacao_contato: v})} placeholder="Autorização ou contato" />
         </div>
@@ -461,11 +462,11 @@ export default function AcessoCRDK() {
   );
 }
 
-function Field({ label, value, onChange, placeholder }) {
+function Field({ label, value, onChange, placeholder, maxLength }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
-      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} />
+      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
     </div>
   );
 }

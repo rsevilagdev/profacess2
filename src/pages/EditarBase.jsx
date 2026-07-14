@@ -3,6 +3,7 @@ import { Search, Plus, Truck, Users, Edit2, Trash2, X, ChevronLeft, ChevronRight
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { formatCPF } from '@/lib/cpf-utils.js';
 
 const PAGE_SIZE = 10;
 
@@ -243,7 +244,7 @@ export default function EditarBase() {
               ) : (
                 <>
                   <Field label="Nome e Sobrenome *" value={form.nome || ''} onChange={v => setForm({...form, nome: v})} />
-                  <Field label="CPF *" value={form.cpf || ''} onChange={v => setForm({...form, cpf: v})} />
+                  <Field label="CPF *" value={form.cpf || ''} onChange={v => setForm({...form, cpf: formatCPF(v)})} maxLength={14} />
                   <SelectField label="Status" value={form.status || 'pendente_revisao'} options={['validado', 'bloqueado', 'pendente_revisao']} onChange={v => setForm({...form, status: v})} />
                 </>
               )}
@@ -261,11 +262,11 @@ export default function EditarBase() {
   );
 }
 
-function Field({ label, value, onChange }) {
+function Field({ label, value, onChange, maxLength }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
-      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={e => onChange(e.target.value)} />
+      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={e => onChange(e.target.value)} maxLength={maxLength} />
     </div>
   );
 }
