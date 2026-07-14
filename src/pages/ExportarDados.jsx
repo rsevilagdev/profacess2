@@ -204,62 +204,25 @@ export default function ExportarDados() {
         )}
       </div>
 
-      {/* Excel Template Reference */}
+      {/* Formato de importação */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center gap-3 mb-3">
           <FileSpreadsheet className="h-5 w-5 text-primary" />
           <div>
-            <h3 className="font-heading font-bold">Modelo de Planilha (Excel/CSV)</h3>
-            <p className="text-sm text-muted-foreground">Formato padrão para importação de Motoristas e Veículos</p>
+            <h3 className="font-heading font-bold">Formato de Importação (Excel/CSV)</h3>
+            <p className="text-sm text-muted-foreground">A importação inteligente detecta automaticamente se os dados são de motoristas ou veículos</p>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
-          <div className="border border-border rounded-xl overflow-hidden">
-            <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Aba: MOTORISTAS</div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-3 py-2 font-medium">CPF</th>
-                  <th className="text-left px-3 py-2 font-medium">NOME E SOBRENOME</th>
-                  <th className="text-left px-3 py-2 font-medium">EST. DE MOTORISTA</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border"><td className="px-3 py-2">007.220.389-76</td><td className="px-3 py-2">Márcio Granella</td><td className="px-3 py-2">VALIDADO</td></tr>
-                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
-              </tbody>
-            </table>
-            <div className="p-3 border-t border-border bg-muted/50">
-              <Button onClick={() => fileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
-                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Importar Motoristas
-              </Button>
-            </div>
+          <div className="bg-muted/50 rounded-xl p-4">
+            <p className="text-sm font-medium mb-2">Veículos</p>
+            <p className="text-xs text-muted-foreground">Colunas: PLACA · MODELO · EST. VEICULO</p>
           </div>
-          <div className="border border-border rounded-xl overflow-hidden">
-            <div className="bg-muted px-4 py-2 text-sm font-medium border-b border-border">Aba: VEICULOS</div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left px-3 py-2 font-medium">PLACA</th>
-                  <th className="text-left px-3 py-2 font-medium">MODELO</th>
-                  <th className="text-left px-3 py-2 font-medium">EST. VEICULO</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-border"><td className="px-3 py-2">AXM9F80</td><td className="px-3 py-2">TOCO</td><td className="px-3 py-2">VALIDADO</td></tr>
-                <tr><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td><td className="px-3 py-2 text-muted-foreground">...</td></tr>
-              </tbody>
-            </table>
-            <div className="p-3 border-t border-border bg-muted/50">
-              <Button onClick={() => fileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
-                {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                Importar Veículos
-              </Button>
-            </div>
+          <div className="bg-muted/50 rounded-xl p-4">
+            <p className="text-sm font-medium mb-2">Motoristas</p>
+            <p className="text-xs text-muted-foreground">Colunas: CPF · NOME E SOBRENOME · EST. DE MOTORISTA</p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-3">A importação inteligente detecta automaticamente se os dados são de motoristas ou veículos. Se o registro já existe na base, atualiza o status. Se não existe, cria um novo registro.</p>
       </div>
     </div>
   );

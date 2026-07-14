@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar, Mail } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,7 @@ export default function Auditoria() {
   const [dateTo, setDateTo] = useState('');
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   useEffect(() => {
     base44.entities.AuditLog.list('-created_date', 500).then(list => {
@@ -75,6 +76,21 @@ export default function Auditoria() {
     setExporting(false);
   };
 
+  const sendEmail = async () => {
+    setSendingEmail(true);
+    try {
+      const summary = filtered.slice(0, 50).map(l =>
+        `${new Date(l.created_date).toLocaleString('pt-BR')} | ${l.user_name || '—'} | ${l.action} | IP: ${l.ip_address || '—'} | ${l.domain || '—'}`
+      ).join('\n');
+      await base44.integrations.Core.SendEmail({
+        to: colaborador?.email || 'admin@profarma.com',
+        subject: 'Logs de Auditoria - ' + new Date().toLocaleDateString('pt-BR'),
+        body: `AUDITORIA DO SISTEMA\n${new Date().toLocaleString('pt-BR')}\n\nTotal de registros: ${filtered.length}\n\n${summary}\n\nPROFARMA LIBERAAUTO PRO`
+      });
+    } catch (e) {}
+    setSendingEmail(false);
+  };
+
   const exportCSV = () => {
     const headers = ['Data', 'Usuário', 'CPF', 'Ação', 'Categoria', 'Detalhes', 'IP', 'Domínio'];
     const rows = filtered.map(l => [
@@ -96,9 +112,10 @@ export default function Auditoria() {
           <h1 className="brand-title text-2xl">Auditoria</h1>
           <p className="text-sm text-muted-foreground">Log completo de ações com IP, domínio e dispositivo</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button onClick={exportCSV} variant="secondary" className="h-12 rounded-2xl"><Download className="h-4 w-4" /> Excel</Button>
           <Button onClick={exportPDF} disabled={exporting} className="h-12 rounded-2xl">{exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} PDF</Button>
+          <Button onClick={sendEmail} disabled={sendingEmail} variant="secondary" className="h-12 rounded-2xl">{sendingEmail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Email</Button>
         </div>
       </div>
 

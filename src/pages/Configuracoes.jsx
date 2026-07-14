@@ -8,6 +8,24 @@ import AparenciaTab from '@/components/configuracoes/AparenciaTab';
 
 const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'];
 
+const PAGES = [
+  { path: '/dashboard', label: 'Dashboard' },
+  { path: '/acessos', label: 'Acessos' },
+  { path: '/painel-bloqueio', label: 'Painel de Bloqueio' },
+  { path: '/editar-base', label: 'Editar Base de Dados' },
+  { path: '/relatorios', label: 'Relatórios' },
+  { path: '/relatorio-personalizado', label: 'Relatório Personalizado' },
+  { path: '/resumo-turnos', label: 'Resumo de Turnos' },
+  { path: '/notificacoes', label: 'Notificações' },
+  { path: '/auditoria', label: 'Auditoria' },
+  { path: '/gerenciamento-filiais', label: 'Gerenciamento de Filiais' },
+  { path: '/configuracoes', label: 'Configurações' },
+  { path: '/configuracoes-seguranca', label: 'Configurações de Segurança' },
+  { path: '/exportar-dados', label: 'Exportar/Importar Dados' },
+  { path: '/plano-trabalho', label: 'Plano de Trabalho' },
+  { path: '/perfil', label: 'Perfil' },
+];
+
 export default function Configuracoes() {
   const { colaborador } = useProfarmaAuth();
   const [tab, setTab] = useState('usuarios');
@@ -31,7 +49,11 @@ export default function Configuracoes() {
   useEffect(() => { loadData(); }, []);
 
   const saveUser = async () => {
-    const data = { ...form, filiais_permitidas: Array.isArray(form.filiais_permitidas) ? form.filiais_permitidas.join(',') : form.filiais_permitidas };
+    const data = {
+      ...form,
+      filiais_permitidas: Array.isArray(form.filiais_permitidas) ? form.filiais_permitidas.join(',') : form.filiais_permitidas,
+      paginas_permitidas: Array.isArray(form.paginas_permitidas) ? form.paginas_permitidas.join(',') : form.paginas_permitidas
+    };
     if (editing) { await base44.entities.Colaborador.update(editing.id, data); await logAudit('Usuário editado', data.nome); }
     else { await base44.entities.Colaborador.create({ ...data, ativo: true, termos_aceitos: false }); await logAudit('Usuário criado', data.nome); }
     setShowForm(false); loadData();
@@ -64,8 +86,8 @@ export default function Configuracoes() {
     await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action, details, ip_address: 'local', domain: window.location.hostname, category: 'user_management', branch_id: colaborador.filial_id });
   };
 
-  const openNewUser = () => { setEditing(null); setForm({ nome: '', cpf: '', senha: '', email: '', telefone: '', matricula: '', cargo: 'operador', filial_id: colaborador.filial_id, filiais_permitidas: [colaborador.filial_id] }); setShowForm(true); };
-  const openEditUser = (u) => { setEditing(u); setForm({ ...u, filiais_permitidas: u.filiais_permitidas ? u.filiais_permitidas.split(',') : [] }); setShowForm(true); };
+  const openNewUser = () => { setEditing(null); setForm({ nome: '', cpf: '', senha: '', email: '', telefone: '', matricula: '', cargo: 'operador', filial_id: colaborador.filial_id, filiais_permitidas: [colaborador.filial_id], paginas_permitidas: [] }); setShowForm(true); };
+  const openEditUser = (u) => { setEditing(u); setForm({ ...u, filiais_permitidas: u.filiais_permitidas ? u.filiais_permitidas.split(',') : [], paginas_permitidas: u.paginas_permitidas ? u.paginas_permitidas.split(',') : [] }); setShowForm(true); };
 
   return (
     <div className="space-y-6 fade-in">
@@ -190,7 +212,7 @@ export default function Configuracoes() {
               </select>
               <div>
                 <p className="text-sm font-medium mb-2">Filiais Permitidas</p>
-                <div className="space-y-1">
+                <div className="space-y-1 max-h-32 overflow-y-auto">
                   {filiais.map(f => (
                     <label key={f.id} className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" checked={(form.filiais_permitidas || []).includes(f.id)} onChange={e => {
@@ -198,6 +220,27 @@ export default function Configuracoes() {
                         setForm({...form, filiais_permitidas: e.target.checked ? [...current, f.id] : current.filter(id => id !== f.id)});
                       }} className="h-4 w-4" />
                       <span className="text-sm">{f.nome}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Permissões de Páginas</p>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setForm({...form, paginas_permitidas: PAGES.map(p => p.path)})} className="text-xs text-primary hover:underline">Selecionar todas</button>
+                    <button type="button" onClick={() => setForm({...form, paginas_permitidas: []})} className="text-xs text-muted-foreground hover:underline">Limpar</button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">Se vazio, o usuário tem acesso a todas as páginas</p>
+                <div className="space-y-1 max-h-40 overflow-y-auto border border-border rounded-xl p-2">
+                  {PAGES.map(p => (
+                    <label key={p.path} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-1">
+                      <input type="checkbox" checked={(form.paginas_permitidas || []).includes(p.path)} onChange={e => {
+                        const current = form.paginas_permitidas || [];
+                        setForm({...form, paginas_permitidas: e.target.checked ? [...current, p.path] : current.filter(path => path !== p.path)});
+                      }} className="h-4 w-4" />
+                      <span className="text-sm">{p.label}</span>
                     </label>
                   ))}
                 </div>

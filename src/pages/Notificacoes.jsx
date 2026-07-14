@@ -52,8 +52,10 @@ export default function Notificacoes() {
   useEffect(() => { loadData(); }, [colaborador]);
 
   useEffect(() => {
-    const unsubscribe = base44.entities.Notification.subscribe(() => loadData());
-    return unsubscribe;
+    const unsubN = base44.entities.Notification.subscribe(() => loadData());
+    const unsubR = base44.entities.ReviewRequest.subscribe(() => loadData());
+    const unsubT = base44.entities.Task.subscribe(() => loadData());
+    return () => { unsubN(); unsubR(); unsubT(); };
   }, [colaborador]);
 
   const toggleUser = (userId) => {

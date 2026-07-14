@@ -30,6 +30,13 @@ export default function EditarBase() {
 
   useEffect(() => { loadData(); }, []);
 
+  // Real-time — atualiza base sem refresh
+  useEffect(() => {
+    const unsubV = base44.entities.Vehicle.subscribe(() => loadData());
+    const unsubD = base44.entities.Driver.subscribe(() => loadData());
+    return () => { unsubV(); unsubD(); };
+  }, []);
+
   const filtered = (tab === 'veiculos' ? veiculos : motoristas).filter(item => {
     if (!search) return true;
     const term = search.toLowerCase();

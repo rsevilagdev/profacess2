@@ -29,35 +29,44 @@ export default function Dashboard() {
   const [recentes, setRecentes] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    Promise.all([
+  const loadData = async () => {
+    const [logs, veiculos, motoristas] = await Promise.all([
       base44.entities.AccessLog.list('-created_date', 100).catch(() => []),
       base44.entities.Vehicle.list().catch(() => []),
       base44.entities.Driver.list().catch(() => []),
-    ]).then(([logs, veiculos, motoristas]) => {
-      const today = new Date().toDateString();
-      const todayLogs = logs.filter(l => new Date(l.created_date).toDateString() === today);
-      const bloqueados = veiculos.filter(v => v.status === 'bloqueado').length + motoristas.filter(m => m.status === 'bloqueado').length;
+    ]);
+    const today = new Date().toDateString();
+    const todayLogs = logs.filter(l => new Date(l.created_date).toDateString() === today);
+    const bloqueados = veiculos.filter(v => v.status === 'bloqueado').length + motoristas.filter(m => m.status === 'bloqueado').length;
 
-      const hours = {};
-      for (let h = 0; h < 24; h++) hours[`${h}h`] = 0;
-      todayLogs.forEach(l => {
-        const h = new Date(l.created_date).getHours();
-        hours[`${h}h`] = (hours[`${h}h`] || 0) + 1;
-      });
-      setChartData(Object.entries(hours).map(([hour, count]) => ({ hour, count })));
-
-      setStats({
-        acessos: todayLogs.length,
-        bloqueados,
-        veiculos: veiculos.filter(v => v.status === 'validado').length,
-        veiculosTotal: veiculos.length,
-        motoristas: motoristas.filter(m => m.status === 'validado').length,
-        motoristasTotal: motoristas.length,
-      });
-      setRecentes(logs.slice(0, 5));
-      setLoading(false);
+    const hours = {};
+    for (let h = 0; h < 24; h++) hours[`${h}h`] = 0;
+    todayLogs.forEach(l => {
+      const h = new Date(l.created_date).getHours();
+      hours[`${h}h`] = (hours[`${h}h`] || 0) + 1;
     });
+    setChartData(Object.entries(hours).map(([hour, count]) => ({ hour, count })));
+
+    setStats({
+      acessos: todayLogs.length,
+      bloqueados,
+      veiculos: veiculos.filter(v => v.status === 'validado').length,
+      veiculosTotal: veiculos.length,
+      motoristas: motoristas.filter(m => m.status === 'validado').length,
+      motoristasTotal: motoristas.length,
+    });
+    setRecentes(logs.slice(0, 5));
+    setLoading(false);
+  };
+
+  useEffect(() => { loadData(); }, []);
+
+  // Real-time — atualiza dashboard sem refresh
+  useEffect(() => {
+    const unsubA = base44.entities.AccessLog.subscribe(() => loadData());
+    const unsubV = base44.entities.Vehicle.subscribe(() => loadData());
+    const unsubD = base44.entities.Driver.subscribe(() => loadData());
+    return () => { unsubA(); unsubV(); unsubD(); };
   }, []);
 
   if (loading) return <div className="flex justify-center py-20"><Smartphone className="h-8 w-8 animate-pulse text-primary" /></div>;

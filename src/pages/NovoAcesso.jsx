@@ -29,6 +29,12 @@ export default function NovoAcesso() {
     if (canEditDB) loadReviewRequests();
   }, [canEditDB]);
 
+  // Real-time subscription — atualiza fila sem refresh
+  useEffect(() => {
+    const unsubAccess = base44.entities.AccessLog.subscribe(() => loadAcessos());
+    return unsubAccess;
+  }, []);
+
   const loadReviewRequests = async () => {
     try {
       const list = await base44.entities.ReviewRequest.filter({ status: 'pendente' });
@@ -108,6 +114,16 @@ export default function NovoAcesso() {
       } else {
         setCheckResult('revision');
         setShowRevision(true);
+        // Criar tarefa de revisão para administradores, gestores e colaboradores
+        try {
+          await base44.entities.Task.create({
+            titulo: `Revisar acesso - Placa: ${placa.toUpperCase()} | CPF: ${cpfDigits}`,
+            descricao: `Veículo: ${v ? v.status : 'não encontrado'} | Motorista: ${m ? m.status : 'não encontrado'}. Solicitado por ${colaborador.nome} na filial ${colaborador.filial_nome || ''}.`,
+            status: 'pendente',
+            prioridade: 'alta',
+            filial_id: colaborador.filial_id
+          });
+        } catch (e) {}
       }
     } catch (e) {
       setCheckResult('error');

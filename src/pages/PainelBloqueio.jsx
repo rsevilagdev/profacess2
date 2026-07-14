@@ -37,6 +37,17 @@ export default function PainelBloqueio() {
     });
   }, []);
 
+  // Real-time — atualiza listas sem refresh
+  useEffect(() => {
+    const unsubV = base44.entities.Vehicle.subscribe(() => {
+      base44.entities.Vehicle.list('-created_date', 500).then(setVeiculos).catch(() => {});
+    });
+    const unsubD = base44.entities.Driver.subscribe(() => {
+      base44.entities.Driver.list('-created_date', 500).then(setMotoristas).catch(() => {});
+    });
+    return () => { unsubV(); unsubD(); };
+  }, []);
+
   const toggleStatus = (s) => {
     setStatusFilter(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
     setPage(0);
