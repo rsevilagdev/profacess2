@@ -20,7 +20,7 @@ export default function Notificacoes() {
     if (!colaborador) return false;
     if (n.target_user_id) return n.target_user_id === colaborador.id;
     if (n.branch_id) return n.branch_id === colaborador.filial_id;
-    return true;
+    return false;
   };
 
   const loadData = async () => {
@@ -81,7 +81,8 @@ export default function Notificacoes() {
     } else if (form.targetUserIds.length > 0) {
       targets = users.filter(u => form.targetUserIds.includes(u.id));
     } else {
-      targets = users;
+      targets = users.filter(u => u.filial_id === colaborador.filial_id);
+      branchId = colaborador.filial_id;
     }
 
     for (const target of targets) {

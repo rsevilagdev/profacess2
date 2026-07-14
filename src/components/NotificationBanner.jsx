@@ -20,8 +20,7 @@ export default function NotificationBanner() {
         if (n.target_user_id) return n.target_user_id === colaborador.id;
         // Targeted to my filial
         if (n.branch_id) return n.branch_id === colaborador.filial_id;
-        // Global broadcast (no target, no branch)
-        return true;
+        return false;
       });
       if (mine.length > 0) {
         const prefMap = {

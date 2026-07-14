@@ -23,6 +23,8 @@ export default function ExportarDados() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const fileRef = useRef(null);
+  const vehicleFileRef = useRef(null);
+  const driverFileRef = useRef(null);
 
   const isAdmin = ['administrador_master', 'administrador'].includes(colaborador?.cargo);
 
@@ -151,6 +153,37 @@ export default function ExportarDados() {
     }
     setImporting(false);
     if (fileRef.current) fileRef.current.value = '';
+    if (vehicleFileRef.current) vehicleFileRef.current.value = '';
+    if (driverFileRef.current) driverFileRef.current.value = '';
+  };
+
+  const handleCardImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImporting(true); setImportResult(null);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      try {
+        const res = await base44.functions.invoke('importarExcelInteligente', { file_url });
+        const d = res.data;
+        if (d.success) {
+          setImportResult({ success: true, count: d.created + d.updated, detail: `${d.entityType === 'Vehicle' ? 'Veículos' : 'Motoristas'}: ${d.created} criados, ${d.updated} atualizados, ${d.errors} erros` });
+        } else {
+          setImportResult({ success: false, error: d.error || 'Erro na importação' });
+        }
+      } catch (invokeErr) {
+        const errData = invokeErr.response?.data || {};
+        setImportResult({ success: false, error: errData.error || invokeErr.message || 'Erro ao processar o arquivo' });
+      }
+      try {
+        await base44.entities.AuditLog.create({ user_name: colaborador.nome, user_cpf: colaborador.cpf, action: `Importação: ${file.name}`, ip_address: 'local', domain: window.location.hostname, category: 'export', branch_id: colaborador.filial_id });
+      } catch (e) {}
+    } catch (err) {
+      setImportResult({ success: false, error: err.response?.data?.error || err.message || 'Erro na importação' });
+    }
+    setImporting(false);
+    if (vehicleFileRef.current) vehicleFileRef.current.value = '';
+    if (driverFileRef.current) driverFileRef.current.value = '';
   };
 
   if (!isAdmin) {
@@ -216,11 +249,19 @@ export default function ExportarDados() {
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="bg-muted/50 rounded-xl p-4">
             <p className="text-sm font-medium mb-2">Veículos</p>
-            <p className="text-xs text-muted-foreground">Colunas: PLACA · MODELO · EST. VEICULO</p>
+            <p className="text-xs text-muted-foreground mb-3">Colunas: PLACA · MODELO · EST. VEICULO</p>
+            <Button onClick={() => vehicleFileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Importar Veículos
+            </Button>
+            <input ref={vehicleFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleCardImport} disabled={importing} className="hidden" />
           </div>
           <div className="bg-muted/50 rounded-xl p-4">
             <p className="text-sm font-medium mb-2">Motoristas</p>
-            <p className="text-xs text-muted-foreground">Colunas: CPF · NOME E SOBRENOME · EST. DE MOTORISTA</p>
+            <p className="text-xs text-muted-foreground mb-3">Colunas: CPF · NOME E SOBRENOME · EST. DE MOTORISTA</p>
+            <Button onClick={() => driverFileRef.current?.click()} disabled={importing} variant="secondary" className="w-full h-10 rounded-xl">
+              {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} Importar Motoristas
+            </Button>
+            <input ref={driverFileRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleCardImport} disabled={importing} className="hidden" />
           </div>
         </div>
       </div>
