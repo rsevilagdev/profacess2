@@ -1,5 +1,6 @@
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import FloatingMenu from './FloatingMenu.jsx';
+import QuickNotifications from './QuickNotifications.jsx';
 import TermsModal from '@/components/TermsModal.jsx';
 import NotificationBanner from '@/components/NotificationBanner.jsx';
 import { Loader2, LogOut } from 'lucide-react';
@@ -54,6 +55,7 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background" style={{ userSelect: 'none' }}>
       <FloatingMenu />
+      <QuickNotifications />
       <NotificationBanner />
       <TermsModal />
       {forceLogoutMsg && (
