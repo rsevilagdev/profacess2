@@ -1,0 +1,72 @@
+{
+  "name": "AcessoCRDK",
+  "type": "object",
+  "properties": {
+    "placa": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "nome": {
+      "type": "string",
+      "description": "Nome do motorista"
+    },
+    "empresa": {
+      "type": "string",
+      "description": "Empresa/transportadora"
+    },
+    "destino": {
+      "type": "string",
+      "default": "PR",
+      "description": "Destino da transfer\u00eancia"
+    },
+    "rg_cpf": {
+      "type": "string",
+      "description": "RG ou CPF do motorista"
+    },
+    "horario_entrada": {
+      "type": "string",
+      "description": "Hor\u00e1rio de entrada"
+    },
+    "horario_saida": {
+      "type": "string",
+      "description": "Hor\u00e1rio de sa\u00edda"
+    },
+    "cracha": {
+      "type": "string",
+      "description": "N\u00famero do crach\u00e1"
+    },
+    "autorizacao_contato": {
+      "type": "string",
+      "description": "Autoriza\u00e7\u00e3o ou contato"
+    },
+    "observacao": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "operador_nome": {
+      "type": "string",
+      "description": "Nome do operador que registrou"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida"
+      ],
+      "default": "entrada",
+      "description": "Status do acesso"
+    }
+  },
+  "required": [
+    "placa",
+    "nome"
+  ]
+}

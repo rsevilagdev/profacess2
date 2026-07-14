@@ -32,6 +32,7 @@ import ConfiguracoesNotificacoes from '@/pages/ConfiguracoesNotificacoes';
 import PlanoTrabalho from '@/pages/PlanoTrabalho';
 import MonitorFiliais from '@/pages/MonitorFiliais';
 import Modelos from '@/pages/Modelos';
+import AcessoCRDK from '@/pages/AcessoCRDK';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -67,6 +68,7 @@ function App() {
                 <Route path="/plano-trabalho" element={<PlanoTrabalho />} />
                 <Route path="/monitor-filiais" element={<MonitorFiliais />} />
                 <Route path="/modelos" element={<Modelos />} />
+                <Route path="/acesso-crdk" element={<AcessoCRDK />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>

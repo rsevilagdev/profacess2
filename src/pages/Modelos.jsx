@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Printer, Loader2, LayoutGrid, Calendar } from 'lucide-react';
+import { Printer, Loader2, LayoutGrid, Calendar, Truck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
+import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
 
 const TEMPLATES = [
   {
@@ -10,6 +11,12 @@ const TEMPLATES = [
     name: 'Controle de Veículos Expedição',
     icon: LayoutGrid,
     description: 'Controle de entrada e saída de veículos com motorista e ajudante',
+  },
+  {
+    id: 'controle_veiculos_recebimento',
+    name: 'Controle de Veículos Recebimento',
+    icon: Truck,
+    description: 'Controle de recebimento de veículos — transferência entre CDs (CRDK)',
   },
 ];
 
@@ -25,7 +32,8 @@ export default function Modelos() {
     setLoading(true);
     setGenerated(true);
     try {
-      const allLogs = await base44.entities.AccessLog.list('-created_date', 1000);
+      const entity = selectedTemplate === 'controle_veiculos_recebimento' ? 'AcessoCRDK' : 'AccessLog';
+      const allLogs = await base44.entities[entity].list('-created_date', 1000);
       let filtered = allLogs;
       if (dataInicio) {
         const inicio = new Date(dataInicio + 'T00:00:00');
@@ -104,6 +112,9 @@ export default function Modelos() {
       {/* Template render */}
       {generated && selectedTemplate === 'controle_veiculos_expedicao' && (
         <ControleVeiculosExpedicao logs={logs} loading={loading} />
+      )}
+      {generated && selectedTemplate === 'controle_veiculos_recebimento' && (
+        <ControleVeiculosRecebimento logs={logs} loading={loading} />
       )}
     </div>
   );
