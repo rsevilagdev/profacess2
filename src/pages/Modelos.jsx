@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Printer, Loader2, LayoutGrid, Calendar, Truck, Download } from 'lucide-react';
+import { Printer, Loader2, LayoutGrid, Calendar, Truck, Download, FileSpreadsheet } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { imageUrlToBase64 } from '@/lib/pdf-utils';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
 import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
+import AverbacaoReport from '@/components/modelos/AverbacaoReport';
+
+const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
 const TEMPLATES = [
   {
@@ -20,6 +23,18 @@ const TEMPLATES = [
     icon: Truck,
     description: 'Controle de recebimento de veículos — transferência entre CDs (CRDK)',
   },
+  {
+    id: 'averbacao_mensal',
+    name: 'Averbação Mensal',
+    icon: FileSpreadsheet,
+    description: 'Relatório de averbação agrupado por mês com exportação PDF, Excel e e-mail',
+  },
+  {
+    id: 'averbacao_semestral',
+    name: 'Averbação Semestral',
+    icon: FileSpreadsheet,
+    description: 'Relatório de averbação agrupado por semestre com exportação PDF, Excel e e-mail',
+  },
 ];
 
 export default function Modelos() {
@@ -30,6 +45,10 @@ export default function Modelos() {
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [selectedMes, setSelectedMes] = useState('');
+  const [selectedSemestre, setSelectedSemestre] = useState(1);
+
+  const isAverbacao = selectedTemplate === 'averbacao_mensal' || selectedTemplate === 'averbacao_semestral';
 
   const gerar = async () => {
     setLoading(true);
@@ -177,33 +196,70 @@ export default function Modelos() {
         })}
       </div>
 
-      {/* Date range */}
-      <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Data inicial</label>
-            <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm" />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1 block">Data final</label>
-            <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm" />
-          </div>
-          <Button onClick={gerar} disabled={loading} className="h-10 rounded-xl">
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
-            Gerar Relatório
-          </Button>
-          {generated && !loading && (
-            <div className="flex gap-2 ml-auto">
-              <Button onClick={exportarPDF} disabled={exportingPdf} variant="secondary" className="h-10 rounded-xl">
-                {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PDF
-              </Button>
-              <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl">
+      {/* Controls */}
+      {isAverbacao ? (
+        <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex flex-wrap items-end gap-3">
+            {selectedTemplate === 'averbacao_mensal' ? (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Mês</label>
+                <select
+                  value={selectedMes}
+                  onChange={e => setSelectedMes(e.target.value)}
+                  className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm min-w-[180px]"
+                >
+                  <option value="">Selecione um mês</option>
+                  {MESES.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Semestre</label>
+                <select
+                  value={selectedSemestre}
+                  onChange={e => setSelectedSemestre(Number(e.target.value))}
+                  className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm min-w-[180px]"
+                >
+                  <option value={1}>1º Semestre (Jan–Jun)</option>
+                  <option value={2}>2º Semestre (Jul–Dez)</option>
+                </select>
+              </div>
+            )}
+            {generated && (
+              <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl ml-auto">
                 <Printer className="h-4 w-4" /> Imprimir
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex flex-wrap items-end gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Data inicial</label>
+              <input type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm" />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Data final</label>
+              <input type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} className="h-10 px-3 rounded-xl border border-input bg-transparent text-sm" />
+            </div>
+            <Button onClick={gerar} disabled={loading} className="h-10 rounded-xl">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calendar className="h-4 w-4" />}
+              Gerar Relatório
+            </Button>
+            {generated && !loading && (
+              <div className="flex gap-2 ml-auto">
+                <Button onClick={exportarPDF} disabled={exportingPdf} variant="secondary" className="h-10 rounded-xl">
+                  {exportingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar PDF
+                </Button>
+                <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl">
+                  <Printer className="h-4 w-4" /> Imprimir
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Template render */}
       {generated && selectedTemplate === 'controle_veiculos_expedicao' && (
@@ -211,6 +267,12 @@ export default function Modelos() {
       )}
       {generated && selectedTemplate === 'controle_veiculos_recebimento' && (
         <ControleVeiculosRecebimento logs={logs} loading={loading} />
+      )}
+      {selectedTemplate === 'averbacao_mensal' && selectedMes && (
+        <AverbacaoReport tipo="mensal" periodo={selectedMes} />
+      )}
+      {selectedTemplate === 'averbacao_semestral' && (
+        <AverbacaoReport tipo="semestral" periodo={selectedSemestre} />
       )}
     </div>
   );
