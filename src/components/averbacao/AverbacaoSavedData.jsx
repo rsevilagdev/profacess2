@@ -138,7 +138,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const list = await base44.entities.AverbacaoRecord.list('-created_date', 500);
+      const list = await base44.entities.AverbacaoRecord.list('-created_date', 2000);
       setRecords(list);
     } catch (e) {}
     setLoading(false);

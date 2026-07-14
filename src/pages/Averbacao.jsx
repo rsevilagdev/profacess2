@@ -312,15 +312,22 @@ export default function Averbacao() {
 
       // Delete existing records for the same months before creating new ones
       const monthsToReplace = [...new Set(records.map(r => r.mes).filter(Boolean))];
-      if (monthsToReplace.length > 0) {
-        await base44.entities.AverbacaoRecord.deleteMany({ mes: { $in: monthsToReplace } });
+      for (const mes of monthsToReplace) {
+        await base44.entities.AverbacaoRecord.deleteMany({ mes });
       }
       if (records.some(r => !r.mes)) {
         await base44.entities.AverbacaoRecord.deleteMany({ mes: '' });
       }
 
-      await base44.entities.AverbacaoRecord.bulkCreate(records);
-      setSavedMsg(`${records.length} registro(s) atualizado(s) com sucesso!`);
+      // Create records in batches of 100 to avoid bulk limits
+      const BATCH_SIZE = 100;
+      let created = 0;
+      for (let i = 0; i < records.length; i += BATCH_SIZE) {
+        const batch = records.slice(i, i + BATCH_SIZE);
+        await base44.entities.AverbacaoRecord.bulkCreate(batch);
+        created += batch.length;
+      }
+      setSavedMsg(`${created} registro(s) atualizado(s) com sucesso!`);
       setSavedDataVersion(v => v + 1);
       setTimeout(() => setSavedMsg(''), 6000);
     } catch (e) {
