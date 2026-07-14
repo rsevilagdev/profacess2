@@ -107,7 +107,6 @@ Deno.serve(async (req) => {
       if (!firstSheet) return Response.json({ error: 'Nenhuma aba encontrada' }, { status: 400 });
       const worksheet = workbook.Sheets[firstSheet];
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, defval: '' });
-      // Row 0=title, Row 1=metadata, Row 2=headers, Row 3+=data
       if (rows.length > 2) {
         headers = rows[2].map(h => String(h || ''));
         for (let i = 3; i < rows.length; i++) {
@@ -132,12 +131,13 @@ Deno.serve(async (req) => {
     // Find columns flexibly
     const colNumNf = findColumn(headers, ['NUMNF', 'NUM_NF', 'NUMERO NF', 'NUMERO_NF', 'NOTA FISCAL', 'NF', 'NUMERONF', 'NUM NOTA', 'NUMNOTA']);
     const colData = findColumn(headers, ['DATA DO EMBARQUE', 'DATA EMBARQUE', 'DATA', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
+    const colPrioridade = findColumn(headers, ['PRIORIDADE', 'PRIORIDAD', 'PRIORITY', 'PRIOR']);
+    const colRota = findColumn(headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
     const colPlaca = findColumn(headers, ['PLACA VEÍCULO', 'PLACA VEICULO', 'PLACA', 'VEICULO', 'VEÍCULO', 'PLACA VEIC']);
-    const colItinerario = findColumn(headers, ['ITINERÁRIO', 'ITINERARIO', 'ROTA', 'RUTA', 'ITINERARY', 'ITINER']);
     const colUfOrigem = findColumn(headers, ['UF ORIGEM', 'UF_ORIGEM', 'ORIGEM', 'UF ORIG']);
     const colUfDestino = findColumn(headers, ['UF DESTINO', 'UF_DESTINO', 'DESTINO', 'UF DEST']);
     const colUrbano = findColumn(headers, ['URBANO']);
-    const colValor = findColumn(headers, ['VALOR DE MERCADORIA', 'VALOR MERCADORIA', 'VALOR', 'VL_MERCADORIA', 'VLMERCADORIA', 'MERCADORIA', 'VL MERCADORIA']);
+    const colValor = findColumn(headers, ['VL NF', 'VL_NF', 'VLNF', 'VALOR DA NOTA FISCAL', 'VALOR DA NF', 'VALOR DA NOTA', 'VALOR NOTA FISCAL', 'VALOR DE MERCADORIA', 'VALOR MERCADORIA', 'VALOR', 'VL_MERCADORIA', 'VLMERCADORIA', 'MERCADORIA', 'VL MERCADORIA']);
 
     // Deduplicate by NumNf
     const seenNf = new Set();
@@ -151,72 +151,36 @@ Deno.serve(async (req) => {
     }
 
     // Parse records
-    const parsed = deduped.map(record => ({
-      data_embarque: colData ? record[colData] : null,
-      data_obj: colData ? parseDate(record[colData]) : null,
-      placa: colPlaca ? String(record[colPlaca] || '') : '',
-      itinerario_raw: colItinerario ? String(record[colItinerario] || '').trim() : '',
-      uf_origem: colUfOrigem ? String(record[colUfOrigem] || '') : '',
-      uf_destino: colUfDestino ? String(record[colUfDestino] || '') : '',
-      urbano: colUrbano ? String(record[colUrbano] || '') : '',
-      valor: colValor ? parseNumber(record[colValor]) : 0,
-      num_nf: colNumNf ? String(record[colNumNf] || '') : ''
-    }));
+    const parsed = deduped.map(record => {
+      const prioridade = colPrioridade ? parseInt(parseNumber(record[colPrioridade])) || 0 : 0;
+      const rota = colRota ? parseInt(parseNumber(record[colRota])) || 0 : 0;
+      const dataObj = colData ? parseDate(record[colData]) : null;
+      const itinerarioFormatado = (prioridade === 90 || prioridade === 91) && rota > 0
+        ? `${prioridade} - ${rota}`
+        : `${prioridade}`;
+      return {
+        data_embarque: dataObj ? dataObj.toISOString() : '',
+        prioridade,
+        rota,
+        placa: colPlaca ? String(record[colPlaca] || '') : '',
+        itinerario: prioridade,
+        itinerario_formatado: itinerarioFormatado,
+        uf_origem: colUfOrigem ? String(record[colUfOrigem] || '') : '',
+        uf_destino: colUfDestino ? String(record[colUfDestino] || '') : '',
+        urbano: colUrbano ? String(record[colUrbano] || '') : '',
+        valor: colValor ? parseNumber(record[colValor]) : 0,
+        num_nf: colNumNf ? String(record[colNumNf] || '') : ''
+      };
+    });
 
     // Sort by date ascending
     parsed.sort((a, b) => {
-      if (!a.data_obj) return 1;
-      if (!b.data_obj) return -1;
-      return a.data_obj - b.data_obj;
+      if (!a.data_embarque) return 1;
+      if (!b.data_embarque) return -1;
+      return new Date(a.data_embarque) - new Date(b.data_embarque);
     });
 
-    // Group by date, then by route, assign sequential positions
-    const byDate = {};
-    parsed.forEach(r => {
-      const dateKey = r.data_obj ? r.data_obj.toDateString() : 'sem_data';
-      if (!byDate[dateKey]) byDate[dateKey] = {};
-      const route = r.itinerario_raw || 'sem_rota';
-      if (!byDate[dateKey][route]) byDate[dateKey][route] = [];
-      byDate[dateKey][route].push(r);
-    });
-
-    const records = [];
-    Object.keys(byDate).sort((a, b) => {
-      if (a === 'sem_data') return 1;
-      if (b === 'sem_data') return -1;
-      return new Date(a) - new Date(b);
-    }).forEach(dateKey => {
-      const routes = byDate[dateKey];
-      Object.keys(routes).sort((a, b) => {
-        const numA = Number(a);
-        const numB = Number(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b);
-      }).forEach(route => {
-        const routeRecords = routes[route];
-        const routeNum = Number(route);
-        routeRecords.forEach((r, idx) => {
-          const position = idx + 1;
-          let itinerarioFormatado;
-          let itinerarioNum = null;
-          if (!isNaN(routeNum) && routeNum >= 90) {
-            const suffix = position * 10 + (routeNum - 90);
-            itinerarioFormatado = `${routeNum} - ${suffix}`;
-            itinerarioNum = routeNum;
-          } else {
-            itinerarioFormatado = route;
-          }
-          const { data_obj, ...rest } = r;
-          records.push({
-            ...rest,
-            data_embarque: r.data_obj ? r.data_obj.toISOString() : '',
-            itinerario: itinerarioNum,
-            itinerario_formatado: itinerarioFormatado,
-            sequencia: position
-          });
-        });
-      });
-    });
+    const records = parsed;
 
     // Determine available months and semesters
     const monthsSet = new Set();
@@ -265,8 +229,9 @@ Deno.serve(async (req) => {
       columns_found: {
         num_nf: colNumNf,
         data: colData,
+        prioridade: colPrioridade,
+        rota: colRota,
         placa: colPlaca,
-        itinerario: colItinerario,
         uf_origem: colUfOrigem,
         uf_destino: colUfDestino,
         urbano: colUrbano,

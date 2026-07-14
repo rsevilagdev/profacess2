@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Loader2, Download, Calendar, CalendarRange, ChevronDown, RefreshCw, Send } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, Download, Calendar, CalendarRange, RefreshCw, Send } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import AverbacaoBlocks from '@/components/averbacao/AverbacaoBlocks';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -84,22 +85,6 @@ export default function Averbacao() {
     });
   };
 
-  // Group by day (monthly) or by month (semester)
-  const grouped = () => {
-    const records = filteredRecords();
-    const groups = {};
-    records.forEach(r => {
-      const date = new Date(r.data_embarque);
-      const key = view === 'mensal' ? date.toDateString() : String(date.getMonth());
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(r);
-    });
-    return Object.entries(groups).sort(([a], [b]) => {
-      if (view === 'mensal') return new Date(a) - new Date(b);
-      return Number(a) - Number(b);
-    });
-  };
-
   const periodTotal = filteredRecords().reduce((s, r) => s + (r.valor || 0), 0);
   const periodLabel = view === 'mensal'
     ? (selectedMonth !== null ? MESES[selectedMonth] : '')
@@ -131,32 +116,10 @@ export default function Averbacao() {
   };
 
   const exportCSV = () => {
-    const groups = grouped();
-    const headers = ['Data do Embarque', 'Placa Veículo', 'Itinerário', 'UF Origem', 'UF Destino', 'Urbano', 'Valor de mercadoria'];
+    const headers = ['Data', 'Prioridade', 'Rota', 'Valor'];
     const lines = [headers.join(';')];
 
-    groups.forEach(([key, dayRecords]) => {
-      const groupLabel = view === 'mensal'
-        ? formatDate(dayRecords[0].data_embarque)
-        : MESES[Number(key)];
-      lines.push(`;;${groupLabel};;;`);
-      dayRecords.sort((a, b) => a.itinerario - b.itinerario).forEach(r => {
-        lines.push([
-          formatDate(r.data_embarque),
-          r.placa,
-          r.itinerario_formatado,
-          r.uf_origem,
-          r.uf_destino,
-          r.urbano,
-          (r.valor || 0).toFixed(2).replace('.', ',')
-        ].join(';'));
-      });
-      const groupTotal = dayRecords.reduce((s, r) => s + (r.valor || 0), 0);
-      lines.push(`;;Subtotal ${groupLabel};;;;${groupTotal.toFixed(2).replace('.', ',')}`);
-      lines.push('');
-    });
-
-    lines.push(`;;Total ${periodLabel};;;;${periodTotal.toFixed(2).replace('.', ',')}`);
+    lines.push(`Total ${periodLabel};;;;${periodTotal.toFixed(2).replace('.', ',')}`);
 
     const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -196,7 +159,6 @@ export default function Averbacao() {
     );
   }
 
-  const groups = grouped();
   const availableMonths = data.available_months || [];
   const availableSemesters = data.available_semesters || [];
 
@@ -279,74 +241,8 @@ export default function Averbacao() {
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#7a95a9] text-white">
-                <th className="px-3 py-2 text-left font-medium">Data do Embarque</th>
-                <th className="px-3 py-2 text-left font-medium">Placa Veículo</th>
-                <th className="px-3 py-2 text-center font-medium">Itinerário</th>
-                <th className="px-3 py-2 text-center font-medium">UF Origem</th>
-                <th className="px-3 py-2 text-center font-medium">UF Destino</th>
-                <th className="px-3 py-2 text-center font-medium">Urbano</th>
-                <th className="px-3 py-2 text-right font-medium">Valor de mercadoria</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum registro encontrado para o período selecionado</td>
-                </tr>
-              ) : (
-                groups.map(([key, dayRecords]) => {
-                  const groupLabel = view === 'mensal'
-                    ? formatDate(dayRecords[0].data_embarque)
-                    : MESES[Number(key)];
-                  const groupTotal = dayRecords.reduce((s, r) => s + (r.valor || 0), 0);
-                  return (
-                    <FragmentGroup key={key} label={groupLabel} records={dayRecords} total={groupTotal} isMonth={view === 'semestral'} />
-                  );
-                })
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="bg-[#a6bac9] text-[#202020] font-bold">
-                <td colSpan={6} className="px-3 py-2 text-right">Total {periodLabel}</td>
-                <td className="px-3 py-2 text-right">{formatCurrency(periodTotal)}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+      {/* Hierarchical Blocks */}
+      <AverbacaoBlocks records={filteredRecords()} view={view} />
     </div>
-  );
-}
-
-function FragmentGroup({ label, records, total, isMonth }) {
-  return (
-    <>
-      <tr className="bg-muted/50">
-        <td colSpan={7} className="px-3 py-1.5 text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          {isMonth ? 'Mês' : 'Dia'}: {label}
-        </td>
-      </tr>
-      {records.map((r, idx) => (
-        <tr key={idx} className="border-b border-border/50 hover:bg-muted/30">
-          <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(r.data_embarque)}</td>
-          <td className="px-3 py-1.5">{r.placa || '—'}</td>
-          <td className="px-3 py-1.5 text-center">{r.itinerario_formatado}</td>
-          <td className="px-3 py-1.5 text-center">{r.uf_origem || '—'}</td>
-          <td className="px-3 py-1.5 text-center">{r.uf_destino || '—'}</td>
-          <td className="px-3 py-1.5 text-center">{r.urbano || '—'}</td>
-          <td className="px-3 py-1.5 text-right tabular-nums">{formatCurrency(r.valor)}</td>
-        </tr>
-      ))}
-      <tr className="bg-primary/5 font-medium">
-        <td colSpan={6} className="px-3 py-1.5 text-right text-xs">Subtotal {label}</td>
-        <td className="px-3 py-1.5 text-right tabular-nums text-primary">{formatCurrency(total)}</td>
-      </tr>
-    </>
   );
 }

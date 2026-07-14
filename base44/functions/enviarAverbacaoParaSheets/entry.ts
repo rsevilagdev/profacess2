@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     rows.push(['AVERBAÇÃO - PROFARMA DISTRIBUIDORA DE PRODUTOS FARMACEUTICOS SA']);
     rows.push([`Período: ${period_label || ''} | CNPJ: ${metadata?.cnpj || ''} | Filial: ${metadata?.filial || ''}`]);
     rows.push([]);
-    rows.push(['Data do Embarque', 'Placa Veículo', 'Itinerário', 'UF Origem', 'UF Destino', 'Urbano', 'Valor de mercadoria']);
+    rows.push(['Data', 'Prioridade', 'Rota', 'Valor']);
 
     // Group by day (mensal) or month (semestral)
     const groups = {};
@@ -87,56 +87,86 @@ Deno.serve(async (req) => {
         ? formatDateBR(dayRecords[0].data_embarque)
         : MESES[Number(key)];
 
-      // Day/month header row
-      rows.push([`${view === 'mensal' ? 'DIA' : 'MÊS'}: ${groupLabel}`, '', '', '', '', '', '']);
+      rows.push([`${view === 'mensal' ? 'DIA' : 'MÊS'}: ${groupLabel}`, '', '', '']);
 
-      // Group by route (priority) within the day
-      const routeGroups = {};
-      dayRecords.forEach(r => {
-        const route = r.itinerario != null ? String(r.itinerario) : 'Outros';
-        if (!routeGroups[route]) routeGroups[route] = [];
-        routeGroups[route].push(r);
+      // Block 1: Prioridades 1-89 (agrupado por prioridade)
+      const block1 = dayRecords.filter(r => r.prioridade < 90);
+      const b1Groups = {};
+      block1.forEach(r => {
+        const p = r.prioridade || 0;
+        if (!b1Groups[p]) b1Groups[p] = 0;
+        b1Groups[p] += r.valor || 0;
       });
-
-      const routeKeys = Object.keys(routeGroups).sort((a, b) => {
-        const numA = Number(a);
-        const numB = Number(b);
-        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-        return a.localeCompare(b);
-      });
-
-      let dayTotal = 0;
-
-      routeKeys.forEach(route => {
-        const routeRecords = routeGroups[route];
-        let routeTotal = 0;
-
-        routeRecords.forEach(r => {
-          rows.push([
-            formatDateBR(r.data_embarque),
-            r.placa || '',
-            r.itinerario_formatado || '',
-            r.uf_origem || '',
-            r.uf_destino || '',
-            r.urbano || '',
-            formatCurrencyBR(r.valor)
-          ]);
-          routeTotal += r.valor || 0;
+      let b1Total = 0;
+      if (Object.keys(b1Groups).length > 0) {
+        rows.push(['', 'Prioridades 1 a 89', '', '']);
+        Object.keys(b1Groups).sort((a, b) => Number(a) - Number(b)).forEach(p => {
+          rows.push(['', `Prioridade ${p}`, '', formatCurrencyBR(b1Groups[p])]);
+          b1Total += b1Groups[p];
         });
+        rows.push(['', 'Subtotal 1-89', '', formatCurrencyBR(b1Total)]);
+      }
 
-        // Route subtotal
-        rows.push(['', '', `Subtotal Rota ${route}`, '', '', '', formatCurrencyBR(routeTotal)]);
-        dayTotal += routeTotal;
+      // Block 2: Prioridades 90 e 91 (detalhado por rota)
+      const block2 = dayRecords.filter(r => r.prioridade === 90 || r.prioridade === 91);
+      const b2Groups = {};
+      block2.forEach(r => {
+        const key2 = `${r.prioridade}|${r.rota || 0}`;
+        if (!b2Groups[key2]) b2Groups[key2] = { prioridade: r.prioridade, rota: r.rota || 0, total: 0 };
+        b2Groups[key2].total += r.valor || 0;
       });
+      let b2Total = 0;
+      if (Object.keys(b2Groups).length > 0) {
+        rows.push(['', 'Prioridades 90 e 91 (por Rota)', '', '']);
+        const b2Keys = Object.keys(b2Groups).sort((a, b) => {
+          const [pa, ra] = a.split('|').map(Number);
+          const [pb, rb] = b.split('|').map(Number);
+          return pa !== pb ? pa - pb : ra - rb;
+        });
+        let lastPrioridade = -1;
+        let prioridadeTotal = 0;
+        b2Keys.forEach((k, idx) => {
+          const g = b2Groups[k];
+          if (g.prioridade !== lastPrioridade && lastPrioridade >= 0) {
+            rows.push(['', `Subtotal Prioridade ${lastPrioridade}`, '', formatCurrencyBR(prioridadeTotal)]);
+            prioridadeTotal = 0;
+          }
+          rows.push(['', `Prioridade ${g.prioridade}`, `Rota ${g.rota}`, formatCurrencyBR(g.total)]);
+          prioridadeTotal += g.total;
+          b2Total += g.total;
+          lastPrioridade = g.prioridade;
+          if (idx === b2Keys.length - 1) {
+            rows.push(['', `Subtotal Prioridade ${lastPrioridade}`, '', formatCurrencyBR(prioridadeTotal)]);
+          }
+        });
+        rows.push(['', 'Subtotal 90-91', '', formatCurrencyBR(b2Total)]);
+      }
 
-      // Day subtotal
-      rows.push(['', `TOTAL ${groupLabel}`, '', '', '', '', formatCurrencyBR(dayTotal)]);
+      // Block 3: Prioridades >91 (agrupado por prioridade)
+      const block3 = dayRecords.filter(r => r.prioridade > 91);
+      const b3Groups = {};
+      block3.forEach(r => {
+        const p = r.prioridade || 0;
+        if (!b3Groups[p]) b3Groups[p] = 0;
+        b3Groups[p] += r.valor || 0;
+      });
+      let b3Total = 0;
+      if (Object.keys(b3Groups).length > 0) {
+        rows.push(['', 'Prioridades acima de 91', '', '']);
+        Object.keys(b3Groups).sort((a, b) => Number(a) - Number(b)).forEach(p => {
+          rows.push(['', `Prioridade ${p}`, '', formatCurrencyBR(b3Groups[p])]);
+          b3Total += b3Groups[p];
+        });
+        rows.push(['', 'Subtotal >91', '', formatCurrencyBR(b3Total)]);
+      }
+
+      const dayTotal = b1Total + b2Total + b3Total;
+      rows.push([`TOTAL ${groupLabel}`, '', '', formatCurrencyBR(dayTotal)]);
       rows.push([]);
       grandTotal += dayTotal;
     });
 
-    // Grand total
-    rows.push(['', `TOTAL ${period_label || ''}`, '', '', '', '', formatCurrencyBR(grandTotal)]);
+    rows.push([`TOTAL ${period_label || ''}`, '', '', formatCurrencyBR(grandTotal)]);
 
     // Write data
     const writeRes = await fetch(
