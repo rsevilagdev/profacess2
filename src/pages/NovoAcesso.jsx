@@ -111,6 +111,7 @@ export default function NovoAcesso() {
         });
         setCheckResult('success');
         await loadAcessos();
+        setTimeout(() => { setCheckResult(null); reset(); }, 2000);
       } else {
         setCheckResult('revision');
         setShowRevision(true);
@@ -395,32 +396,6 @@ export default function NovoAcesso() {
 
       {/* Kanban */}
       <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} onLiberarSaida={liberarSaida} />
-
-      {/* Queue List */}
-      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-        <h3 className="font-heading font-bold mb-3">Fila de Liberação de Saída</h3>
-        {acessos.filter(a => a.status === 'validado' && a.tipo === 'entrada').length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhum veículo aguardando liberação</p>
-        ) : (
-          <div className="space-y-2">
-            {acessos.filter(a => a.status === 'validado' && a.tipo === 'entrada').map(log => (
-              <div key={log.id} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <Truck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm font-medium">{log.veiculo_placa}</p>
-                    <p className="text-xs text-muted-foreground">{log.motorista_nome || '—'} — {log.motorista_cpf || '—'}</p>
-                    {log.ajudante_nome && <p className="text-xs text-muted-foreground">Ajudante: {log.ajudante_nome} — {log.ajudante_cpf || ''}</p>}
-                  </div>
-                </div>
-                <Button size="sm" className="h-8 rounded-xl" onClick={() => liberarSaida(log)}>
-                  Liberar Saída
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
