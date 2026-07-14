@@ -144,7 +144,7 @@ export default function Dashboard() {
                   <div className={`h-2 w-2 rounded-full ${log.status === 'validado' ? 'bg-primary' : log.status === 'bloqueado' ? 'bg-destructive' : 'bg-orange-500'}`} />
                   <div>
                     <p className="text-sm font-medium">{maskPlaca(log.veiculo_placa)}</p>
-                    <p className="text-xs text-muted-foreground">{maskCPF(log.motorista_cpf)} · {log.motorista_nome ? log.motorista_nome[0] + '***' : '—'}</p>
+                    <p className="text-xs text-muted-foreground">{maskCPF(log.motorista_cpf)} · {log.motorista_nome || '—'}</p>
                   </div>
                 </div>
                 <div className="text-right">

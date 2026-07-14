@@ -185,8 +185,8 @@ export default function PainelBloqueio() {
                     {tab === 'veiculos' ? <Truck className="h-5 w-5" /> : <Users className="h-5 w-5" />}
                   </div>
                   <div>
-                    <p className="text-sm font-medium blur-lg-text">{tab === 'veiculos' ? maskPlaca(item.placa) : maskNome(item.nome)}</p>
-                    <p className="text-xs text-muted-foreground blur-lg-text">{tab === 'veiculos' ? item.modelo || '—' : maskCPF(item.cpf)}</p>
+                    <p className="text-sm font-medium">{tab === 'veiculos' ? maskPlaca(item.placa) : maskNome(item.nome)}</p>
+                    <p className="text-xs text-muted-foreground">{tab === 'veiculos' ? item.modelo || '—' : maskCPF(item.cpf)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
