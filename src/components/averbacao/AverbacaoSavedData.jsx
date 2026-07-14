@@ -54,7 +54,12 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
     }
   });
 
-  const columns = parsed.length > 0 ? Object.keys(parsed[0].parsedRow) : [];
+  const sortedParsed = [...parsed].sort((a, b) => {
+    const pa = parseInt(a.prioridade) || 0;
+    const pb = parseInt(b.prioridade) || 0;
+    return pa - pb;
+  });
+  const columns = sortedParsed.length > 0 ? Object.keys(sortedParsed[0].parsedRow) : [];
 
   const toggleDia = (dia) => {
     setSelectedDias(prev =>
@@ -194,7 +199,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
               </tr>
             </thead>
             <tbody>
-              {parsed.map((r, idx) => (
+              {sortedParsed.map((r, idx) => (
                 <tr key={r.id || idx} className="hover:bg-muted/30">
                   {columns.map(col => {
                     const cellLists = r.parsedLists[col];
@@ -216,9 +221,9 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
         </div>
       )}
 
-      {parsed.length > 0 && (
+      {sortedParsed.length > 0 && (
         <p className="text-xs text-muted-foreground mt-2">
-          {parsed.length} registro(s) · {selectedMes || 'Todos os meses'}
+          {sortedParsed.length} registro(s) · {selectedMes || 'Todos os meses'}
           {selectedDias.length > 0 ? ` · Dias: ${selectedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
         </p>
       )}

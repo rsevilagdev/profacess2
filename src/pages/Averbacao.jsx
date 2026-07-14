@@ -242,38 +242,61 @@ export default function Averbacao() {
       const colData = findColumn(fileData.headers, ['DATA', 'DATA EMBARQUE', 'DATA DO EMBARQUE', 'DT_EMBARQUE', 'DTEMBARQUE', 'EMBARQUE', 'DT EMBARQUE']);
       const colVlNf = fileData.processedMeta?.vlNfColumn;
 
-      const records = fileData.processedRows.map(item => {
-        let mes = '', dia = '', dataRef = '';
+      const records = [];
+      for (const item of fileData.processedRows) {
+        const dadosJson = JSON.stringify({
+          row: item.row,
+          lists: Object.fromEntries(
+            Object.entries(item.lists || {}).map(([k, v]) => [k, v.slice(0, 100)])
+          ),
+          count: item.count
+        });
+        const prioridadeStr = colPrioridade ? String(item.row[colPrioridade] || '') : '';
+        const totalGeral = colVlNf ? parseNumber(item.row[colVlNf]) : 0;
+
+        // Extract ALL unique dates from the data column — one record per date
+        const allDates = [];
         if (colData && item.lists?.[colData]) {
           for (const dateStr of item.lists[colData]) {
             const d = parseDate(dateStr);
             if (d) {
-              mes = MESES[d.getMonth()];
-              dia = String(d.getDate()).padStart(2, '0');
-              dataRef = d.toLocaleDateString('pt-BR');
-              break;
+              const mesNome = MESES[d.getMonth()];
+              const diaStr = String(d.getDate()).padStart(2, '0');
+              const dataRef = d.toLocaleDateString('pt-BR');
+              allDates.push({ mes: mesNome, dia: diaStr, dataRef });
             }
           }
         }
-        return {
-          mes,
-          dia,
-          data_referencia: dataRef,
-          prioridade: colPrioridade ? String(item.row[colPrioridade] || '') : '',
-          arquivo_origem: fileData.fileName,
-          dados_json: JSON.stringify({
-            row: item.row,
-            lists: Object.fromEntries(
-              Object.entries(item.lists || {}).map(([k, v]) => [k, v.slice(0, 100)])
-            ),
-            count: item.count
-          }),
-          total_geral: colVlNf ? parseNumber(item.row[colVlNf]) : 0,
-          operador_nome: colaborador?.nome || '',
-          filial_id: colaborador?.filial_id || '',
-          filial_nome: colaborador?.filial_nome || '',
-        };
-      });
+        const uniqueDates = [...new Map(allDates.map(d => [`${d.mes}_${d.dia}`, d])).values()];
+
+        if (uniqueDates.length === 0) {
+          records.push({
+            mes: '', dia: '', data_referencia: '',
+            prioridade: prioridadeStr,
+            arquivo_origem: fileData.fileName,
+            dados_json: dadosJson,
+            total_geral: totalGeral,
+            operador_nome: colaborador?.nome || '',
+            filial_id: colaborador?.filial_id || '',
+            filial_nome: colaborador?.filial_nome || '',
+          });
+        } else {
+          for (const dt of uniqueDates) {
+            records.push({
+              mes: dt.mes,
+              dia: dt.dia,
+              data_referencia: dt.dataRef,
+              prioridade: prioridadeStr,
+              arquivo_origem: fileData.fileName,
+              dados_json: dadosJson,
+              total_geral: totalGeral,
+              operador_nome: colaborador?.nome || '',
+              filial_id: colaborador?.filial_id || '',
+              filial_nome: colaborador?.filial_nome || '',
+            });
+          }
+        }
+      }
 
       await base44.entities.AverbacaoRecord.bulkCreate(records);
       setSavedMsg(`${records.length} registro(s) salvo(s) com sucesso!`);
