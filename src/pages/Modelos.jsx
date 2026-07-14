@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { imageUrlToBase64 } from '@/lib/pdf-utils';
+import { triggerDownload } from '@/lib/export-utils';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
 import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
 import AverbacaoReport from '@/components/modelos/AverbacaoReport';
@@ -154,7 +155,8 @@ export default function Modelos() {
         doc.setTextColor(150, 150, 150);
         doc.text(`PROFARMA LIBERAAUTO PRO — ${templateName} — Página ${i} de ${pc}`, pw / 2, ph - 8, { align: 'center' });
       }
-      doc.save(`${templateName.replace(/\s+/g, '_')}.pdf`);
+      const pdfBlob = doc.output('blob');
+      triggerDownload(pdfBlob, `${templateName.replace(/\s+/g, '_')}.pdf`);
     } catch (e) {}
     setExportingPdf(false);
   };

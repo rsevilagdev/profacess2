@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { triggerDownload } from '@/lib/export-utils';
 import RegistrosAcesso from '@/components/auditoria/RegistrosAcesso';
 
 const PAGE_SIZE = 10;
@@ -73,7 +74,8 @@ export default function Auditoria() {
       doc.text(`Detalhes: ${log.details || '—'}`, 14, y + 8);
       y += 14;
     });
-    doc.save(`auditoria_profarma_${Date.now()}.pdf`);
+    const pdfBlob = doc.output('blob');
+    triggerDownload(pdfBlob, `auditoria_profarma_${Date.now()}.pdf`);
     setExporting(false);
   };
 
@@ -85,10 +87,8 @@ export default function Auditoria() {
       l.details || '—', l.ip_address || '—', l.domain || '—'
     ]);
     const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `auditoria_${Date.now()}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    const csvBlob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+    triggerDownload(csvBlob, `auditoria_${Date.now()}.csv`);
   };
 
   return (

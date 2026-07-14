@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { maskNome } from '@/lib/lgpd-utils.js';
+import { triggerDownload } from '@/lib/export-utils';
 
 export default function ResumoTurnos() {
   const { colaborador } = useProfarmaAuth();
@@ -107,7 +108,8 @@ export default function ResumoTurnos() {
         doc.text(String(op.pendentes), 170, y);
         y += 6;
       });
-      doc.save(`resumo_turnos_${Date.now()}.pdf`);
+      const pdfBlob = doc.output('blob');
+      triggerDownload(pdfBlob, `resumo_turnos_${Date.now()}.pdf`);
     } catch (e) {}
     setExporting(false);
   };

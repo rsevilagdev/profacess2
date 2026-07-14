@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { triggerDownload } from '@/lib/export-utils';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -328,7 +329,8 @@ export default function AverbacaoReport({ tipo, periodo }) {
       }
 
       const pdfFileName = `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`;
-      doc.save(pdfFileName);
+      const pdfBlob = doc.output('blob');
+      triggerDownload(pdfBlob, pdfFileName);
     } catch (e) {
       console.error('Erro export PDF:', e);
       setExportError('Erro ao exportar PDF: ' + (e.message || 'desconhecido'));
@@ -354,7 +356,8 @@ export default function AverbacaoReport({ tipo, periodo }) {
       const ws = XLSX.utils.aoa_to_sheet(aoa);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
-      XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
+      const xlsxBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      triggerDownload(new Blob([xlsxBlob], { type: 'application/octet-stream' }), `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
     } catch (e) {
       console.error('Erro export Excel:', e);
       setExportError('Erro ao exportar Excel: ' + (e.message || 'desconhecido'));

@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { triggerDownload } from '@/lib/export-utils';
 import DropdownCell from './DropdownCell';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -272,7 +273,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
       y += rowHeight;
     });
 
-    doc.save(`averbacao_${selectedMes || 'todos'}_${Date.now()}.pdf`);
+    const pdfBlob = doc.output('blob');
+    triggerDownload(pdfBlob, `averbacao_${selectedMes || 'todos'}_${Date.now()}.pdf`);
   };
 
   const exportExcel = () => {
@@ -281,7 +283,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
-    XLSX.writeFile(wb, `averbacao_${selectedMes || 'todos'}_${Date.now()}.xlsx`);
+    const xlsxBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    triggerDownload(new Blob([xlsxBlob], { type: 'application/octet-stream' }), `averbacao_${selectedMes || 'todos'}_${Date.now()}.xlsx`);
   };
 
   return (
