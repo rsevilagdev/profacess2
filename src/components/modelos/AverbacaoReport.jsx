@@ -102,32 +102,31 @@ export default function AverbacaoReport({ tipo, periodo }) {
     loadManagers();
   }, [tipo, periodo]);
 
-  const loadAllRecords = async (filterObj) => {
-    const all = [];
-    const PAGE_SIZE = 5000;
-    let skip = 0;
-    while (true) {
-      const batch = await base44.entities.AverbacaoRecord.filter(filterObj, '-created_date', PAGE_SIZE, skip);
-      all.push(...batch);
-      if (batch.length < PAGE_SIZE) break;
-      skip += PAGE_SIZE;
-    }
-    return all;
-  };
-
   const loadData = async () => {
     setLoading(true);
     setLoadError('');
     try {
+      // Load ALL records using list + pagination (same approach as AverbacaoSavedData)
+      const all = [];
+      const PAGE_SIZE = 5000;
+      let skip = 0;
+      while (true) {
+        const batch = await base44.entities.AverbacaoRecord.list('-created_date', PAGE_SIZE, skip);
+        all.push(...batch);
+        if (batch.length < PAGE_SIZE) break;
+        skip += PAGE_SIZE;
+      }
+      // Filter in JavaScript by month
       let filtered = [];
       if (tipo === 'mensal') {
-        filtered = await loadAllRecords({ mes: periodo });
+        filtered = all.filter(r => r.mes === periodo);
       } else {
         const semMonths = periodo === 1 ? MESES.slice(0, 6) : MESES.slice(6);
-        filtered = await loadAllRecords({ mes: { $in: semMonths } });
+        filtered = all.filter(r => semMonths.includes(r.mes));
       }
       setRecords(filtered);
     } catch (e) {
+      console.error('Erro ao carregar dados:', e);
       setLoadError('Erro ao carregar dados: ' + (e.message || 'desconhecido'));
     }
     setLoading(false);
@@ -338,6 +337,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
 
       doc.save(`averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.pdf`);
     } catch (e) {
+      console.error('Erro export PDF:', e);
       setExportError('Erro ao exportar PDF: ' + (e.message || 'desconhecido'));
     }
     setExportingPdf(false);
@@ -363,6 +363,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
       XLSX.utils.book_append_sheet(wb, ws, 'Averbação');
       XLSX.writeFile(wb, `averbacao_${tipo}_${periodoLabel.replace(/\s+/g, '_')}.xlsx`);
     } catch (e) {
+      console.error('Erro export Excel:', e);
       setExportError('Erro ao exportar Excel: ' + (e.message || 'desconhecido'));
     }
     setExportingExcel(false);
