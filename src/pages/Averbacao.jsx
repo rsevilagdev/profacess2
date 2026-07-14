@@ -310,8 +310,17 @@ export default function Averbacao() {
         }
       }
 
+      // Delete existing records for the same months before creating new ones
+      const monthsToReplace = [...new Set(records.map(r => r.mes).filter(Boolean))];
+      if (monthsToReplace.length > 0) {
+        await base44.entities.AverbacaoRecord.deleteMany({ mes: { $in: monthsToReplace } });
+      }
+      if (records.some(r => !r.mes)) {
+        await base44.entities.AverbacaoRecord.deleteMany({ mes: '' });
+      }
+
       await base44.entities.AverbacaoRecord.bulkCreate(records);
-      setSavedMsg(`${records.length} registro(s) salvo(s) com sucesso!`);
+      setSavedMsg(`${records.length} registro(s) atualizado(s) com sucesso!`);
       setSavedDataVersion(v => v + 1);
       setTimeout(() => setSavedMsg(''), 6000);
     } catch (e) {
