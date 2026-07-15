@@ -404,7 +404,8 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
         placa={placaExists?.placa}
         nome={placaExists?.nome}
         open={!!placaExists}
-        onClose={() => setPlacaExists(null)}
+        onConfirm={() => setPlacaExists(null)}
+        onCancel={() => { setPlacaExists(null); resetForm(); }}
       />
       {/* Modal de CNH obrigatória */}
       <CnhRequiredModal

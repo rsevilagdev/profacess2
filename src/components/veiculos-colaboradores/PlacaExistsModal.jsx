@@ -1,7 +1,7 @@
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function PlacaExistsModal({ placa, nome, open, onClose }) {
+export default function PlacaExistsModal({ placa, nome, open, onConfirm, onCancel }) {
   if (!open) return null;
 
   return (
@@ -16,11 +16,16 @@ export default function PlacaExistsModal({ placa, nome, open, onClose }) {
           {nome && <> e pertence a <strong className="text-foreground">{nome}</strong></>}.
         </p>
         <p className="text-xs text-muted-foreground mb-5">
-          Não é necessário cadastrar novamente. Verifique a lista de veículos cadastrados abaixo.
+          Deseja continuar cadastrando ou cancelar o registro?
         </p>
-        <Button onClick={onClose} className="w-full h-12 rounded-2xl">
-          <Check className="h-5 w-5" /> Entendi, Fechar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1 h-12 rounded-2xl" onClick={onCancel}>
+            <X className="h-5 w-5" /> Cancelar Registro
+          </Button>
+          <Button className="flex-1 h-12 rounded-2xl" onClick={onConfirm}>
+            <Check className="h-5 w-5" /> Confirmar
+          </Button>
+        </div>
       </div>
     </div>
   );
