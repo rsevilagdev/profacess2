@@ -54,9 +54,10 @@ export default function NotificationBanner() {
     if (!current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
+      try { base44.entities.Notification.update(current.id, { read: true }); } catch (e) {}
       setCurrent(null);
       setSeenIds(prev => new Set([...prev, current.id]));
-    }, 3000);
+    }, 2000);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [current]);
 

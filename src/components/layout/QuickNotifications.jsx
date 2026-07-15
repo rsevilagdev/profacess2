@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCircle2, Truck, ClipboardList, ShieldAlert, FileCheck, Car, Users, X, PackageCheck } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 
 export default function QuickNotifications() {
   const [open, setOpen] = useState(false);
   const [data, setData] = useState({ tasks: 0, vehicles: 0, drivers: 0, accessLogs: 0, reviews: 0, liberacoes: 0, filaLiberacao: 0 });
+  const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const ref = useRef(null);
   const navigate = useNavigate();
@@ -34,6 +36,15 @@ export default function QuickNotifications() {
         liberacoes: liberacoes.length,
         filaLiberacao: crdkDescarga.length + accessValidados.filter(a => a.tipo !== 'saida').length,
       });
+
+      const notifList = await base44.entities.Notification.list('-created_date', 20);
+      const myNotifs = notifList.filter(n => {
+        if (n.read) return false;
+        if (n.target_user_id) return n.target_user_id === colaborador?.id;
+        if (n.branch_id) return n.branch_id === colaborador?.filial_id;
+        return false;
+      });
+      setNotifications(myNotifs);
     } catch (e) {}
     setLoading(false);
   };
@@ -48,7 +59,8 @@ export default function QuickNotifications() {
     const u5 = base44.entities.ReviewRequest.subscribe(() => loadData());
     const u6 = base44.entities.Liberacao.subscribe(() => loadData());
     const u7 = base44.entities.AcessoCRDK.subscribe(() => loadData());
-    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); };
+    const u8 = base44.entities.Notification.subscribe(() => loadData());
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); u7(); u8(); };
   }, []);
 
   useEffect(() => {
@@ -71,7 +83,14 @@ export default function QuickNotifications() {
 
   // Operadores: apenas Fila de Liberação (sem gestão de base de dados)
   const items = isOperator ? allItems.filter(i => i.path === '/acessos') : allItems;
-  const total = items.reduce((sum, i) => sum + i.count, 0);
+  const total = items.reduce((sum, i) => sum + i.count, 0) + notifications.length;
+
+  const markAsRead = async (id) => {
+    try {
+      await base44.entities.Notification.update(id, { read: true });
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (e) {}
+  };
 
   return (
     <div ref={ref} className="fixed top-4 right-4 z-50">
@@ -100,9 +119,34 @@ export default function QuickNotifications() {
             </button>
           </div>
 
+          {!loading && notifications.length > 0 && (
+            <div className="mb-3 pb-3 border-b border-border">
+              <p className="text-xs font-medium text-muted-foreground px-3 mb-2">Notificações</p>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {notifications.map(n => (
+                  <button
+                    key={n.id}
+                    onClick={() => markAsRead(n.id)}
+                    className="w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-sm hover:bg-accent transition-colors text-left"
+                  >
+                    <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{n.title}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {n.sender_name && <span className="text-[10px] text-muted-foreground">De: {n.sender_name}</span>}
+                        <span className="text-[10px] text-muted-foreground">{formatCuritiba(n.created_date, { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {loading ? (
             <p className="text-center py-6 text-sm text-muted-foreground">Carregando...</p>
-          ) : items.length === 0 ? (
+          ) : items.length === 0 && notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2">
               <CheckCircle2 className="h-8 w-8 text-primary" />
               <p className="text-sm text-muted-foreground text-center">Tudo em dia! Nenhum item pendente.</p>
