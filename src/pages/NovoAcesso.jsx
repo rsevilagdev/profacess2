@@ -159,7 +159,14 @@ export default function NovoAcesso() {
         base44.entities.Vehicle.filter({ status: 'pendente_revisao' }).catch(() => []),
         base44.entities.Vehicle.filter({ status: 'bloqueado' }).catch(() => []),
       ]);
-      setSaidas(saidaLogs);
+      const seenSaidas = new Set();
+      const uniqueSaidas = saidaLogs.filter(s => {
+        const key = (s.veiculo_placa || '').toUpperCase().trim();
+        if (!key || seenSaidas.has(key)) return false;
+        seenSaidas.add(key);
+        return true;
+      }).slice(0, 3);
+      setSaidas(uniqueSaidas);
 
       // Merge: vehicles without a corresponding AccessLog entry appear as Kanban items
       const logPlacas = new Set(logs.map(l => (l.veiculo_placa || '').toUpperCase().trim()));
