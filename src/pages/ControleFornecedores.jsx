@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, LogOut, Loader2, Download, Clock, User, Building2, CheckCircle } from 'lucide-react';
+import { Truck, LogOut, Loader2, Download, Clock, User, Building2, CheckCircle, X, ShieldCheck, Calendar } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
@@ -15,6 +15,9 @@ export default function ControleFornecedores() {
   const [saving, setSaving] = useState(false);
   const [saindo, setSaindo] = useState(null);
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [entradaDialog, setEntradaDialog] = useState(null);
+  const [responsavel, setResponsavel] = useState('');
+  const [dialogDateTime, setDialogDateTime] = useState('');
   const [form, setForm] = useState({ transportadora: '', placa: '', motorista: '', rg_cpf: '' });
 
   const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
@@ -35,18 +38,25 @@ export default function ControleFornecedores() {
     return unsub;
   }, []);
 
-  const registrarEntrada = async () => {
+  const abrirDialogEntrada = () => {
     if (!form.transportadora || !form.placa) return;
+    const now = getCuritibaDateTime();
+    setDialogDateTime(now);
+    setResponsavel(editorName);
+    setEntradaDialog({ now });
+  };
+
+  const registrarEntrada = async () => {
+    if (!form.transportadora || !form.placa || !responsavel.trim()) return;
     setSaving(true);
     try {
-      const now = getCuritibaDateTime();
-      const [data, horario] = now.split(' ');
+      const [data, horario] = dialogDateTime.split(' ');
       await base44.entities.ControleFornecedores.create({
         ...form,
         placa: form.placa.toUpperCase(),
         entrada_data: data,
         entrada_horario: horario,
-        entrada_liberado_por: editorName,
+        entrada_liberado_por: responsavel.trim(),
         status: 'entrada',
         filial_id: colaborador.filial_id,
         filial_nome: colaborador.filial_nome,
@@ -58,6 +68,8 @@ export default function ControleFornecedores() {
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
       setForm({ transportadora: '', placa: '', motorista: '', rg_cpf: '' });
+      setEntradaDialog(null);
+      setResponsavel('');
       await loadRegistros();
     } catch (e) {}
     setSaving(false);
@@ -167,8 +179,8 @@ export default function ControleFornecedores() {
           <Field label="Motorista" value={form.motorista} onChange={(v) => setForm({ ...form, motorista: v })} placeholder="Nome do motorista" />
           <Field label="RG / CPF" value={form.rg_cpf} onChange={(v) => setForm({ ...form, rg_cpf: formatCPF(v) })} placeholder="000.000.000-00" maxLength={14} />
         </div>
-        <Button onClick={registrarEntrada} disabled={saving || !form.transportadora || !form.placa} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
-          {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Truck className="h-5 w-5" />}
+        <Button onClick={abrirDialogEntrada} disabled={!form.transportadora || !form.placa} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
+          <Truck className="h-5 w-5" />
           Registrar Entrada
         </Button>
       </div>
@@ -242,6 +254,55 @@ export default function ControleFornecedores() {
           </div>
         </div>
       }
+
+      {/* Diálogo de confirmação de entrada */}
+      {entradaDialog && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-primary" />
+                <h2 className="font-heading font-bold text-lg">Confirmar Entrada</h2>
+              </div>
+              <button onClick={() => { setEntradaDialog(null); setResponsavel(''); }} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Calendar className="h-3 w-3" /> Data e Hora (Fuso de Curitiba)</p>
+                <p className="font-medium text-sm">{dialogDateTime}</p>
+              </div>
+              <div className="bg-muted/50 rounded-xl p-3 space-y-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Truck className="h-3 w-3" /> Veículo</p>
+                <p className="font-medium text-sm">{form.placa.toUpperCase()} — {form.transportadora}</p>
+                {form.motorista && <p className="text-xs text-muted-foreground">Motorista: {form.motorista}</p>}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Responsável pela Liberação de Acesso *</label>
+                <input
+                  autoFocus
+                  value={responsavel}
+                  onChange={e => setResponsavel(e.target.value)}
+                  placeholder="Nome de quem liberou o acesso"
+                  className="w-full h-11 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => { setEntradaDialog(null); setResponsavel(''); }}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 h-11 rounded-xl" disabled={saving || !responsavel.trim()} onClick={registrarEntrada}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Confirmar Entrada
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>);
 
 }
