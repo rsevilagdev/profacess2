@@ -2,7 +2,8 @@ import { base44 } from '@/api/base44Client';
 
 /**
  * Envia uma notificacao via WhatsApp.
- * Primeiro tenta o agente (se conectado), depois fall back para wa.me com o telefone do perfil.
+ * 1. Tenta o agente (backend function) — envio automatico se conectado
+ * 2. Fallback: abre wa.me para o primeiro numero autorizado ativo
  * @param {string} titulo - Titulo da notificacao
  * @param {string} mensagem - Corpo da mensagem
  * @param {string} tipo - Tipo: 'entrada', 'saida', 'problema', 'colaborador', 'cnh'
@@ -25,15 +26,10 @@ export async function sendWhatsAppNotification(titulo, mensagem, tipo = 'entrada
     if (response?.data?.success) return true;
   } catch (_e) {}
 
-  // 2. Fallback: wa.me link para administradores com telefone cadastrado
+  // 2. Fallback: wa.me para numeros autorizados
   try {
-    const colaboradores = await base44.entities.Colaborador.list();
-    const admins = colaboradores.filter(c =>
-      c.ativo &&
-      ['administrador_master', 'administrador', 'encarregado'].includes(c.cargo) &&
-      c.telefone
-    );
-    if (admins.length === 0) return false;
+    const autorizados = await base44.entities.WhatsAppAutorizado.filter({ ativo: true });
+    if (autorizados.length === 0) return false;
 
     const formatPhone = (tel) => {
       let digits = (tel || '').replace(/\D/g, '');
@@ -42,12 +38,11 @@ export async function sendWhatsAppNotification(titulo, mensagem, tipo = 'entrada
       return digits;
     };
 
-    // Abrir wa.me para o primeiro admin com telefone valido
-    for (const admin of admins) {
-      const phone = formatPhone(admin.telefone);
+    // Abrir wa.me para o primeiro numero valido
+    for (const item of autorizados) {
+      const phone = formatPhone(item.telefone);
       if (phone) {
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(content)}`;
-        // Criar link e clicar programaticamente (evita bloqueio de popup)
         const link = document.createElement('a');
         link.href = url;
         link.target = '_blank';

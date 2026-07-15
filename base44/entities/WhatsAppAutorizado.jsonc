@@ -1,0 +1,31 @@
+{
+  "name": "WhatsAppAutorizado",
+  "type": "object",
+  "properties": {
+    "nome": {
+      "type": "string",
+      "description": "Nome da pessoa autorizada"
+    },
+    "telefone": {
+      "type": "string",
+      "description": "Numero de WhatsApp com DDD (ex: 5541999999999)"
+    },
+    "cargo": {
+      "type": "string",
+      "description": "Cargo ou funcao (ex: Administrador, Supervisor)"
+    },
+    "ativo": {
+      "type": "boolean",
+      "default": true,
+      "description": "Se o numero esta ativo para receber notificacoes"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    }
+  },
+  "required": [
+    "nome",
+    "telefone"
+  ]
+}
