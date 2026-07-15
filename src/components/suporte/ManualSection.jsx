@@ -1,8 +1,9 @@
-import { ChevronUp, ChevronDown, ScanLine, Truck, ShieldAlert, LayoutGrid, ScrollText, Activity, Bell, Download, Settings, BookOpen, Lock, LayoutDashboard, Search, Database, BarChart3, FileSpreadsheet, DollarSign, Building2, User, Lightbulb, CheckCircle } from 'lucide-react';
+import { ChevronUp, ChevronDown, ScanLine, Truck, ShieldAlert, LayoutGrid, ScrollText, Activity, Bell, Download, Settings, BookOpen, Lock, LayoutDashboard, Search, Database, BarChart3, FileSpreadsheet, DollarSign, Building2, User, Users, Car, Lightbulb, CheckCircle } from 'lucide-react';
 
 const ICON_MAP = {
   ScanLine, Truck, ShieldAlert, LayoutGrid, ScrollText, Activity, Bell, Download, Settings, BookOpen,
   Lock, LayoutDashboard, Search, Database, BarChart3, FileSpreadsheet, DollarSign, Building2, User,
+  Users, Car,
 };
 
 export default function ManualSection({ section, isOpen, onToggle }) {
