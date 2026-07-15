@@ -8,6 +8,7 @@ import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO } from '@/lib/curitiba-time.js';
 import { enforceSystemTimezone } from '@/lib/timezone-enforcer.js';
 import ParticleBackground from '@/components/ParticleBackground';
+import PushInit from '@/components/PushInit';
 
 export default function LoginProfarma() {
   const [cpf, setCpf] = useState('');
@@ -199,6 +200,7 @@ export default function LoginProfarma() {
 
         <p className="text-center text-xs text-teal-200/30 mt-6">© 2026 PROFARMA LIBERAAUTO PRO · Todos os direitos reservados</p>
       </div>
+      <PushInit />
     </div>
   );
 }
