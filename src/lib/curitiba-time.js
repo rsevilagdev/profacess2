@@ -61,3 +61,23 @@ export function formatCuritiba(dateStr, options = {}) {
   const d = parseUTC(dateStr);
   return d.toLocaleString('pt-BR', { timeZone: CURITIBA_TZ, ...options });
 }
+
+/**
+ * Returns an ISO string for 6 months from now — used for vehicle/driver validity.
+ */
+export function getSixMonthsFromNow() {
+  const now = new Date();
+  const future = new Date(now);
+  future.setMonth(future.getMonth() + 6);
+  return future.toISOString();
+}
+
+/**
+ * Returns an ISO string for 6 months after the given date.
+ */
+export function getSixMonthsFromDate(dateStr) {
+  const base = dateStr ? parseUTC(dateStr) : new Date();
+  const future = new Date(base);
+  future.setMonth(future.getMonth() + 6);
+  return future.toISOString();
+}

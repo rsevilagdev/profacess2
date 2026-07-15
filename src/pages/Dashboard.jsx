@@ -7,6 +7,7 @@ import { formatCuritiba } from '@/lib/curitiba-time.js';
 import { maskPlaca, maskCPF } from '@/lib/lgpd-utils.js';
 import PainelRelatorios from '@/components/dashboard/PainelRelatorios';
 import SmartDashboard from '@/components/dashboard/SmartDashboard';
+import ValidityAlerts from '@/components/dashboard/ValidityAlerts';
 
 function StatCard({ icon: Icon, label, value, color, to }) {
   const card = (
@@ -67,6 +68,8 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6 fade-in">
+      <ValidityAlerts />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

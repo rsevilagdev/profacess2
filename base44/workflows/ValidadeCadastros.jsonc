@@ -1,0 +1,45 @@
+{
+  "description": "Verifica diariamente ve\u00edculos e motoristas com validade vencida (6 meses) e coloca em revis\u00e3o",
+  "trigger": {
+    "condition": null,
+    "config": {
+      "trigger_type": "scheduled",
+      "events": [],
+      "schedule_mode": "recurring",
+      "cron_expression": "0 6 * * *",
+      "one_time_date": null,
+      "timezone": "America/Sao_Paulo",
+      "interval_value": null,
+      "interval_unit": null,
+      "interval_anchor": null,
+      "ends_type": "never",
+      "ends_on_date": null,
+      "ends_after_count": null
+    }
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "validade_cadastros",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "verificar_validade": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "verificarValidadeCadastros",
+            "args": {}
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Verificar Validade",
+            "description": "Backfill e vencimento autom\u00e1tico"
+          }
+        }
+      }
+    ]
+  },
+  "name": "Validade Cadastros"
+}

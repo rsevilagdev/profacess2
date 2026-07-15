@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
+import { getCuritibaISO, getSixMonthsFromNow } from '@/lib/curitiba-time.js';
 
 const PAGE_SIZE = 10;
 
@@ -86,18 +87,30 @@ export default function EditarBase() {
     if (tab === 'veiculos') {
       const data = { ...form, placa: form.placa?.toUpperCase() };
       if (editing) {
+        if (data.status === 'validado' && editing.status !== 'validado') {
+          data.data_cadastro = getCuritibaISO();
+          data.data_validade = getSixMonthsFromNow();
+        }
         await base44.entities.Vehicle.update(editing.id, data);
         await logAudit('Veículo editado', `Placa: ${data.placa} | Editado por: ${editorName}`);
       } else {
+        data.data_cadastro = getCuritibaISO();
+        data.data_validade = getSixMonthsFromNow();
         await base44.entities.Vehicle.create(data);
         await logAudit('Veículo cadastrado', `Placa: ${data.placa} | Cadastrado por: ${editorName}`);
       }
     } else {
       const data = { ...form };
       if (editing) {
+        if (data.status === 'validado' && editing.status !== 'validado') {
+          data.data_cadastro = getCuritibaISO();
+          data.data_validade = getSixMonthsFromNow();
+        }
         await base44.entities.Driver.update(editing.id, data);
         await logAudit('Motorista editado', `Nome: ${data.nome} | Editado por: ${editorName}`);
       } else {
+        data.data_cadastro = getCuritibaISO();
+        data.data_validade = getSixMonthsFromNow();
         await base44.entities.Driver.create(data);
         await logAudit('Motorista cadastrado', `Nome: ${data.nome} | Cadastrado por: ${editorName}`);
       }

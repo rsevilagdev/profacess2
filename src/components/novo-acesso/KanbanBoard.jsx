@@ -3,7 +3,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User, LogIn } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { getCuritibaISO, formatCuritiba } from '@/lib/curitiba-time.js';
+import { getCuritibaISO, getSixMonthsFromNow, formatCuritiba } from '@/lib/curitiba-time.js';
 
 const COLUMNS = [
   { id: 'pendente_revisao', title: 'Pendente de Revisão', icon: Clock, color: 'text-orange-500', bg: 'bg-orange-500/10', dot: 'bg-orange-500' },
@@ -48,7 +48,12 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
     setMoving(draggableId);
     try {
       if (item?.source === 'vehicle') {
-        await base44.entities.Vehicle.update(item.vehicle_id, { status: newStatus });
+        const vehicleUpdate = { status: newStatus };
+        if (newStatus === 'validado') {
+          vehicleUpdate.data_cadastro = getCuritibaISO();
+          vehicleUpdate.data_validade = getSixMonthsFromNow();
+        }
+        await base44.entities.Vehicle.update(item.vehicle_id, vehicleUpdate);
         await base44.entities.AccessLog.create({
           veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
           filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: newStatus,
@@ -72,7 +77,7 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
       const item = acessos.find(a => a.id === id);
       const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
       if (item?.source === 'vehicle') {
-        await base44.entities.Vehicle.update(item.vehicle_id, { status: 'validado' });
+        await base44.entities.Vehicle.update(item.vehicle_id, { status: 'validado', data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() });
         await base44.entities.AccessLog.create({
           veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
           filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: 'validado',

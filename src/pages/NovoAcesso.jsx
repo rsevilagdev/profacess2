@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
-import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
+import { getCuritibaISO, getCuritibaDateTime, getSixMonthsFromNow } from '@/lib/curitiba-time.js';
 import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
 import CadastroForm from '@/components/novo-acesso/CadastroForm';
 import ReviewDialog from '@/components/novo-acesso/ReviewDialog';
@@ -64,7 +64,8 @@ export default function NovoAcesso() {
           for (const v of existingVehicles) {
             await base44.entities.Vehicle.update(v.id, {
               status: decision,
-              ...(dados.veiculo?.modelo ? { modelo: dados.veiculo.modelo } : {})
+              ...(dados.veiculo?.modelo ? { modelo: dados.veiculo.modelo } : {}),
+              ...(decision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
             });
           }
         } else if (dados.veiculo) {
@@ -72,7 +73,9 @@ export default function NovoAcesso() {
             ...dados.veiculo,
             status: decision,
             filial_id: colaborador.filial_id,
-            filial_nome: colaborador.filial_nome
+            filial_nome: colaborador.filial_nome,
+            data_cadastro: getCuritibaISO(),
+            data_validade: getSixMonthsFromNow()
           });
         }
       }
@@ -85,7 +88,8 @@ export default function NovoAcesso() {
           for (const d of existingDrivers) {
             await base44.entities.Driver.update(d.id, {
               status: decision,
-              ...(dados.motorista?.nome ? { nome: dados.motorista.nome } : {})
+              ...(dados.motorista?.nome ? { nome: dados.motorista.nome } : {}),
+              ...(decision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
             });
           }
         } else if (dados.motorista) {
@@ -93,7 +97,9 @@ export default function NovoAcesso() {
             ...dados.motorista,
             status: decision,
             filial_id: colaborador.filial_id,
-            filial_nome: colaborador.filial_nome
+            filial_nome: colaborador.filial_nome,
+            data_cadastro: getCuritibaISO(),
+            data_validade: getSixMonthsFromNow()
           });
         }
       }

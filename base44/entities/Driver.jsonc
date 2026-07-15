@@ -65,6 +65,16 @@
     "comprovante_foto": {
       "type": "string",
       "description": "URL da foto comprovante de atualiza\u00e7\u00e3o no Opentech"
+    },
+    "data_cadastro": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de cadastro na base de dados"
+    },
+    "data_validade": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Data de validade do status (6 meses ap\u00f3s cadastro)"
     }
   },
   "required": [
