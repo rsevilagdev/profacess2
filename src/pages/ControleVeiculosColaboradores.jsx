@@ -5,6 +5,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import CnhRequiredModal from '@/components/veiculos-colaboradores/CnhRequiredModal';
+import PlacaExistsModal from '@/components/veiculos-colaboradores/PlacaExistsModal';
 
 export default function ControleVeiculosColaboradores() {
   const { colaborador } = useProfarmaAuth();
@@ -18,6 +19,7 @@ export default function ControleVeiculosColaboradores() {
   const [recognizePreview, setRecognizePreview] = useState('');
   const [fotoCnhUrl, setFotoCnhUrl] = useState('');
   const [showCnhModal, setShowCnhModal] = useState(false);
+  const [placaExists, setPlacaExists] = useState(null);
   const fileInputRef = useRef(null);
   const cnhModalInputRef = useRef(null);
   const [form, setForm] = useState({
@@ -49,6 +51,16 @@ export default function ControleVeiculosColaboradores() {
     setFotoCnhUrl('');
     setRecognizePreview('');
     setRecognizeError('');
+    setPlacaExists(null);
+  };
+
+  const checkPlacaExists = (placaValue) => {
+    const placaClean = placaValue.toUpperCase().trim();
+    if (!placaClean || editId) return;
+    const found = registros.find(r => r.placa?.toUpperCase().trim() === placaClean);
+    if (found) {
+      setPlacaExists({ placa: placaClean, nome: found.nome });
+    }
   };
 
   const salvar = async () => {
@@ -244,7 +256,7 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
           )}
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Field label="Placa *" value={form.placa} onChange={v => setForm({ ...form, placa: v.toUpperCase() })} placeholder="ABC1D23" />
+          <Field label="Placa *" value={form.placa} onChange={v => setForm({ ...form, placa: v.toUpperCase() })} onBlur={() => checkPlacaExists(form.placa)} placeholder="ABC1D23" />
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome * <span className="text-primary">(via foto da CNH)</span></label>
             <input
@@ -387,6 +399,13 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
           </div>
         )}
       </div>
+      {/* Modal de placa já cadastrada */}
+      <PlacaExistsModal
+        placa={placaExists?.placa}
+        nome={placaExists?.nome}
+        open={!!placaExists}
+        onClose={() => setPlacaExists(null)}
+      />
       {/* Modal de CNH obrigatória */}
       <CnhRequiredModal
         open={showCnhModal}
@@ -403,7 +422,7 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
   );
 }
 
-function Field({ label, value, onChange, placeholder }) {
+function Field({ label, value, onChange, onBlur, placeholder }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
@@ -411,6 +430,7 @@ function Field({ label, value, onChange, placeholder }) {
         className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring"
         value={value}
         onChange={e => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
       />
     </div>
