@@ -103,7 +103,7 @@ function FieldRow({ label, value, fullWidth }) {
 function EntradaSaidaRow({ label, data, horario, liberadoPor }) {
   return (
     <div className="flex border border-black border-t-0">
-      <div className="w-24 shrink-0 bg-[#C0C0C0] border-r border-black px-1.5 py-1">
+      <div className="w-28 shrink-0 bg-[#C0C0C0] border-r border-black px-1.5 py-1">
         <span className="text-[10px] font-bold text-black">{label}</span>
       </div>
       <div className="w-36 shrink-0 border-r border-black px-1.5 py-1 bg-white min-h-[22px]">
