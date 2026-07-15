@@ -4,7 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
-import { getCuritibaISO, getSixMonthsFromNow } from '@/lib/curitiba-time.js';
+import { getCuritibaISO, getSixMonthsFromNow, formatCuritiba } from '@/lib/curitiba-time.js';
 
 const PAGE_SIZE = 10;
 
@@ -217,6 +217,12 @@ export default function EditarBase() {
                         <p className="text-xs text-muted-foreground">{item.cpf}</p>
                       </>
                     )}
+                    {item.data_validade && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Validade: {formatCuritiba(item.data_validade, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {new Date(item.data_validade) < new Date() && <span className="text-destructive font-medium ml-1">• Vencido</span>}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -253,12 +259,34 @@ export default function EditarBase() {
                   <Field label="Placa *" value={form.placa || ''} onChange={v => setForm({...form, placa: v.toUpperCase()})} />
                   <Field label="Modelo" value={form.modelo || ''} onChange={v => setForm({...form, modelo: v})} />
                   <SelectField label="Status" value={form.status || 'pendente_revisao'} options={['validado', 'bloqueado', 'pendente_revisao']} onChange={v => setForm({...form, status: v})} />
+                  {form.data_cadastro && (
+                    <div className="text-xs text-muted-foreground bg-muted rounded-xl p-2">
+                      Cadastro: {formatCuritiba(form.data_cadastro, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </div>
+                  )}
+                  {form.data_validade && (
+                    <div className={`text-xs rounded-xl p-2 ${new Date(form.data_validade) < new Date() ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>
+                      Validade (6 meses): {formatCuritiba(form.data_validade, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      {new Date(form.data_validade) < new Date() && ' — Vencido'}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   <Field label="Nome e Sobrenome *" value={form.nome || ''} onChange={v => setForm({...form, nome: v})} />
                   <Field label="CPF *" value={form.cpf || ''} onChange={v => setForm({...form, cpf: formatCPF(v)})} maxLength={14} />
                   <SelectField label="Status" value={form.status || 'pendente_revisao'} options={['validado', 'bloqueado', 'pendente_revisao']} onChange={v => setForm({...form, status: v})} />
+                  {form.data_cadastro && (
+                    <div className="text-xs text-muted-foreground bg-muted rounded-xl p-2">
+                      Cadastro: {formatCuritiba(form.data_cadastro, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </div>
+                  )}
+                  {form.data_validade && (
+                    <div className={`text-xs rounded-xl p-2 ${new Date(form.data_validade) < new Date() ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>
+                      Validade (6 meses): {formatCuritiba(form.data_validade, { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      {new Date(form.data_validade) < new Date() && ' — Vencido'}
+                    </div>
+                  )}
                 </>
               )}
               <div className="text-xs text-muted-foreground bg-muted rounded-xl p-2 flex items-center gap-2">

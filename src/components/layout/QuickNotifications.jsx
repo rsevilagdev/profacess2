@@ -92,10 +92,26 @@ export default function QuickNotifications() {
     } catch (e) {}
   };
 
+  const markAllAsRead = async () => {
+    try {
+      for (const n of notifications) {
+        await base44.entities.Notification.update(n.id, { read: true });
+      }
+      setNotifications([]);
+    } catch (e) {}
+  };
+
+  const togglePanel = async () => {
+    if (!open && notifications.length > 0) {
+      await markAllAsRead();
+    }
+    setOpen(!open);
+  };
+
   return (
     <div ref={ref} className="fixed top-4 right-4 z-50">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={togglePanel}
         className="relative h-12 w-12 rounded-2xl bg-card border border-border shadow-lg flex items-center justify-center hover:shadow-md transition-shadow"
         aria-label="Notificações rápidas"
       >

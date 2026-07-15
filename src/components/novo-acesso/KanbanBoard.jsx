@@ -222,7 +222,7 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[120px]">
                       {items.map((item, idx) => (
-                        <Draggable key={item.id} draggableId={item.id} index={idx} isDragDisabled={!canApproveBlock}>
+                        <Draggable key={item.id} draggableId={item.id} index={idx} isDragDisabled={!canApproveBlock || col.id === 'validado'}>
                           {(prov) => (
                             <div
                               ref={prov.innerRef}
