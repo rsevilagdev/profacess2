@@ -20,6 +20,7 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
   const [liberandoItem, setLiberandoItem] = useState(null);
   const [liberandoObs, setLiberandoObs] = useState('');
   const [reEntering, setReEntering] = useState(null);
+  const [reEntryItem, setReEntryItem] = useState(null);
 
   const canApproveBlock = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
   const canLiberar = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
@@ -309,7 +310,7 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
                   size="sm"
                   className="h-8 w-full rounded-lg text-xs mt-2"
                   disabled={reEntering === item.id}
-                  onClick={() => reEntry(item)}
+                  onClick={() => setReEntryItem(item)}
                 >
                   {reEntering === item.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogIn className="h-3 w-3" />}
                   Dar Entrada
@@ -371,6 +372,53 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
               >
                 {liberando === liberandoItem.id ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle className="h-5 w-5" />}
                 <span className="text-xs">Carregado</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Re-entry confirmation modal */}
+      {reEntryItem && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <LogIn className="h-5 w-5 text-primary" />
+                <h2 className="font-heading font-bold text-lg">Confirmar Re-entrada</h2>
+              </div>
+              <button onClick={() => setReEntryItem(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">Confirme os dados do veículo e motorista para registrar a nova entrada:</p>
+            <div className="space-y-3 mb-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Truck className="h-3 w-3" /> Veículo</p>
+                <p className="font-medium">{reEntryItem.veiculo_placa}</p>
+                {reEntryItem.empresa && <p className="text-xs text-muted-foreground">{reEntryItem.empresa}</p>}
+              </div>
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><User className="h-3 w-3" /> Motorista</p>
+                <p className="font-medium">{reEntryItem.motorista_nome || '—'}</p>
+                {reEntryItem.motorista_cpf && <p className="text-xs text-muted-foreground">CPF: {reEntryItem.motorista_cpf}</p>}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => setReEntryItem(null)}>
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 h-11 rounded-xl"
+                disabled={reEntering === reEntryItem.id}
+                onClick={async () => {
+                  const item = reEntryItem;
+                  setReEntryItem(null);
+                  await reEntry(item);
+                }}
+              >
+                {reEntering === reEntryItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Confirmar Entrada
               </Button>
             </div>
           </div>
