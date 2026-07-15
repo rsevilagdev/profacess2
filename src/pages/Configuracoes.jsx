@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { maskCPF } from '@/lib/lgpd-utils.js';
 import AparenciaTab from '@/components/configuracoes/AparenciaTab';
 import IntegracoesGoogle from '@/components/configuracoes/IntegracoesGoogle';
+import WhatsAppNotifCard from '@/components/notificacoes/WhatsAppNotifCard';
 
 const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'];
 
@@ -264,7 +265,12 @@ export default function Configuracoes() {
       {tab === 'aparencia' && <AparenciaTab />}
 
       {/* Integrações Tab */}
-      {tab === 'integracoes' && <IntegracoesGoogle />}
+      {tab === 'integracoes' && (
+        <div className="space-y-4">
+          <WhatsAppNotifCard />
+          <IntegracoesGoogle />
+        </div>
+      )}
 
       {/* User Form Modal */}
       {showForm && (
