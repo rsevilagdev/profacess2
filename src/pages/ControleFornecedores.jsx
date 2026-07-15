@@ -18,6 +18,9 @@ export default function ControleFornecedores() {
   const [entradaDialog, setEntradaDialog] = useState(null);
   const [responsavel, setResponsavel] = useState('');
   const [dialogDateTime, setDialogDateTime] = useState('');
+  const [saidaDialog, setSaidaDialog] = useState(null);
+  const [responsavelSaida, setResponsavelSaida] = useState('');
+  const [saidaDateTime, setSaidaDateTime] = useState('');
   const [form, setForm] = useState({ transportadora: '', placa: '', motorista: '', rg_cpf: '' });
 
   const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
@@ -75,15 +78,23 @@ export default function ControleFornecedores() {
     setSaving(false);
   };
 
-  const liberarSaida = async (reg) => {
+  const abrirDialogSaida = (reg) => {
+    const now = getCuritibaDateTime();
+    setSaidaDateTime(now);
+    setResponsavelSaida(editorName);
+    setSaidaDialog(reg);
+  };
+
+  const confirmarSaida = async () => {
+    const reg = saidaDialog;
+    if (!reg || !responsavelSaida.trim()) return;
     setSaindo(reg.id);
     try {
-      const now = getCuritibaDateTime();
-      const [data, horario] = now.split(' ');
+      const [data, horario] = saidaDateTime.split(' ');
       await base44.entities.ControleFornecedores.update(reg.id, {
         saida_data: data,
         saida_horario: horario,
-        saida_liberado_por: editorName,
+        saida_liberado_por: responsavelSaida.trim(),
         status: 'saida'
       });
       await base44.entities.AuditLog.create({
@@ -94,6 +105,8 @@ export default function ControleFornecedores() {
       await loadRegistros();
     } catch (e) {}
     setSaindo(null);
+    setSaidaDialog(null);
+    setResponsavelSaida('');
   };
 
   const exportarPDF = () => {
@@ -210,7 +223,7 @@ export default function ControleFornecedores() {
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> Entrada: {reg.entrada_data} {reg.entrada_horario}</p>
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" /> Liberado por: {reg.entrada_liberado_por || '—'}</p>
                 </div>
-                <Button size="sm" className="h-8 w-full rounded-xl mt-2" disabled={saindo === reg.id} onClick={() => liberarSaida(reg)}>
+                <Button size="sm" className="h-8 w-full rounded-xl mt-2" disabled={saindo === reg.id} onClick={() => abrirDialogSaida(reg)}>
                   {saindo === reg.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
                   Liberar Sa\u00edda
                 </Button>
@@ -298,6 +311,55 @@ export default function ControleFornecedores() {
               <Button className="flex-1 h-11 rounded-xl" disabled={saving || !responsavel.trim()} onClick={registrarEntrada}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Confirmar Entrada
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo de liberação de saída */}
+      {saidaDialog && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <LogOut className="h-5 w-5 text-primary" />
+                <h2 className="font-heading font-bold text-lg">Liberar Saída</h2>
+              </div>
+              <button onClick={() => { setSaidaDialog(null); setResponsavelSaida(''); }} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Calendar className="h-3 w-3" /> Data e Hora (Fuso de Curitiba)</p>
+                <p className="font-medium text-sm">{saidaDateTime}</p>
+              </div>
+              <div className="bg-muted/50 rounded-xl p-3 space-y-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1"><Truck className="h-3 w-3" /> Veículo</p>
+                <p className="font-medium text-sm">{saidaDialog.placa} — {saidaDialog.transportadora}</p>
+                {saidaDialog.motorista && <p className="text-xs text-muted-foreground">Motorista: {saidaDialog.motorista}</p>}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Responsável pela Liberação de Saída *</label>
+                <input
+                  autoFocus
+                  value={responsavelSaida}
+                  onChange={e => setResponsavelSaida(e.target.value)}
+                  placeholder="Nome de quem liberou a saída"
+                  className="w-full h-11 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => { setSaidaDialog(null); setResponsavelSaida(''); }}>
+                Cancelar
+              </Button>
+              <Button className="flex-1 h-11 rounded-xl" disabled={saindo === saidaDialog.id || !responsavelSaida.trim()} onClick={confirmarSaida}>
+                {saindo === saidaDialog.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                Confirmar Saída
               </Button>
             </div>
           </div>
