@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Send, Trash2, Check, Loader2, X, Users, Building2, ClipboardList, ChevronRight } from 'lucide-react';
+import { Bell, Send, Trash2, Check, Loader2, X, Users, Building2, ClipboardList, ChevronRight, Ban } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ export default function Notificacoes() {
   const [form, setForm] = useState({ title: '', message: '', type: 'admin_ops', targetUserIds: [], targetFilialId: '' });
   const [sending, setSending] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState(null);
+  const [deletingReview, setDeletingReview] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const isMine = (n) => {
     if (!colaborador) return false;
@@ -119,6 +121,22 @@ export default function Notificacoes() {
   const markRead = async (id) => { await base44.entities.Notification.update(id, { read: true }); loadData(); };
   const remove = async (id) => { await base44.entities.Notification.delete(id); loadData(); };
 
+  const deleteReview = async (review) => {
+    setDeletingReview(review.id);
+    try {
+      await base44.entities.AuditLog.create({
+        user_name: colaborador.nome, user_cpf: colaborador.cpf,
+        action: 'Registro de revisão excluído',
+        details: `Tipo: ${review.tipo} | Alvo: ${review.target_nome || review.target_cpf} | Solicitante: ${review.solicitante_nome}`,
+        ip_address: 'local', domain: window.location.hostname, category: 'user_management', branch_id: colaborador.filial_id
+      });
+      await base44.entities.ReviewRequest.delete(review.id);
+      await loadData();
+    } catch (e) {}
+    setDeletingReview(null);
+    setDeleteConfirm(null);
+  };
+
   const userDisplayName = (u) => `${u.nome} — Mat: ${u.matricula || 'N/A'}`;
 
   return (
@@ -185,13 +203,47 @@ export default function Notificacoes() {
                     <p className="text-xs text-muted-foreground">{r.motivo}</p>
                     <p className="text-xs text-muted-foreground mt-1">Solicitante: {r.solicitante_nome} · {new Date(r.created_date).toLocaleString('pt-BR')}</p>
                   </div>
-                  <Link to="/painel-bloqueio">
-                    <Button size="sm" variant="outline" className="rounded-xl">Revisar</Button>
-                  </Link>
+                  <div className="flex gap-1 shrink-0">
+                    <Link to="/painel-bloqueio">
+                      <Button size="sm" variant="outline" className="rounded-xl">Revisar</Button>
+                    </Link>
+                    <Button size="sm" variant="destructive" className="rounded-xl" disabled={deletingReview === r.id} onClick={() => setDeleteConfirm(r)}>
+                      {deletingReview === r.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Ban className="h-5 w-5 text-destructive" />
+                <h2 className="font-heading font-bold text-lg">Apagar Registro</h2>
+              </div>
+              <button onClick={() => setDeleteConfirm(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Tem certeza que deseja apagar permanentemente este registro de revisão?
+              <span className="block mt-2 font-medium text-foreground">{deleteConfirm.tipo === 'veiculo' ? 'Veículo' : 'Motorista'}: {deleteConfirm.target_nome || deleteConfirm.target_cpf}</span>
+              <span className="block text-xs mt-1">Esta ação não pode ser desfeita.</span>
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
+              <Button variant="destructive" className="flex-1 h-11 rounded-xl" disabled={deletingReview === deleteConfirm.id} onClick={() => deleteReview(deleteConfirm)}>
+                {deletingReview === deleteConfirm.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Apagar
+              </Button>
+            </div>
+          </div>
         </div>
       )}
 
