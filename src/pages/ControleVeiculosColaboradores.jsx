@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Car, Loader2, Download, Search, Pencil, Trash2, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Car, Loader2, Download, Search, Pencil, Trash2, X, ScanText, Camera } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,10 @@ export default function ControleVeiculosColaboradores() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [editId, setEditId] = useState(null);
+  const [recognizing, setRecognizing] = useState(false);
+  const [recognizeError, setRecognizeError] = useState('');
+  const [recognizePreview, setRecognizePreview] = useState('');
+  const fileInputRef = useRef(null);
   const [form, setForm] = useState({
     placa: '', nome: '', matricula: '', setor: '',
     modelo_veiculo: '', cor: '', cnh: '', obs: ''
@@ -106,6 +110,48 @@ export default function ControleVeiculosColaboradores() {
     } catch (e) {}
   };
 
+  const reconhecerCNH = async (file) => {
+    if (!file) return;
+    setRecognizing(true);
+    setRecognizeError('');
+    setRecognizePreview(URL.createObjectURL(file));
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Analise a imagem da Carteira Nacional de Habilitação (CNH) brasileira e extraia os seguintes dados do motorista:
+1. Nome completo do condutor
+2. Número do registro da CNH (número da habilitação)
+
+Retorne APENAS os dados no formato JSON especificado. Se algum campo não for legível, retorne string vazia.`,
+        file_urls: [file_url],
+        response_json_schema: {
+          type: 'object',
+          properties: {
+            nome: { type: 'string', description: 'Nome completo do condutor' },
+            cnh: { type: 'string', description: 'Número do registro da CNH' }
+          }
+        }
+      });
+      setForm(prev => ({
+        ...form,
+        nome: result.nome || form.nome,
+        cnh: result.cnh || form.cnh,
+      }));
+      if (!result.nome && !result.cnh) {
+        setRecognizeError('Não foi possível identificar os dados da CNH na foto. Tente outra imagem com melhor qualidade.');
+      }
+    } catch (e) {
+      setRecognizeError('Erro ao reconhecer CNH: ' + (e.message || 'desconhecido'));
+    }
+    setRecognizing(false);
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) reconhecerCNH(file);
+    e.target.value = '';
+  };
+
   const filtered = registros.filter(r => {
     if (!search) return true;
     const term = search.toLowerCase();
@@ -144,6 +190,45 @@ export default function ControleVeiculosColaboradores() {
           <Field label="CNH" value={form.cnh} onChange={v => setForm({ ...form, cnh: v })} placeholder="Nº da CNH" />
           <Field label="OBS" value={form.obs} onChange={v => setForm({ ...form, obs: v })} placeholder="Observações" />
         </div>
+
+        {/* Reconhecimento de CNH por foto */}
+        <div className="mt-3 p-4 rounded-xl border border-primary/20 bg-primary/5">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-2">
+              <ScanText className="h-5 w-5 text-primary" />
+              <div>
+                <p className="text-sm font-medium">Reconhecimento de CNH por foto</p>
+                <p className="text-xs text-muted-foreground">Tire uma foto da CNH para preencher nome e número automaticamente</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={recognizing}
+                onClick={() => fileInputRef.current?.click()}
+                className="h-10 rounded-xl"
+              >
+                {recognizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                {recognizing ? 'Reconhecendo...' : 'Reconhecer CNH'}
+              </Button>
+            </div>
+          </div>
+          {recognizePreview && (
+            <div className="mt-3 flex items-start gap-3">
+              <img src={recognizePreview} alt="CNH" className="h-24 rounded-lg border border-border object-cover" />
+              <div className="flex-1">
+                {recognizing && <p className="text-xs text-primary flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> Analisando imagem...</p>}
+                {recognizeError && <p className="text-xs text-destructive">{recognizeError}</p>}
+                {!recognizing && !recognizeError && (form.nome || form.cnh) && (
+                  <p className="text-xs text-primary">Dados preenchidos a partir da CNH. Revise antes de salvar.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <p className="text-xs text-muted-foreground mt-2">A data, horário e operador são preenchidos automaticamente.</p>
         <Button onClick={salvar} disabled={saving || !form.placa || !form.nome} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Car className="h-5 w-5" />}
