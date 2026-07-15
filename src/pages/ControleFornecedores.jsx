@@ -151,7 +151,7 @@ export default function ControleFornecedores() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="brand-title text-2xl">Controle de Entrada e Saída de Fornecedores</h1>
-          <p className="text-sm text-muted-foreground">Registro de entrada e saída de veiculos de transportadoras</p>
+          <p className="text-sm text-muted-foreground">Registro de entrada e saída de veículos de transportadoras</p>
         </div>
         <Button onClick={exportarPDF} disabled={exportingPdf || registros.length === 0} variant="secondary" className="h-12 rounded-2xl">
           {exportingPdf ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />} Exportar PDF
