@@ -50,6 +50,7 @@ function App() {
             <ScrollToTop />
             <Routes>
               <Route path="/" element={<LoginProfarma />} />
+              <Route path="/login" element={<LoginProfarma />} />
               <Route path="/solicitar-acesso" element={<SolicitarAcesso />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route element={<AppLayout />}>
