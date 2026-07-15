@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Camera, CheckCircle, X, Loader2, RefreshCw, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
+import { compressImage } from '@/lib/image-compress.js';
 
 export default function FotoLiberacaoModal({ registro, onConfirm, onClose, saving }) {
   const [fotoUrl, setFotoUrl] = useState(null);
@@ -51,14 +52,14 @@ export default function FotoLiberacaoModal({ registro, onConfirm, onClose, savin
       setUploading(true);
       setError('');
       try {
-        const file = new File([blob], `liberacao_${registro.placa}_${Date.now()}.jpg`, { type: 'image/jpeg' });
+        const file = await compressImage(blob, { maxWidth: 1024, maxHeight: 1024, quality: 0.6 });
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         setFotoUrl(file_url);
       } catch (e) {
         setError('Erro ao enviar a foto. Tente novamente.');
       }
       setUploading(false);
-    }, 'image/jpeg', 0.8);
+    }, 'image/jpeg', 0.85);
   };
 
   const retakePhoto = () => {

@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { AlertTriangle, Camera, Loader2, X, CheckCircle2, ScanText } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
+import { compressImage } from '@/lib/image-compress.js';
 
 export default function CnhRequiredModal({ open, onClose, onCaptured, colaboradorNome }) {
   const [capturing, setCapturing] = useState(false);
@@ -20,7 +21,8 @@ export default function CnhRequiredModal({ open, onClose, onCaptured, colaborado
     setError('');
     setPreview(URL.createObjectURL(file));
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.7 });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: compressed });
       const result = await base44.integrations.Core.InvokeLLM({
         prompt: `Analise a imagem da Carteira Nacional de Habilitação (CNH) brasileira e extraia:
 1. Nome completo do condutor

@@ -8,6 +8,7 @@ import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import { triggerDownload } from '@/lib/export-utils';
 import FotoLiberacaoModal from '@/components/fornecedores/FotoLiberacaoModal';
+import LazyPhoto from '@/components/LazyPhoto';
 
 export default function ControleFornecedores() {
   const { colaborador } = useProfarmaAuth();
@@ -271,9 +272,7 @@ export default function ControleFornecedores() {
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.saida_liberado_por || '—'}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">
                       {reg.foto_liberacao ? (
-                        <a href={reg.foto_liberacao} target="_blank" rel="noopener noreferrer">
-                          <img src={reg.foto_liberacao} alt="Foto liberação" className="h-10 w-14 object-cover rounded-lg border border-border" />
-                        </a>
+                        <LazyPhoto src={reg.foto_liberacao} alt="Foto liberação" thumbClass="h-10 w-14" />
                       ) : '—'}
                     </td>
                     </tr>

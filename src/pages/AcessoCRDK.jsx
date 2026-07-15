@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { imageUrlToBase64 } from '@/lib/pdf-utils';
 import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
+import { compressImage } from '@/lib/image-compress.js';
 
 export default function AcessoCRDK() {
   const { colaborador } = useProfarmaAuth();
@@ -86,7 +87,8 @@ export default function AcessoCRDK() {
     setFotoPlacasDetectadas([]);
     try {
       setFotoStep('Enviando foto...');
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const compressed = await compressImage(file, { maxWidth: 1280, maxHeight: 1280, quality: 0.65 });
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: compressed });
       setFotoStep('Analisando imagem com IA...');
       const result = await base44.integrations.Core.InvokeLLM({
         prompt: "Analise esta imagem e identifique TODAS as placas de veículo visíveis. Placas brasileiras têm formato ABC1D23 (padrão Mercosul) ou ABC1234 (padrão antigo). Retorne apenas as placas encontradas em maiúsculas, sem hífens ou espaços. Se nenhuma placa for visível na imagem, retorne uma lista vazia.",
