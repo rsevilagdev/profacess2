@@ -3,6 +3,7 @@ import { Check, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { base44 } from '@/api/base44Client';
+import { getCuritibaISO } from '@/lib/curitiba-time.js';
 
 const TERMOS_TEXTO = `TERMOS DE USO E POLÍTICA DE PRIVACIDADE – PROFARMA LIBERAAUTO PRO
 
@@ -57,9 +58,16 @@ export default function TermsModal() {
   const handleAccept = async () => {
     if (!checked) return;
     const data = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
-    updateColaborador({ termos_aceitos: true, termos_data: data });
+    const nowISO = getCuritibaISO();
+    const payload = {
+      termos_aceitos: true,
+      termos_data: data,
+      fuso_horario: 'America/Sao_Paulo',
+      ultimo_acesso: nowISO
+    };
+    updateColaborador(payload);
     try {
-      await base44.entities.Colaborador.update(colaborador.id, { termos_aceitos: true, termos_data: data });
+      await base44.entities.Colaborador.update(colaborador.id, payload);
     } catch (e) { /* silent */ }
     setOpen(false);
   };

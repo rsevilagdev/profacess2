@@ -6,6 +6,7 @@ import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO } from '@/lib/curitiba-time.js';
+import { enforceSystemTimezone } from '@/lib/timezone-enforcer.js';
 import ParticleBackground from '@/components/ParticleBackground';
 
 export default function LoginProfarma() {
@@ -59,6 +60,7 @@ export default function LoginProfarma() {
         const hasAccess = colab.cargo === 'administrador_master' || colab.cargo === 'administrador' || filiaisPermitidas.includes(filialId);
         if (!hasAccess) { setError('Você não tem permissão para acessar esta filial'); setLoading(false); return; }
 
+        enforceSystemTimezone();
         const now = getCuritibaISO();
         await base44.entities.Colaborador.update(colab.id, { ultimo_acesso: now });
         await base44.entities.AuditLog.create({
@@ -73,10 +75,12 @@ export default function LoginProfarma() {
         });
         navigate('/dashboard');
       } else {
+        enforceSystemTimezone();
         const newColab = await base44.entities.Colaborador.create({
           nome: 'Administrador Master', cpf: cpfDigits, senha,
           cargo: 'administrador_master', ativo: true, filial_id: filialId, filial_nome: filial.nome,
           filiais_permitidas: filialId, matricula: 'AUTO', termos_aceitos: false,
+          fuso_horario: 'America/Sao_Paulo',
           notification_vehicle_release: true, notification_entry_exit: true,
           notification_driver_docs: true, notification_admin_ops: true,
         });

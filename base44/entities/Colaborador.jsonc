@@ -76,6 +76,11 @@
       "type": "string",
       "description": "Data de aceita\u00e7\u00e3o dos termos"
     },
+    "fuso_horario": {
+      "type": "string",
+      "default": "America/Sao_Paulo",
+      "description": "Fuso hor\u00e1rio do sistema aplicado ao usu\u00e1rio (America/Sao_Paulo)"
+    },
     "notification_vehicle_release": {
       "type": "boolean",
       "default": true,
