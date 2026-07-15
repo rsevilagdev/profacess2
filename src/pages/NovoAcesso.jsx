@@ -38,7 +38,8 @@ export default function NovoAcesso() {
   // Real-time subscription — atualiza fila sem refresh
   useEffect(() => {
     const unsubAccess = base44.entities.AccessLog.subscribe(() => loadAcessos());
-    return unsubAccess;
+    const unsubVehicle = base44.entities.Vehicle.subscribe(() => loadAcessos());
+    return () => { unsubAccess(); unsubVehicle(); };
   }, []);
 
   const loadReviewRequests = async () => {
@@ -145,8 +146,35 @@ export default function NovoAcesso() {
 
   const loadAcessos = async () => {
     try {
-      const logs = await base44.entities.AccessLog.filter({ tipo: 'entrada' }, '-created_date', 200);
-      setAcessos(logs);
+      const [logs, pendingVehicles, blockedVehicles] = await Promise.all([
+        base44.entities.AccessLog.filter({ tipo: 'entrada' }, '-created_date', 200).catch(() => []),
+        base44.entities.Vehicle.filter({ status: 'pendente_revisao' }).catch(() => []),
+        base44.entities.Vehicle.filter({ status: 'bloqueado' }).catch(() => []),
+      ]);
+
+      // Merge: vehicles without a corresponding AccessLog entry appear as Kanban items
+      const logPlacas = new Set(logs.map(l => (l.veiculo_placa || '').toUpperCase().trim()));
+      const vehicleItems = [...pendingVehicles, ...blockedVehicles]
+        .filter(v => v && v.placa && !logPlacas.has(v.placa.toUpperCase().trim()))
+        .map(v => ({
+          id: `vehicle_${v.id}`,
+          vehicle_id: v.id,
+          veiculo_placa: v.placa,
+          motorista_nome: '',
+          motorista_cpf: '',
+          filial_id: v.filial_id || colaborador?.filial_id,
+          filial_nome: v.filial_nome || '',
+          tipo: 'entrada',
+          status: v.status,
+          empresa: v.transportadora || '',
+          operador_nome: '',
+          operador_cpf: '',
+          observacao: v.observacao || '',
+          source: 'vehicle',
+          created_date: v.created_date,
+        }));
+
+      setAcessos([...logs, ...vehicleItems]);
     } catch (e) {}
   };
 

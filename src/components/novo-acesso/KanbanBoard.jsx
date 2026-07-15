@@ -35,6 +35,8 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
     if (!result.destination) return;
     const { draggableId, destination } = result;
     const newStatus = destination.droppableId;
+    const item = acessos.find(a => a.id === draggableId);
+    const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
 
     if (newStatus === 'bloqueado') {
       setBlocking({ id: draggableId, acessos });
@@ -42,12 +44,19 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
     }
     setMoving(draggableId);
     try {
-      await base44.entities.AccessLog.update(draggableId, {
-        status: newStatus,
-        aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
-        aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: getCuritibaISO(),
-      });
+      if (item?.source === 'vehicle') {
+        await base44.entities.Vehicle.update(item.vehicle_id, { status: newStatus });
+        await base44.entities.AccessLog.create({
+          veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
+          filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: newStatus,
+          empresa: item.empresa || '', operador_nome: colaborador.nome, operador_cpf: colaborador.cpf,
+          aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf, data_aprovacao: getCuritibaISO(),
+        });
+      } else {
+        await base44.entities.AccessLog.update(draggableId, {
+          status: newStatus, aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf, data_aprovacao: getCuritibaISO(),
+        });
+      }
       await logApproval(draggableId, newStatus, acessos, null);
       onRefresh();
     } catch (e) {}
@@ -57,13 +66,22 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   const approveAccess = async (id) => {
     setApproving(id);
     try {
-      await base44.entities.AccessLog.update(id, {
-        status: 'validado',
-        aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
-        aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: getCuritibaISO(),
-        motivo_bloqueio: '',
-      });
+      const item = acessos.find(a => a.id === id);
+      const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
+      if (item?.source === 'vehicle') {
+        await base44.entities.Vehicle.update(item.vehicle_id, { status: 'validado' });
+        await base44.entities.AccessLog.create({
+          veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
+          filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: 'validado',
+          empresa: item.empresa || '', operador_nome: colaborador.nome, operador_cpf: colaborador.cpf,
+          aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf, data_aprovacao: getCuritibaISO(),
+        });
+      } else {
+        await base44.entities.AccessLog.update(id, {
+          status: 'validado', aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf,
+          data_aprovacao: getCuritibaISO(), motivo_bloqueio: '',
+        });
+      }
       await logApproval(id, 'validado', acessos, null);
       onRefresh();
     } catch (e) {}
@@ -74,13 +92,23 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
     if (!blocking || !motivo.trim()) return;
     setMoving(blocking.id);
     try {
-      await base44.entities.AccessLog.update(blocking.id, {
-        status: 'bloqueado',
-        aprovado_por: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
-        aprovado_por_cpf: colaborador.cpf,
-        data_aprovacao: getCuritibaISO(),
-        motivo_bloqueio: motivo.trim(),
-      });
+      const item = acessos.find(a => a.id === blocking.id);
+      const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
+      if (item?.source === 'vehicle') {
+        await base44.entities.Vehicle.update(item.vehicle_id, { status: 'bloqueado' });
+        await base44.entities.AccessLog.create({
+          veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
+          filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: 'bloqueado',
+          empresa: item.empresa || '', operador_nome: colaborador.nome, operador_cpf: colaborador.cpf,
+          aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf, data_aprovacao: getCuritibaISO(),
+          motivo_bloqueio: motivo.trim(),
+        });
+      } else {
+        await base44.entities.AccessLog.update(blocking.id, {
+          status: 'bloqueado', aprovado_por: editorName, aprovado_por_cpf: colaborador.cpf,
+          data_aprovacao: getCuritibaISO(), motivo_bloqueio: motivo.trim(),
+        });
+      }
       await logApproval(blocking.id, 'bloqueado', acessos, motivo.trim());
       onRefresh();
     } catch (e) {}
@@ -210,7 +238,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                               )}
 
                               {/* Liberar saída — pergunta se vazio ou carregado */}
-                              {col.id === 'validado' && canApprove && (
+                              {col.id === 'validado' && canApprove && item.source !== 'vehicle' && (
                                 <Button
                                   size="sm"
                                   className="h-7 w-full rounded-lg text-xs mt-2"
