@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, LogOut, Loader2, Download, Clock, User, Building2, CheckCircle, X, ShieldCheck, Calendar } from 'lucide-react';
+import { Truck, LogOut, Loader2, Download, Clock, User, Building2, CheckCircle, X, ShieldCheck, Calendar, Camera } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import { triggerDownload } from '@/lib/export-utils';
+import FotoLiberacaoModal from '@/components/fornecedores/FotoLiberacaoModal';
 
 export default function ControleFornecedores() {
   const { colaborador } = useProfarmaAuth();
@@ -19,6 +20,7 @@ export default function ControleFornecedores() {
   const [responsavel, setResponsavel] = useState('');
   const [dialogDateTime, setDialogDateTime] = useState('');
   const [saidaDialog, setSaidaDialog] = useState(null);
+  const [fotoDialog, setFotoDialog] = useState(null);
   const [responsavelSaida, setResponsavelSaida] = useState('');
   const [saidaDateTime, setSaidaDateTime] = useState('');
   const [form, setForm] = useState({ transportadora: '', placa: '', motorista: '', rg_cpf: '' });
@@ -79,10 +81,16 @@ export default function ControleFornecedores() {
   };
 
   const abrirDialogSaida = (reg) => {
+    setFotoDialog(reg);
+  };
+
+  const onFotoConfirmada = (fotoUrl) => {
+    const reg = fotoDialog;
+    setFotoDialog(null);
     const now = getCuritibaDateTime();
     setSaidaDateTime(now);
     setResponsavelSaida(editorName);
-    setSaidaDialog(reg);
+    setSaidaDialog({ ...reg, foto_liberacao: fotoUrl });
   };
 
   const confirmarSaida = async () => {
@@ -95,11 +103,12 @@ export default function ControleFornecedores() {
         saida_data: data,
         saida_horario: horario,
         saida_liberado_por: responsavelSaida.trim(),
-        status: 'saida'
+        status: 'saida',
+        foto_liberacao: reg.foto_liberacao
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
-        action: 'Saída de fornecedor liberada', details: `Transportadora: ${reg.transportadora} | Placa: ${reg.placa}`,
+        action: 'Saída de fornecedor liberada', details: `Transportadora: ${reg.transportadora} | Placa: ${reg.placa} | Foto: ${reg.foto_liberacao || '—'}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
       await loadRegistros();
@@ -224,10 +233,10 @@ export default function ControleFornecedores() {
                   <p className="text-xs text-muted-foreground flex items-center gap-1"><Building2 className="h-3 w-3" /> Liberado por: {reg.entrada_liberado_por || '—'}</p>
                 </div>
                 <Button size="sm" className="h-8 w-full rounded-xl mt-2" disabled={saindo === reg.id} onClick={() => abrirDialogSaida(reg)}>
-                  {saindo === reg.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
+                  {saindo === reg.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
                   Liberar Saída
                 </Button>
-              </div>
+                </div>
           )}
           </div>
         }
@@ -244,7 +253,7 @@ export default function ControleFornecedores() {
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Saída', 'Liberado por'].map((h) =>
+                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Saída', 'Liberado por', 'Foto'].map((h) =>
                 <th key={h} className="text-left px-3 py-2 border-b border-border bg-secondary font-medium text-xs whitespace-nowrap">{h}</th>
                 )}
                 </tr>
@@ -260,7 +269,14 @@ export default function ControleFornecedores() {
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.entrada_liberado_por || '—'}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.saida_data} {reg.saida_horario}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.saida_liberado_por || '—'}</td>
-                  </tr>
+                    <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">
+                      {reg.foto_liberacao ? (
+                        <a href={reg.foto_liberacao} target="_blank" rel="noopener noreferrer">
+                          <img src={reg.foto_liberacao} alt="Foto liberação" className="h-10 w-14 object-cover rounded-lg border border-border" />
+                        </a>
+                      ) : '—'}
+                    </td>
+                    </tr>
               )}
               </tbody>
             </table>
@@ -315,6 +331,16 @@ export default function ControleFornecedores() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de foto de liberação — obrigatório antes de liberar saída */}
+      {fotoDialog && (
+        <FotoLiberacaoModal
+          registro={fotoDialog}
+          onConfirm={onFotoConfirmada}
+          onClose={() => setFotoDialog(null)}
+          saving={saindo === fotoDialog.id}
+        />
       )}
 
       {/* Diálogo de liberação de saída */}
