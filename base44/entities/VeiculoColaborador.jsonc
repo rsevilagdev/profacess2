@@ -34,6 +34,10 @@
       "type": "string",
       "description": "Observa\u00e7\u00f5es"
     },
+    "foto_cnh": {
+      "type": "string",
+      "description": "URL da foto da CNH"
+    },
     "data": {
       "type": "string",
       "description": "Data do registro"

@@ -15,6 +15,7 @@ export default function ControleVeiculosColaboradores() {
   const [recognizing, setRecognizing] = useState(false);
   const [recognizeError, setRecognizeError] = useState('');
   const [recognizePreview, setRecognizePreview] = useState('');
+  const [fotoCnhUrl, setFotoCnhUrl] = useState('');
   const fileInputRef = useRef(null);
   const [form, setForm] = useState({
     placa: '', nome: '', matricula: '', setor: '',
@@ -42,6 +43,9 @@ export default function ControleVeiculosColaboradores() {
   const resetForm = () => {
     setForm({ placa: '', nome: '', matricula: '', setor: '', modelo_veiculo: '', cor: '', cnh: '', obs: '' });
     setEditId(null);
+    setFotoCnhUrl('');
+    setRecognizePreview('');
+    setRecognizeError('');
   };
 
   const salvar = async () => {
@@ -59,6 +63,7 @@ export default function ControleVeiculosColaboradores() {
         cor: form.cor,
         cnh: form.cnh,
         obs: form.obs,
+        foto_cnh: fotoCnhUrl || undefined,
         filial_id: colaborador.filial_id,
         filial_nome: colaborador.filial_nome,
         operador_nome: editorName,
@@ -99,6 +104,9 @@ export default function ControleVeiculosColaboradores() {
       setor: reg.setor || '', modelo_veiculo: reg.modelo_veiculo || '',
       cor: reg.cor || '', cnh: reg.cnh || '', obs: reg.obs || ''
     });
+    setFotoCnhUrl(reg.foto_cnh || '');
+    setRecognizePreview(reg.foto_cnh || '');
+    setRecognizeError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -115,8 +123,10 @@ export default function ControleVeiculosColaboradores() {
     setRecognizing(true);
     setRecognizeError('');
     setRecognizePreview(URL.createObjectURL(file));
+    setFotoCnhUrl('');
     try {
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setFotoCnhUrl(file_url);
       const result = await base44.integrations.Core.InvokeLLM({
         prompt: `Analise a imagem da Carteira Nacional de Habilitação (CNH) brasileira e extraia os seguintes dados do motorista:
 1. Nome completo do condutor
@@ -141,6 +151,7 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
         setRecognizeError('Não foi possível identificar os dados da CNH na foto. Tente outra imagem com melhor qualidade.');
       }
     } catch (e) {
+      setFotoCnhUrl('');
       setRecognizeError('Erro ao reconhecer CNH: ' + (e.message || 'desconhecido'));
     }
     setRecognizing(false);
@@ -182,12 +193,28 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Field label="Placa *" value={form.placa} onChange={v => setForm({ ...form, placa: v.toUpperCase() })} placeholder="ABC1D23" />
-          <Field label="Nome *" value={form.nome} onChange={v => setForm({ ...form, nome: v })} placeholder="Nome do colaborador" />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Nome * <span className="text-primary">(via foto da CNH)</span></label>
+            <input
+              className="w-full h-10 px-3 rounded-xl border border-input bg-muted/30 text-sm cursor-not-allowed"
+              value={form.nome}
+              readOnly
+              placeholder="Reconhecer via CNH"
+            />
+          </div>
           <Field label="Matrícula" value={form.matricula} onChange={v => setForm({ ...form, matricula: v })} placeholder="Nº de matrícula" />
           <Field label="Setor" value={form.setor} onChange={v => setForm({ ...form, setor: v })} placeholder="Setor" />
           <Field label="Modelo do Veículo" value={form.modelo_veiculo} onChange={v => setForm({ ...form, modelo_veiculo: v })} placeholder="Modelo" />
           <Field label="Cor" value={form.cor} onChange={v => setForm({ ...form, cor: v })} placeholder="Cor" />
-          <Field label="CNH" value={form.cnh} onChange={v => setForm({ ...form, cnh: v })} placeholder="Nº da CNH" />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">CNH * <span className="text-primary">(via foto da CNH)</span></label>
+            <input
+              className="w-full h-10 px-3 rounded-xl border border-input bg-muted/30 text-sm cursor-not-allowed"
+              value={form.cnh}
+              readOnly
+              placeholder="Reconhecer via CNH"
+            />
+          </div>
           <Field label="OBS" value={form.obs} onChange={v => setForm({ ...form, obs: v })} placeholder="Observações" />
         </div>
 
@@ -229,7 +256,7 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
           )}
         </div>
 
-        <p className="text-xs text-muted-foreground mt-2">A data, horário e operador são preenchidos automaticamente.</p>
+        <p className="text-xs text-muted-foreground mt-2">Os campos <strong>Nome</strong> e <strong>CNH</strong> são preenchidos exclusivamente via foto da CNH. A data, horário e operador são automáticos.</p>
         <Button onClick={salvar} disabled={saving || !form.placa || !form.nome} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Car className="h-5 w-5" />}
           {editId ? 'Salvar Alterações' : 'Cadastrar Veículo'}

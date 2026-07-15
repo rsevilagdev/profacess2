@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar, ScrollText, Truck } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2, Filter, Calendar, ScrollText, Truck, IdCard, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -32,12 +32,25 @@ export default function Auditoria() {
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
   const [mainTab, setMainTab] = useState('auditoria');
+  const [cnhRecords, setCnhRecords] = useState([]);
+  const [cnhLoading, setCnhLoading] = useState(false);
+  const [cnhSearch, setCnhSearch] = useState('');
+  const [cnhPhotoModal, setCnhPhotoModal] = useState(null);
 
   useEffect(() => {
     base44.entities.AuditLog.list('-created_date', 500).then(list => {
       setLogs(list); setLoading(false);
     });
   }, []);
+
+  const loadCnhRecords = async () => {
+    setCnhLoading(true);
+    try {
+      const list = await base44.entities.VeiculoColaborador.list('-created_date', 500);
+      setCnhRecords(list.filter(r => r.foto_cnh));
+    } catch (e) {}
+    setCnhLoading(false);
+  };
 
   const toggleCat = (cat) => {
     setSelectedCats(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
@@ -121,9 +134,73 @@ export default function Auditoria() {
         >
           <Truck className="h-4 w-4" /> Registros de Acesso/Saída
         </button>
+        <button
+          onClick={() => { setMainTab('cnh'); loadCnhRecords(); }}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${mainTab === 'cnh' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
+        >
+          <IdCard className="h-4 w-4" /> Fotos de CNH
+        </button>
       </div>
 
-      {mainTab === 'acessos' ? (
+      {mainTab === 'cnh' ? (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <input
+              type="text"
+              value={cnhSearch}
+              onChange={e => setCnhSearch(e.target.value)}
+              placeholder="Buscar por nome, placa, matrícula ou CNH..."
+              className="w-full h-12 pl-10 pr-4 rounded-2xl border border-input bg-card text-base focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          {cnhLoading ? (
+            <div className="text-center py-8"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
+          ) : cnhRecords.length === 0 ? (
+            <div className="bg-card rounded-2xl border border-border p-5 shadow-sm text-center py-12">
+              <IdCard className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">Nenhuma foto de CNH cadastrada</p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {cnhRecords
+                .filter(r => {
+                  if (!cnhSearch) return true;
+                  const term = cnhSearch.toLowerCase();
+                  return r.nome?.toLowerCase().includes(term)
+                    || r.placa?.toLowerCase().includes(term)
+                    || r.matricula?.toLowerCase().includes(term)
+                    || r.cnh?.includes(cnhSearch);
+                })
+                .map(r => (
+                  <div key={r.id} className="bg-card rounded-2xl border border-border p-3 shadow-sm hover:shadow-md transition-shadow">
+                    <button
+                      onClick={() => setCnhPhotoModal({ url: r.foto_cnh, nome: r.nome, cnh: r.cnh })}
+                      className="w-full aspect-[3/2] rounded-xl overflow-hidden border border-border hover:ring-2 hover:ring-primary transition-all mb-3 relative group"
+                    >
+                      <img src={r.foto_cnh} alt={`CNH de ${r.nome}`} className="h-full w-full object-cover" />
+                      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/20 transition-colors flex items-center justify-center">
+                        <span className="opacity-0 group-hover:opacity-100 text-background text-xs font-medium bg-foreground/70 px-3 py-1 rounded-lg">Ver foto</span>
+                      </div>
+                    </button>
+                    <p className="text-sm font-medium truncate">{r.nome || '—'}</p>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+                      <span>Placa: <strong className="text-foreground">{r.placa || '—'}</strong></span>
+                      {r.matricula && <span>Mat: {r.matricula}</span>}
+                    </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
+                      {r.cnh && <span>CNH: {r.cnh}</span>}
+                      {r.filial_nome && <span>{r.filial_nome}</span>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Cadastro: {r.data || '—'} {r.horario || ''} · {r.operador_nome || '—'}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      ) : mainTab === 'acessos' ? (
         <RegistrosAcesso />
       ) : (
         <>
@@ -204,6 +281,27 @@ export default function Auditoria() {
         )}
       </div>
       </>
+      )}
+
+      {/* CNH photo modal */}
+      {cnhPhotoModal && (
+        <div className="fixed inset-0 z-50 bg-foreground/80 flex items-center justify-center p-4" onClick={() => setCnhPhotoModal(null)}>
+          <div className="relative max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setCnhPhotoModal(null)} className="absolute -top-10 right-0 h-8 w-8 rounded-lg bg-card flex items-center justify-center shadow-lg">
+              <X className="h-4 w-4" />
+            </button>
+            <div className="bg-card rounded-2xl p-3">
+              <img src={cnhPhotoModal.url} alt={`CNH de ${cnhPhotoModal.nome}`} className="w-full max-h-[75vh] object-contain rounded-xl" />
+              <div className="flex items-center gap-2 mt-2 px-1">
+                <IdCard className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">{cnhPhotoModal.nome}</p>
+                  <p className="text-xs text-muted-foreground">CNH: {cnhPhotoModal.cnh || '—'}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
