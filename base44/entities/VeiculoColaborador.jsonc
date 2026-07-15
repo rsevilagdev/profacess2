@@ -1,0 +1,62 @@
+{
+  "name": "VeiculoColaborador",
+  "type": "object",
+  "properties": {
+    "placa": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "nome": {
+      "type": "string",
+      "description": "Nome do colaborador"
+    },
+    "matricula": {
+      "type": "string",
+      "description": "Matr\u00edcula do colaborador"
+    },
+    "setor": {
+      "type": "string",
+      "description": "Setor do colaborador"
+    },
+    "modelo_veiculo": {
+      "type": "string",
+      "description": "Modelo do ve\u00edculo"
+    },
+    "cor": {
+      "type": "string",
+      "description": "Cor do ve\u00edculo"
+    },
+    "cnh": {
+      "type": "string",
+      "description": "N\u00famero da CNH"
+    },
+    "obs": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es"
+    },
+    "data": {
+      "type": "string",
+      "description": "Data do registro"
+    },
+    "horario": {
+      "type": "string",
+      "description": "Hor\u00e1rio do registro"
+    },
+    "operador_nome": {
+      "type": "string",
+      "description": "Nome do operador que registrou"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    }
+  },
+  "required": [
+    "placa",
+    "nome"
+  ]
+}

@@ -38,6 +38,7 @@ import VerificacaoRapida from '@/pages/VerificacaoRapida';
 import Averbacao from '@/pages/Averbacao';
 import ControleFornecedores from '@/pages/ControleFornecedores';
 import ControleVisitantes from '@/pages/ControleVisitantes';
+import ControleVeiculosColaboradores from '@/pages/ControleVeiculosColaboradores';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -79,6 +80,7 @@ function App() {
                 <Route path="/averbacao" element={<Averbacao />} />
                 <Route path="/controle-fornecedores" element={<ControleFornecedores />} />
                 <Route path="/controle-visitantes" element={<ControleVisitantes />} />
+                <Route path="/controle-veiculos-colaboradores" element={<ControleVeiculosColaboradores />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer, Loader2, LayoutGrid, Calendar, Truck, FileSpreadsheet, Users } from 'lucide-react';
+import { Printer, Loader2, LayoutGrid, Calendar, Truck, FileSpreadsheet, Users, Car } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
@@ -7,6 +7,7 @@ import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRe
 import AverbacaoReport from '@/components/modelos/AverbacaoReport';
 import ControleFornecedoresReport from '@/components/modelos/ControleFornecedoresReport';
 import ControleVisitantesReport from '@/components/modelos/ControleVisitantesReport';
+import ControleVeiculosColaboradoresReport from '@/components/modelos/ControleVeiculosColaboradoresReport';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -47,6 +48,12 @@ const TEMPLATES = [
     icon: Users,
     description: 'Relatório de controle de acesso de visitantes com filtros de seleção múltipla e exportação PDF/Excel',
   },
+  {
+    id: 'controle_veiculos_colaboradores',
+    name: 'Controle de Veículos — Colaboradores',
+    icon: Car,
+    description: 'Relatório de veículos de colaboradores com filtros de seleção múltipla e exportação PDF/Excel',
+  },
 ];
 
 export default function Modelos() {
@@ -62,6 +69,7 @@ export default function Modelos() {
   const isAverbacao = selectedTemplate === 'averbacao_mensal' || selectedTemplate === 'averbacao_semestral';
   const isFornecedores = selectedTemplate === 'controle_fornecedores';
   const isVisitantes = selectedTemplate === 'controle_visitantes';
+  const isVeiculosColaboradores = selectedTemplate === 'controle_veiculos_colaboradores';
 
   const gerar = async () => {
     setLoading(true);
@@ -143,6 +151,15 @@ export default function Modelos() {
             </div>
           </div>
         </div>
+      ) : isVeiculosColaboradores ? (
+        <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading font-bold text-sm">Controle de Veículos — Colaboradores</h3>
+              <p className="text-xs text-muted-foreground">Os filtros e botões de exportação estão no relatório abaixo</p>
+            </div>
+          </div>
+        </div>
       ) : isAverbacao ? (
         <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
           <div className="flex flex-wrap items-end gap-3">
@@ -220,6 +237,9 @@ export default function Modelos() {
       )}
       {isVisitantes && (
         <ControleVisitantesReport />
+      )}
+      {isVeiculosColaboradores && (
+        <ControleVeiculosColaboradoresReport />
       )}
     </div>
   );
