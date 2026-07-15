@@ -1,16 +1,20 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { base44 } from '@/api/base44Client';
 
 const ProfarmaAuthContext = createContext(null);
 
 export function ProfarmaAuthProvider({ children }) {
   const [colaborador, setColaborador] = useState(null);
   const [loading, setLoading] = useState(true);
+  const colaboradorIdRef = useRef(null);
 
   useEffect(() => {
     const stored = localStorage.getItem('profarma_colaborador');
     if (stored) {
       try {
-        setColaborador(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        setColaborador(parsed);
+        colaboradorIdRef.current = parsed.id;
       } catch (e) {
         localStorage.removeItem('profarma_colaborador');
       }
@@ -18,14 +22,33 @@ export function ProfarmaAuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Realtime subscription: auto-sync permissions when admin changes this user's record
+  useEffect(() => {
+    const unsub = base44.entities.Colaborador.subscribe(async (event) => {
+      if (!colaboradorIdRef.current) return;
+      const changedId = event.data?.id;
+      if (changedId !== colaboradorIdRef.current) return;
+      try {
+        const updated = await base44.entities.Colaborador.get(colaboradorIdRef.current);
+        const current = JSON.parse(localStorage.getItem('profarma_colaborador') || '{}');
+        const merged = { ...current, ...updated, filial_id: current.filial_id, filial_nome: current.filial_nome, filiais_permitidas: current.filiais_permitidas };
+        localStorage.setItem('profarma_colaborador', JSON.stringify(merged));
+        setColaborador(merged);
+      } catch (e) { /* silent */ }
+    });
+    return unsub;
+  }, []);
+
   const login = (colaboradorData) => {
     localStorage.setItem('profarma_colaborador', JSON.stringify(colaboradorData));
     setColaborador(colaboradorData);
+    colaboradorIdRef.current = colaboradorData.id;
   };
 
   const logout = () => {
     localStorage.removeItem('profarma_colaborador');
     setColaborador(null);
+    colaboradorIdRef.current = null;
   };
 
   const updateColaborador = (data) => {
