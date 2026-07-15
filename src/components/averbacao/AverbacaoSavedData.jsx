@@ -128,6 +128,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   const [loading, setLoading] = useState(true);
   const [selectedMes, setSelectedMes] = useState('');
   const [selectedDias, setSelectedDias] = useState([]);
+  const [appliedMes, setAppliedMes] = useState('');
+  const [appliedDias, setAppliedDias] = useState([]);
   const [diaDropdownOpen, setDiaDropdownOpen] = useState(false);
   const diaDropdownRef = useRef(null);
 
@@ -174,9 +176,26 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   })();
 
   const filtered = records.filter(r =>
-    (!selectedMes || r.mes === selectedMes) &&
-    (selectedDias.length === 0 || selectedDias.includes(r.dia))
+    (!appliedMes || r.mes === appliedMes) &&
+    (appliedDias.length === 0 || appliedDias.includes(r.dia))
   );
+
+  const applyFilters = () => {
+    setAppliedMes(selectedMes);
+    setAppliedDias([...selectedDias]);
+    setDiaDropdownOpen(false);
+  };
+
+  const clearFilters = () => {
+    setSelectedMes('');
+    setSelectedDias([]);
+    setAppliedMes('');
+    setAppliedDias([]);
+  };
+
+  const hasPendingChanges = selectedMes !== appliedMes ||
+    selectedDias.length !== appliedDias.length ||
+    selectedDias.some(d => !appliedDias.includes(d));
 
   const parsed = filtered.map(r => {
     try {
@@ -389,11 +408,19 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
           </div>
         </div>
 
-        {(selectedMes || selectedDias.length > 0) && (
+        <Button
+          onClick={applyFilters}
+          className="h-10 rounded-xl mt-auto"
+          disabled={!hasPendingChanges}
+        >
+          Aplicar Filtros
+        </Button>
+
+        {(appliedMes || appliedDias.length > 0) && (
           <Button
             variant="secondary"
             className="h-10 rounded-xl mt-auto"
-            onClick={() => { setSelectedMes(''); setSelectedDias([]); }}
+            onClick={clearFilters}
           >
             Limpar filtros
           </Button>
@@ -449,8 +476,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
 
       {sortedParsed.length > 0 && (
         <p className="text-xs text-muted-foreground mt-2">
-          {sortedParsed.length} registro(s) · {selectedMes || 'Todos os meses'}
-          {selectedDias.length > 0 ? ` · Dias: ${selectedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
+          {sortedParsed.length} registro(s) · {appliedMes || 'Todos os meses'}
+          {appliedDias.length > 0 ? ` · Dias: ${appliedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
         </p>
       )}
     </div>
