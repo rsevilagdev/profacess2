@@ -415,7 +415,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
               <thead className="sticky top-0 z-10">
                 <tr>
                   {REPORT_COLUMNS.map(col => (
-                    <th key={col} className="border border-black px-2 py-1.5 bg-primary text-primary-foreground font-medium text-left whitespace-nowrap">
+                    <th key={col} className="border border-black px-2 py-3 bg-primary text-primary-foreground font-medium text-left leading-tight">
                       {col}
                     </th>
                   ))}
@@ -425,7 +425,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
                 {reportRows.map((r, idx) => (
                   <tr key={idx} className={idx % 2 === 0 ? 'bg-muted/20' : ''}>
                     {REPORT_COLUMNS.map(col => (
-                      <td key={col} className="border border-black px-2 py-1 whitespace-nowrap">
+                      <td key={col} className="border border-black px-2 py-2 whitespace-nowrap align-top">
                         {col === 'Valor de mercadoria'
                           ? formatCurrency(r[col])
                           : (r[col] || '—')}

@@ -76,7 +76,7 @@ export default function ControleVeiculosRecebimento({ logs, loading }) {
             <thead>
               <tr>
                 {HEADERS.map(h => (
-                  <th key={h} className="border border-black px-1.5 py-1.5 bg-primary text-primary-foreground font-medium text-left">{h}</th>
+                  <th key={h} className="border border-black px-2 py-3 bg-primary text-primary-foreground font-medium text-left leading-tight">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -85,17 +85,17 @@ export default function ControleVeiculosRecebimento({ logs, loading }) {
                 const placa = `${log.placa_carreta || ''}${log.placa_cavalo ? '/' + log.placa_cavalo : ''}`;
                 return (
                   <tr key={log.id}>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{formatData(log.created_date)}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap font-medium">{placa}</td>
-                    <td className="border border-black px-1.5 py-1 break-words">{log.nome || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 break-words">{log.empresa || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{log.destino || 'PR'}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{log.rg_cpf || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{log.horario_entrada || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{log.horario_saida || ''}</td>
-                    <td className="border border-black px-1.5 py-1 whitespace-nowrap">{log.cracha || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 break-words">{log.autorizacao_contato || '—'}</td>
-                    <td className="border border-black px-1.5 py-1 break-words">{log.observacao || ''}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{formatData(log.created_date)}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap font-medium align-top">{placa}</td>
+                    <td className="border border-black px-2 py-2 break-words align-top">{log.nome || '—'}</td>
+                    <td className="border border-black px-2 py-2 break-words align-top">{log.empresa || '—'}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.destino || 'PR'}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.rg_cpf || '—'}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.horario_entrada || '—'}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.horario_saida || ''}</td>
+                    <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.cracha || '—'}</td>
+                    <td className="border border-black px-2 py-2 break-words align-top">{log.autorizacao_contato || '—'}</td>
+                    <td className="border border-black px-2 py-2 break-words align-top">{log.observacao || ''}</td>
                   </tr>
                 );
               })}
