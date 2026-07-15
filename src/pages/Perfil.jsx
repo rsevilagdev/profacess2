@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
-import { User, Camera, Mail, Phone, IdCard, Building2, Shield, Save, Send, Loader2, Check } from 'lucide-react';
+import { User, Camera, Mail, Phone, IdCard, Building2, Shield, Save, Send, Loader2, Check, Clock } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import PerfilHistorico from '@/components/perfil/PerfilHistorico';
 
 export default function Perfil() {
   const { colaborador, updateColaborador } = useProfarmaAuth();
@@ -16,6 +17,7 @@ export default function Perfil() {
   const [showRequest, setShowRequest] = useState(false);
   const [requestSent, setRequestSent] = useState(false);
   const [requestForm, setRequestForm] = useState({ motivo: '', paginas: '' });
+  const [mainTab, setMainTab] = useState('perfil');
   const fileRef = useRef(null);
 
   const save = async () => {
@@ -66,6 +68,26 @@ export default function Perfil() {
         <p className="text-sm text-muted-foreground">Gestão de dados pessoais e permissões</p>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setMainTab('perfil')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${mainTab === 'perfil' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
+        >
+          <User className="h-4 w-4" /> Dados Pessoais
+        </button>
+        <button
+          onClick={() => setMainTab('historico')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-medium transition-colors ${mainTab === 'historico' ? 'bg-primary text-primary-foreground' : 'bg-muted hover:bg-accent'}`}
+        >
+          <Clock className="h-4 w-4" /> Histórico
+        </button>
+      </div>
+
+      {mainTab === 'historico' && <PerfilHistorico colaborador={colaborador} />}
+
+      {mainTab === 'perfil' && (
+      <>
       {/* Profile Card */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center gap-4 mb-6">
@@ -145,6 +167,8 @@ export default function Perfil() {
         )}
         <p className="text-xs text-muted-foreground mt-2">As solicitações são enviadas por email aos administradores. Após aprovação, as permissões serão adicionadas automaticamente.</p>
       </div>
+      </>
+      )}
     </div>
   );
 }
