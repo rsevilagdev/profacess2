@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell, AreaChart, Area, CartesianGrid } from 'recharts';
 import { Settings2, BarChart3, TrendingUp, PieChart as PieIcon, Users, Check } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { formatCuritiba, parseUTC } from '@/lib/curitiba-time.js';
 import { Button } from '@/components/ui/button';
 
 const CHART_DEFS = [
@@ -37,12 +38,12 @@ export default function SmartDashboard() {
   const toggleChart = (id) => setVisibleCharts(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
 
   const today = new Date().toDateString();
-  const todayLogs = logs.filter(l => new Date(l.created_date).toDateString() === today);
-  const hourlyData = Array.from({ length: 24 }, (_, h) => ({ hour: `${h}h`, count: todayLogs.filter(l => new Date(l.created_date).getHours() === h).length }));
+  const todayLogs = logs.filter(l => parseUTC(l.created_date).toDateString() === today);
+  const hourlyData = Array.from({ length: 24 }, (_, h) => ({ hour: `${h}h`, count: todayLogs.filter(l => parseInt(parseUTC(l.created_date).toLocaleString('en-US', { timeZone: 'America/Sao_Paulo', hour: 'numeric', hour12: false })) === h).length }));
   const trendData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const ds = d.toDateString();
-    return { day: d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).replace('.', ''), acessos: logs.filter(l => new Date(l.created_date).toDateString() === ds).length };
+    return { day: formatCuritiba(d, { weekday: 'short' }).replace('.', ''), acessos: logs.filter(l => parseUTC(l.created_date).toDateString() === ds).length };
   });
   const statusData = ['validado', 'bloqueado', 'pendente_revisao'].map(s => ({
     name: s === 'validado' ? 'Validado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente',

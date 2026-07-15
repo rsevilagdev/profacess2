@@ -158,7 +158,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                               </div>
                               <div className="mt-1.5 flex items-center justify-between text-xs text-muted-foreground">
                                 <span>{item.motorista_nome || '—'}</span>
-                                <span>{new Date(item.created_date).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span>{formatCuritiba(item.created_date, { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
                               {item.carregado && (
                                 <span className="inline-block mt-1 text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">Carregado</span>

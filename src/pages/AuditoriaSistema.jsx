@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 
 const PAGE_SIZE = 15;
 const CATEGORIES = [
@@ -59,7 +60,7 @@ export default function AuditoriaSistema() {
     setExporting(true);
     const headers = ['Data/Hora', 'Usuário', 'CPF', 'Ação', 'Categoria', 'Detalhes', 'IP', 'Domínio', 'Dispositivo'];
     const rows = filtered.map(l => [
-      new Date(l.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), l.user_name || '', l.user_cpf || '', l.action || '',
+      formatCuritiba(l.created_date), l.user_name || '', l.user_cpf || '', l.action || '',
       l.category || '', l.details || '', l.ip_address || '', l.domain || '', l.device_info || ''
     ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(','));
     const csv = [headers.map(h => `"${h}"`).join(','), ...rows].join('\n');
@@ -146,7 +147,7 @@ export default function AuditoriaSistema() {
                       {log.device_info && <span className="flex items-center gap-1"><Smartphone className="h-3 w-3" /> {log.device_info.substring(0, 40)}</span>}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{new Date(log.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{formatCuritiba(log.created_date, { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
             ))}

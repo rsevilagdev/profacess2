@@ -3,6 +3,7 @@ import { Upload, FileText, Eye, Loader2, CheckCircle, Trash2, Database } from 'l
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 import AverbacaoTableModal from '@/components/averbacao/AverbacaoTableModal';
 import AverbacaoSavedData from '@/components/averbacao/AverbacaoSavedData';
 import AverbacaoDashboard from '@/components/dashboard/AverbacaoDashboard';
@@ -306,7 +307,7 @@ export default function Averbacao() {
           if (d) {
             const mesNome = MESES[d.getMonth()];
             const diaStr = String(d.getDate()).padStart(2, '0');
-            const dataRef = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+            const dataRef = formatCuritiba(d, { day: '2-digit', month: '2-digit', year: 'numeric' });
             const key = `${mesNome}_${diaStr}`;
             if (!dateGroups[key]) {
               dateGroups[key] = { mes: mesNome, dia: diaStr, dataRef, total: 0 };

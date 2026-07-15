@@ -3,6 +3,7 @@ import { Search, ChevronLeft, ChevronRight, Globe, Smartphone, Download, Loader2
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 import { triggerDownload } from '@/lib/export-utils';
 import RegistrosAcesso from '@/components/auditoria/RegistrosAcesso';
 
@@ -69,7 +70,7 @@ export default function Auditoria() {
     filtered.slice(0, 60).forEach((log, i) => {
       if (y > 270) { doc.addPage(); y = 20; }
       doc.setFontSize(7); doc.setTextColor(50);
-      doc.text(`${new Date(log.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} | ${log.user_name || '—'} | ${log.action}`, 14, y);
+      doc.text(`${formatCuritiba(log.created_date)} | ${log.user_name || '—'} | ${log.action}`, 14, y);
       doc.text(`IP: ${log.ip_address || '—'} | Domínio: ${log.domain || '—'} | Cat: ${log.category}`, 14, y + 4);
       doc.text(`Detalhes: ${log.details || '—'}`, 14, y + 8);
       y += 14;
@@ -82,7 +83,7 @@ export default function Auditoria() {
   const exportCSV = () => {
     const headers = ['Data', 'Usuário', 'CPF', 'Ação', 'Categoria', 'Detalhes', 'IP', 'Domínio'];
     const rows = filtered.map(l => [
-      new Date(l.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }),
+      formatCuritiba(l.created_date),
       l.user_name || '—', l.user_cpf || '—', l.action || '—', l.category || '—',
       l.details || '—', l.ip_address || '—', l.domain || '—'
     ]);
@@ -185,7 +186,7 @@ export default function Auditoria() {
                       <span className="flex items-center gap-1"><Smartphone className="h-3 w-3" /> {log.device_info?.substring(0, 40) || '—'}</span>
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{new Date(log.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap ml-2">{formatCuritiba(log.created_date, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
               </div>
             ))}

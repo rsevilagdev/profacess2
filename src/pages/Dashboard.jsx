@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ScanLine, ShieldAlert, Truck, Users, Cloud, Smartphone, ArrowRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 import { maskPlaca, maskCPF } from '@/lib/lgpd-utils.js';
 import PainelRelatorios from '@/components/dashboard/PainelRelatorios';
 import SmartDashboard from '@/components/dashboard/SmartDashboard';
@@ -116,7 +117,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-medium capitalize">{log.status}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(log.created_date).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-xs text-muted-foreground">{formatCuritiba(log.created_date, { hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
             ))}

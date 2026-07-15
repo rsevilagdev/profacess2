@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Building2, TrendingUp } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 
 const PERIOD_OPTIONS = [
   { value: 7, label: '7 dias' },
@@ -57,11 +58,11 @@ export default function PainelRelatorios() {
     for (let i = period - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const key = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
+      const key = formatCuritiba(d, { day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
       days[key] = { dia: key, liberado: 0, bloqueado: 0 };
     }
     periodLogs.forEach(l => {
-      const key = new Date(l.created_date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
+      const key = formatCuritiba(l.created_date, { day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
       if (days[key]) {
         if (l.status === 'validado') days[key].liberado++;
         else if (l.status === 'bloqueado') days[key].bloqueado++;

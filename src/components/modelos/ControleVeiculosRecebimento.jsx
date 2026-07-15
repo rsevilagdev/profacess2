@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
 
 const HEADERS = [
   'Data', 'Placa', 'Nome', 'Empresa', 'Destino', 'RG/CPF',
@@ -7,7 +8,7 @@ const HEADERS = [
 
 function formatData(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
+  return formatCuritiba(iso, { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export default function ControleVeiculosRecebimento({ logs, loading }) {

@@ -49,8 +49,15 @@ export function getCuritibaMinute() {
 /**
  * Formats any date string/Date object to Curitiba timezone display.
  */
+export function parseUTC(dateStr) {
+  if (!dateStr) return new Date();
+  if (typeof dateStr !== 'string') return dateStr;
+  const hasTZ = dateStr.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(dateStr);
+  return new Date(hasTZ ? dateStr : dateStr + 'Z');
+}
+
 export function formatCuritiba(dateStr, options = {}) {
   if (!dateStr) return '';
-  const d = typeof dateStr === 'string' ? new Date(dateStr) : dateStr;
+  const d = parseUTC(dateStr);
   return d.toLocaleString('pt-BR', { timeZone: CURITIBA_TZ, ...options });
 }
