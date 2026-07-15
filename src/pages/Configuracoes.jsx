@@ -7,6 +7,8 @@ import { maskCPF } from '@/lib/lgpd-utils.js';
 import AparenciaTab from '@/components/configuracoes/AparenciaTab';
 import IntegracoesGoogle from '@/components/configuracoes/IntegracoesGoogle';
 import WhatsAppNotifCard from '@/components/notificacoes/WhatsAppNotifCard';
+import UserProfileModal from '@/components/configuracoes/UserProfileModal';
+import { Eye } from 'lucide-react';
 
 const CARGOS = ['administrador_master', 'administrador', 'encarregado', 'operador', 'visualizador'];
 
@@ -52,6 +54,7 @@ export default function Configuracoes() {
   const [form, setForm] = useState({});
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupDestino, setBackupDestino] = useState('local');
+  const [profileUser, setProfileUser] = useState(null);
 
   const loadData = async () => {
     const [u, f, b] = await Promise.all([
@@ -168,6 +171,7 @@ export default function Configuracoes() {
                   {u.termos_aceitos && <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary whitespace-nowrap">Termos OK</span>}
                   <button onClick={() => toggleUser(u)} className={`h-7 px-2 rounded-lg text-xs whitespace-nowrap ${u.ativo ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>{u.ativo ? 'Ativo' : 'Inativo'}</button>
                   <div className="flex-1" />
+                  <button onClick={() => setProfileUser(u)} className="h-8 w-8 shrink-0 rounded-lg hover:bg-primary/10 text-primary flex items-center justify-center" title="Ver perfil do usuário"><Eye className="h-4 w-4" /></button>
                   <button onClick={() => openEditUser(u)} className="h-8 w-8 shrink-0 rounded-lg hover:bg-accent flex items-center justify-center"><Edit2 className="h-4 w-4" /></button>
                   <button onClick={() => removeUser(u)} className="h-8 w-8 shrink-0 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
                 </div>
@@ -329,6 +333,11 @@ export default function Configuracoes() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* User Profile Modal — admin view */}
+      {profileUser && (
+        <UserProfileModal colaborador={profileUser} onClose={() => setProfileUser(null)} />
       )}
     </div>
   );
