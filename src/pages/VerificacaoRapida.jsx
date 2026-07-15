@@ -20,10 +20,15 @@ export default function VerificacaoRapida() {
     setMotorista(null);
     try {
       const cpfDigits = cpf.replace(/\D/g, '');
-      const [veiculos, motoristas] = await Promise.all([
-        placa ? base44.entities.Vehicle.filter({ placa: placa.toUpperCase() }).catch(() => []) : Promise.resolve([]),
+      const [veiculos, motoristasDigits] = await Promise.all([
+        placa ? base44.entities.Vehicle.filter({ placa: placa.toUpperCase().trim() }).catch(() => []) : Promise.resolve([]),
         cpfDigits ? base44.entities.Driver.filter({ cpf: cpfDigits }).catch(() => []) : Promise.resolve([]),
       ]);
+      // Fallback: try formatted CPF (in case it was stored that way)
+      let motoristas = motoristasDigits;
+      if (cpfDigits && motoristas.length === 0) {
+        motoristas = await base44.entities.Driver.filter({ cpf: formatCPF(cpfDigits) }).catch(() => []);
+      }
       setVeiculo(veiculos.length > 0 ? veiculos[0] : null);
       setMotorista(motoristas.length > 0 ? motoristas[0] : null);
     } catch (e) {}

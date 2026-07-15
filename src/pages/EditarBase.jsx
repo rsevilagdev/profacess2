@@ -100,7 +100,7 @@ export default function EditarBase() {
         await logAudit('Veículo cadastrado', `Placa: ${data.placa} | Cadastrado por: ${editorName}`);
       }
     } else {
-      const data = { ...form };
+      const data = { ...form, cpf: form.cpf ? form.cpf.replace(/\D/g, '') : '' };
       if (editing) {
         if (data.status === 'validado' && editing.status !== 'validado') {
           data.data_cadastro = getCuritibaISO();

@@ -83,7 +83,10 @@ export default function NovoAcesso() {
       // Motorista: buscar por CPF e atualizar status; se não existe, criar
       const cpfMotorista = dados.motorista?.cpf || dados.motorista_existente?.cpf || '';
       if (cpfMotorista) {
-        const existingDrivers = await base44.entities.Driver.filter({ cpf: cpfMotorista });
+        let existingDrivers = await base44.entities.Driver.filter({ cpf: cpfMotorista.replace(/\D/g, '') });
+      if (existingDrivers.length === 0) {
+        existingDrivers = await base44.entities.Driver.filter({ cpf: formatCPF(cpfMotorista) });
+      }
         if (existingDrivers.length > 0) {
           for (const d of existingDrivers) {
             await base44.entities.Driver.update(d.id, {
@@ -200,8 +203,12 @@ export default function NovoAcesso() {
     if (!placa || !cpfDigits) { setLoading(false); return; }
 
     try {
-      const veiculos = await base44.entities.Vehicle.filter({ placa: placa.toUpperCase() });
-      const motoristas = await base44.entities.Driver.filter({ cpf: cpfDigits });
+      const veiculos = await base44.entities.Vehicle.filter({ placa: placa.toUpperCase().trim() });
+      let motoristas = await base44.entities.Driver.filter({ cpf: cpfDigits });
+      // Fallback: try formatted CPF (in case it was stored that way)
+      if (motoristas.length === 0) {
+        motoristas = await base44.entities.Driver.filter({ cpf: formatCPF(cpfDigits) });
+      }
 
       const v = veiculos.length > 0 ? veiculos[0] : null;
       const m = motoristas.length > 0 ? motoristas[0] : null;
