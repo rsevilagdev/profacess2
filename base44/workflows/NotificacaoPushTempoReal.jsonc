@@ -1,0 +1,40 @@
+{
+  "name": "Notifica\u00e7\u00e3o Push Tempo Real",
+  "description": "Dispara push notifications em tempo real quando uma notifica\u00e7\u00e3o \u00e9 criada no sistema",
+  "trigger": {
+    "config": {
+      "trigger_type": "entity",
+      "entity_name": "Notification",
+      "events": [
+        "create"
+      ]
+    },
+    "condition": null
+  },
+  "definition": {
+    "document": {
+      "dsl": "1.0.0",
+      "name": "notificacao_push_tempo_real",
+      "version": "1.0",
+      "namespace": "base44"
+    },
+    "do": [
+      {
+        "enviar_push": {
+          "call": "invoke_backend_function",
+          "with": {
+            "function_name": "enviarNotificacoesPush",
+            "args": {
+              "notification_id": "${ .trigger.entity_id }"
+            }
+          },
+          "then": "end",
+          "x-base44": {
+            "title": "Enviar Push em Tempo Real",
+            "description": "Notifica\u00e7\u00e3o criada \u2192 push imediato"
+          }
+        }
+      }
+    ]
+  }
+}

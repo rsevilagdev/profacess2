@@ -5,6 +5,10 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
+    let body = {};
+    try { body = await req.json(); } catch { /* empty body is fine */ }
+    const notificationId = body.notification_id;
+
     // Get VAPID config
     const configs = await base44.asServiceRole.entities.PushConfig.list();
     if (configs.length === 0) {
@@ -18,9 +22,20 @@ Deno.serve(async (req) => {
       config.vapid_private_key
     );
 
-    // Get unread + unpushed notifications
-    const allNotifs = await base44.asServiceRole.entities.Notification.list('-created_date', 100);
-    const pending = allNotifs.filter(n => !n.read && !n.pushed);
+    // If called with a specific notification_id (from entity trigger), process just that one
+    // Otherwise, fall back to processing all unread + unpushed notifications
+    let pending = [];
+    if (notificationId) {
+      try {
+        const notif = await base44.asServiceRole.entities.Notification.get(notificationId);
+        if (notif && !notif.read && !notif.pushed) {
+          pending = [notif];
+        }
+      } catch { /* not found */ }
+    } else {
+      const allNotifs = await base44.asServiceRole.entities.Notification.list('-created_date', 100);
+      pending = allNotifs.filter(n => !n.read && !n.pushed);
+    }
 
     if (pending.length === 0) {
       return Response.json({ sent: 0, message: 'Nenhuma notificação pendente' });
