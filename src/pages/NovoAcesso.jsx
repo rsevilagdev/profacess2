@@ -144,8 +144,10 @@ export default function NovoAcesso() {
   };
 
   const loadAcessos = async () => {
-    const logs = await base44.entities.AccessLog.list('-created_date', 50);
-    setAcessos(logs);
+    try {
+      const logs = await base44.entities.AccessLog.filter({ tipo: 'entrada' }, '-created_date', 200);
+      setAcessos(logs);
+    } catch (e) {}
   };
 
   const buscar = async () => {
@@ -191,7 +193,8 @@ export default function NovoAcesso() {
       } else {
         // Criar AccessLog com status pendente/bloqueado para aparecer no Kanban
         const accessStatus = (v && v.status === 'bloqueado') || (m && m.status === 'bloqueado') ? 'bloqueado' : 'pendente_revisao';
-        const existingPending = acessos.find(a => a.veiculo_placa === placa.toUpperCase() && (a.status === 'pendente_revisao' || a.status === 'bloqueado'));
+        const freshLogs = await base44.entities.AccessLog.filter({ veiculo_placa: placa.toUpperCase(), tipo: 'entrada' }, '-created_date', 10);
+        const existingPending = freshLogs.find(a => a.status === 'pendente_revisao' || a.status === 'bloqueado');
         if (!existingPending) {
           await base44.entities.AccessLog.create({
             veiculo_placa: placa.toUpperCase(),
