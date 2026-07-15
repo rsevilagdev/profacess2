@@ -6,6 +6,7 @@ import TermsModal from '@/components/TermsModal.jsx';
 import NotificationBanner from '@/components/NotificationBanner.jsx';
 import PwaInstallPrompt from '@/components/PwaInstallPrompt.jsx';
 import PushInit from '@/components/PushInit.jsx';
+import ReviewResultModal from '@/components/novo-acesso/ReviewResultModal';
 import { Loader2, LogOut } from 'lucide-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
@@ -79,6 +80,7 @@ export default function AppLayout() {
       <TermsModal />
       <PwaInstallPrompt />
       <PushInit />
+      <ReviewResultModal />
       {forceLogoutMsg && (
         <div className="fixed inset-0 z-[60] bg-foreground/80 flex items-center justify-center p-4">
           <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">

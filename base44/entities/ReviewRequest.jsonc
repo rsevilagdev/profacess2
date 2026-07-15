@@ -18,11 +18,11 @@
         "ambos"
       ],
       "default": "motorista",
-      "description": "Tipo de revis\u00e3o"
+      "description": "Tipo de revisao"
     },
     "target_nome": {
       "type": "string",
-      "description": "Nome do motorista ou ve\u00edculo"
+      "description": "Nome do motorista ou veiculo"
     },
     "target_cpf": {
       "type": "string",
@@ -30,7 +30,7 @@
     },
     "motivo": {
       "type": "string",
-      "description": "Motivo da revis\u00e3o"
+      "description": "Motivo da revisao"
     },
     "status": {
       "type": "string",
@@ -40,15 +40,15 @@
         "rejeitado"
       ],
       "default": "pendente",
-      "description": "Status da solicita\u00e7\u00e3o"
+      "description": "Status da solicitacao"
     },
     "destinatarios": {
       "type": "string",
-      "description": "IDs dos destinat\u00e1rios (separados por v\u00edrgula)"
+      "description": "IDs dos destinatarios (separados por virgula)"
     },
     "destinatarios_nomes": {
       "type": "string",
-      "description": "Nomes dos destinat\u00e1rios"
+      "description": "Nomes dos destinatarios"
     },
     "filial_id": {
       "type": "string",
@@ -56,11 +56,40 @@
     },
     "observacao": {
       "type": "string",
-      "description": "Observa\u00e7\u00f5es"
+      "description": "Observacoes"
     },
     "dados_json": {
       "type": "string",
-      "description": "JSON com dados do ve\u00edculo/motorista para cadastro"
+      "description": "JSON com dados do veiculo/motorista para cadastro"
+    },
+    "resultado_veiculo": {
+      "type": "string",
+      "enum": [
+        "validado",
+        "bloqueado"
+      ],
+      "description": "Resultado da revisao do veiculo"
+    },
+    "resultado_motorista": {
+      "type": "string",
+      "enum": [
+        "validado",
+        "bloqueado"
+      ],
+      "description": "Resultado da revisao do motorista"
+    },
+    "motivo_bloqueio_veiculo": {
+      "type": "string",
+      "description": "Motivo do bloqueio do veiculo"
+    },
+    "motivo_bloqueio_motorista": {
+      "type": "string",
+      "description": "Motivo do bloqueio do motorista"
+    },
+    "operador_confirmou": {
+      "type": "boolean",
+      "default": false,
+      "description": "Se o operador confirmou que viu o resultado"
     }
   },
   "required": [

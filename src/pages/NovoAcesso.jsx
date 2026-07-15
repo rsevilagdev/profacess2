@@ -51,11 +51,14 @@ export default function NovoAcesso() {
     } catch (e) {}
   };
 
-  const decideReview = async (review, decision, editedData) => {
+  const decideReview = async (review, decisions, editedData) => {
     setDecidingReview(true);
     try {
       const dados = editedData || {};
       const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
+      const vDecision = decisions?.veiculo || (typeof decisions === 'string' ? decisions : null);
+      const mDecision = decisions?.motorista || (typeof decisions === 'string' ? decisions : null);
+      const overallStatus = (vDecision === 'bloqueado' || mDecision === 'bloqueado') ? 'bloqueado' : 'validado';
 
       // Veículo: buscar por placa e atualizar status; se não existe, criar
       const placaVeiculo = dados.veiculo?.placa || dados.veiculo_existente?.placa || '';
@@ -64,15 +67,15 @@ export default function NovoAcesso() {
         if (existingVehicles.length > 0) {
           for (const v of existingVehicles) {
             await base44.entities.Vehicle.update(v.id, {
-              status: decision,
+              status: vDecision,
               ...(dados.veiculo?.modelo ? { modelo: dados.veiculo.modelo } : {}),
-              ...(decision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
+              ...(vDecision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
             });
           }
         } else if (dados.veiculo) {
           await base44.entities.Vehicle.create({
             ...dados.veiculo,
-            status: decision,
+            status: vDecision,
             filial_id: colaborador.filial_id,
             filial_nome: colaborador.filial_nome,
             data_cadastro: getCuritibaISO(),
@@ -91,15 +94,15 @@ export default function NovoAcesso() {
         if (existingDrivers.length > 0) {
           for (const d of existingDrivers) {
             await base44.entities.Driver.update(d.id, {
-              status: decision,
+              status: mDecision,
               ...(dados.motorista?.nome ? { nome: dados.motorista.nome } : {}),
-              ...(decision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
+              ...(mDecision === 'validado' ? { data_cadastro: getCuritibaISO(), data_validade: getSixMonthsFromNow() } : {})
             });
           }
         } else if (dados.motorista) {
           await base44.entities.Driver.create({
             ...dados.motorista,
-            status: decision,
+            status: mDecision,
             filial_id: colaborador.filial_id,
             filial_nome: colaborador.filial_nome,
             data_cadastro: getCuritibaISO(),
@@ -114,7 +117,7 @@ export default function NovoAcesso() {
         for (const log of accessLogs) {
           if (log.tipo === 'saida') continue;
           await base44.entities.AccessLog.update(log.id, {
-            status: decision,
+            status: overallStatus,
             aprovado_por: editorName,
             aprovado_por_cpf: colaborador.cpf,
             data_aprovacao: getCuritibaISO(),
@@ -122,19 +125,25 @@ export default function NovoAcesso() {
         }
       }
 
-      await base44.entities.ReviewRequest.update(review.id, {
+      const resultParts = [];
+      if (vDecision) resultParts.push(`Veículo: ${vDecision}`);
+      if (mDecision) resultParts.push(`Motorista: ${mDecision}`);
+      const reviewUpdate = {
         status: 'aprovado',
-        observacao: `Decisão: ${decision} — por ${colaborador.nome}`
-      });
+        observacao: `Revisado por ${colaborador.nome} — ${resultParts.join(' | ')}`,
+      };
+      if (vDecision) reviewUpdate.resultado_veiculo = vDecision;
+      if (mDecision) reviewUpdate.resultado_motorista = mDecision;
+      if (decisions?.veiculoMotivo) reviewUpdate.motivo_bloqueio_veiculo = decisions.veiculoMotivo;
+      if (decisions?.motoristaMotivo) reviewUpdate.motivo_bloqueio_motorista = decisions.motoristaMotivo;
+      await base44.entities.ReviewRequest.update(review.id, reviewUpdate);
       try {
         const colab = await base44.entities.Colaborador.list();
         const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
         if (solicitante) {
           await base44.entities.Notification.create({
-            title: decision === 'validado' ? 'Cadastro Validado' : 'Cadastro Bloqueado',
-            message: decision === 'validado'
-              ? `Sua solicitação foi VALIDADA. Busque novamente a placa/CPF para registrar o acesso.`
-              : `Sua solicitação foi BLOQUEADA pelo revisor.`,
+            title: 'Revisão de Cadastro Concluída',
+            message: `Resultado: ${resultParts.join(' | ')}. Veja detalhes no modal.`,
             type: 'driver_docs', sender_name: colaborador.nome,
             target_user_id: solicitante.id, branch_id: review.filial_id
           });
@@ -143,7 +152,7 @@ export default function NovoAcesso() {
 
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
-        action: `Revisão de cadastro: ${decision}`,
+        action: `Revisão de cadastro: ${resultParts.join(' | ')}`,
         details: review.motivo, ip_address: 'local', domain: window.location.hostname,
         category: 'user_management', branch_id: colaborador.filial_id
       });
@@ -575,7 +584,7 @@ export default function NovoAcesso() {
 
       {/* Dialog: Revisão (admin/supervisor/gestor) */}
       {reviewDialogItem && (
-        <ReviewDialog review={reviewDialogItem} onDecide={(decision, editedData) => decideReview(reviewDialogItem, decision, editedData)} loading={decidingReview} onClose={() => setReviewDialogItem(null)} />
+        <ReviewDialog review={reviewDialogItem} onDecide={(decisions, editedData) => decideReview(reviewDialogItem, decisions, editedData)} loading={decidingReview} onClose={() => setReviewDialogItem(null)} />
       )}
     </div>
   );

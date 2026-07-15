@@ -84,6 +84,37 @@ function formatNumber(val) {
   return val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function mergeRawRows(existing, incoming, nfColumn) {
+  if (!nfColumn) return [...existing, ...incoming];
+  const merged = [...existing];
+  const nfSet = new Set(existing.map(r => String(r[nfColumn] || '').trim()).filter(Boolean));
+  let deduped = 0;
+  for (const row of incoming) {
+    const nf = String(row[nfColumn] || '').trim();
+    if (nf && nfSet.has(nf)) { deduped++; continue; }
+    if (nf) nfSet.add(nf);
+    merged.push(row);
+  }
+  return { rows: merged, deduped };
+}
+
+function aggregateRows(rows, headers, vlNfIndex, vlNfColumn) {
+  const groupedRow = {};
+  const lists = {};
+  headers.forEach((h, idx) => {
+    if (vlNfIndex >= 0 && idx >= vlNfIndex) {
+      const sum = rows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
+      groupedRow[h] = formatNumber(sum);
+    } else {
+      const uniqueValues = [...new Set(rows.map(r => String(r[h] || '').trim()).filter(Boolean))];
+      groupedRow[h] = uniqueValues.length > 1 ? `${uniqueValues[0]} +${uniqueValues.length - 1}` : (uniqueValues[0] || '');
+      lists[h] = uniqueValues;
+    }
+  });
+  const total = vlNfColumn ? rows.reduce((acc, r) => acc + parseNumber(r[vlNfColumn]), 0) : 0;
+  return { row: groupedRow, lists, total, count: rows.length };
+}
+
 function parseDate(val) {
   if (!val) return null;
   const str = String(val).trim();
@@ -283,7 +314,8 @@ export default function Averbacao() {
           lists: Object.fromEntries(
             Object.entries(item.lists || {}).map(([k, v]) => [k, v.slice(0, 100)])
           ),
-          count: item.count
+          count: item.count,
+          raw_rows: matchingRows
         });
         let prioridadeStr = colPrioridade ? String(item.row[colPrioridade] || '') : '';
         // For priorities 90/91, include route in prioridade to ensure unique keys per route
@@ -354,7 +386,8 @@ export default function Averbacao() {
             const dateDadosJson = JSON.stringify({
               row: dateGroupedRow,
               lists: Object.fromEntries(Object.entries(dateLists).map(([k, v]) => [k, v.slice(0, 100)])),
-              count: dateRows.length
+              count: dateRows.length,
+              raw_rows: dateRows
             });
             const dateTotal = colVlNf ? dateRows.reduce((acc, r) => acc + parseNumber(r[colVlNf]), 0) : 0;
 
@@ -390,20 +423,52 @@ export default function Averbacao() {
       const existingMap = {};
       for (const ex of existingRecords) {
         const key = `${ex.mes || ''}_${ex.dia || ''}_${String(ex.prioridade || '').trim()}`;
-        existingMap[key] = ex.id;
+        existingMap[key] = ex;
       }
 
       const toUpdate = [];
       const toCreate = [];
       const seenUpdateIds = new Set();
       const seenCreateKeys = new Set();
+      let totalDeduped = 0;
       for (const r of records) {
         const key = `${r.mes || ''}_${r.dia || ''}_${String(r.prioridade || '').trim()}`;
         if (existingMap[key]) {
-          const existingId = existingMap[key];
-          if (!seenUpdateIds.has(existingId)) {
-            toUpdate.push({ id: existingId, ...r });
-            seenUpdateIds.add(existingId);
+          const existingRecord = existingMap[key];
+          if (!seenUpdateIds.has(existingRecord.id)) {
+            // Incremental merge: combine existing raw rows with new, dedup by NF
+            let existingData = {};
+            try { existingData = JSON.parse(existingRecord.dados_json || '{}'); } catch (e) {}
+            const existingRawRows = existingData.raw_rows || [];
+            let newData = {};
+            try { newData = JSON.parse(r.dados_json || '{}'); } catch (e) {}
+            const newRawRows = newData.raw_rows || [];
+            const mergeResult = mergeRawRows(existingRawRows, newRawRows, colNumNfSave);
+            totalDeduped += mergeResult.deduped;
+            const mergedRows = mergeResult.rows;
+
+            // Re-aggregate from merged rows
+            const aggregated = aggregateRows(mergedRows, fileData.headers, vlNfIndexSave, colVlNf);
+
+            toUpdate.push({
+              id: existingRecord.id,
+              mes: r.mes,
+              dia: r.dia,
+              data_referencia: r.data_referencia,
+              prioridade: r.prioridade,
+              arquivo_origem: r.arquivo_origem,
+              dados_json: JSON.stringify({
+                row: aggregated.row,
+                lists: Object.fromEntries(Object.entries(aggregated.lists).map(([k, v]) => [k, v.slice(0, 100)])),
+                count: mergedRows.length,
+                raw_rows: mergedRows
+              }),
+              total_geral: aggregated.total,
+              operador_nome: r.operador_nome,
+              filial_id: r.filial_id,
+              filial_nome: r.filial_nome,
+            });
+            seenUpdateIds.add(existingRecord.id);
           }
         } else if (!seenCreateKeys.has(key)) {
           toCreate.push(r);
@@ -427,7 +492,7 @@ export default function Averbacao() {
         await base44.entities.AverbacaoRecord.bulkCreate(batch);
         created += batch.length;
       }
-      setSavedMsg(`${updated} atualizado(s) · ${created} criado(s) com sucesso!`);
+      setSavedMsg(`${updated} atualizado(s) · ${created} criado(s)${totalDeduped > 0 ? ` · ${totalDeduped} nota(s) duplicada(s) evitada(s)` : ''} com sucesso!`);
       setSavedDataVersion(v => v + 1);
       setTimeout(() => setSavedMsg(''), 6000);
     } catch (e) {
@@ -449,6 +514,15 @@ export default function Averbacao() {
         <h1 className="brand-title text-2xl">Averbação</h1>
         <p className="text-sm text-muted-foreground">Importe, processe e salve dados de averbação</p>
       </div>
+
+      {!fileData && (
+        <div className="bg-primary/5 border border-primary/20 rounded-2xl p-3 flex items-center gap-2">
+          <Database className="h-4 w-4 text-primary shrink-0" />
+          <p className="text-xs text-primary">
+            <strong>Carga incremental:</strong> Você pode subir arquivos FRT semanalmente ou diariamente para o mês em curso. O sistema mescla automaticamente os dados novos com os existentes, evitando duplicação de notas fiscais.
+          </p>
+        </div>
+      )}
 
       {!fileData && (
         <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">

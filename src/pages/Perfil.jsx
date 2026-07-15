@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import PerfilHistorico from '@/components/perfil/PerfilHistorico';
+import WhatsAppNotifCard from '@/components/notificacoes/WhatsAppNotifCard';
 
 export default function Perfil() {
   const { colaborador, updateColaborador } = useProfarmaAuth();
@@ -149,6 +150,9 @@ export default function Perfil() {
           <span className="text-sm">Termos de Uso: {colaborador?.termos_aceitos ? `Aceitos em ${colaborador?.termos_data}` : 'Pendentes'}</span>
         </div>
       </div>
+
+      {/* WhatsApp Notifications */}
+      <WhatsAppNotifCard />
 
       {/* Permission Request */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
