@@ -247,8 +247,8 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
                                 </p>
                               )}
 
-                              {/* Delete button */}
-                              {canDelete && (
+                              {/* Delete button — apenas para pendentes de revisão */}
+                              {canDelete && col.id === 'pendente_revisao' && (
                                 <div className="mt-2">
                                   <Button
                                     size="sm"
