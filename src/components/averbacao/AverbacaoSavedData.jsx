@@ -176,8 +176,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
   })();
 
   const filtered = records.filter(r =>
-    (!appliedMes || r.mes === appliedMes) &&
-    (appliedDias.length === 0 || appliedDias.includes(r.dia))
+    (!selectedMes || r.mes === selectedMes) &&
+    (selectedDias.length === 0 || selectedDias.includes(String(r.dia).padStart(2, '0')))
   );
 
   const applyFilters = () => {
@@ -416,7 +416,7 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
           Aplicar Filtros
         </Button>
 
-        {(appliedMes || appliedDias.length > 0) && (
+        {(selectedMes || selectedDias.length > 0) && (
           <Button
             variant="secondary"
             className="h-10 rounded-xl mt-auto"
@@ -476,8 +476,8 @@ export default function AverbacaoSavedData({ refreshTrigger = 0 }) {
 
       {sortedParsed.length > 0 && (
         <p className="text-xs text-muted-foreground mt-2">
-          {sortedParsed.length} registro(s) · {appliedMes || 'Todos os meses'}
-          {appliedDias.length > 0 ? ` · Dias: ${appliedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
+          {sortedParsed.length} registro(s) · {selectedMes || 'Todos os meses'}
+          {selectedDias.length > 0 ? ` · Dias: ${selectedDias.sort((a, b) => Number(a) - Number(b)).join(', ')}` : ''}
         </p>
       )}
     </div>
