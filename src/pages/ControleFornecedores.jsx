@@ -125,7 +125,7 @@ export default function ControleFornecedores() {
       y += 6;
       doc.setFontSize(11);
       doc.setTextColor(30, 30, 30);
-      doc.text('CONTROLE DE ENTRADA E SA\u00cdDA DE FORNECEDORES', pw / 2, y, { align: 'center' });
+      doc.text('CONTROLE DE ENTRADA E SAÍDA DE FORNECEDORES', pw / 2, y, { align: 'center' });
       y += 5;
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
@@ -134,7 +134,7 @@ export default function ControleFornecedores() {
       y += 8;
 
       const colW = [40, 30, 45, 35, 35, 25, 35, 35, 25, 35, 25];
-      const headers = ['TRANSPORTADORA', 'PLACA', 'MOTORISTA', 'RG/CPF', 'ENTRADA DATA', 'ENTRADA HORA', 'ENTRADA LIBERADO POR', 'SA\u00cdDA DATA', 'SA\u00cdDA HORA', 'SA\u00cdDA LIBERADO POR', 'STATUS'];
+      const headers = ['TRANSPORTADORA', 'PLACA', 'MOTORISTA', 'RG/CPF', 'ENTRADA DATA', 'ENTRADA HORA', 'ENTRADA LIBERADO POR', 'SAÍDA DATA', 'SAÍDA HORA', 'SAÍDA LIBERADO POR', 'STATUS'];
 
       doc.setFillColor(220, 220, 220);
       doc.rect(m, y - 4, pw - m * 2, 6, 'F');
@@ -160,7 +160,7 @@ export default function ControleFornecedores() {
         doc.setPage(i);
         doc.setFontSize(7);
         doc.setTextColor(150, 150, 150);
-        doc.text(`PROFARMA — Controle de Fornecedores — P\u00e1gina ${i} de ${pc}`, pw / 2, ph - 6, { align: 'center' });
+        doc.text(`PROFARMA — Controle de Fornecedores — Página ${i} de ${pc}`, pw / 2, ph - 6, { align: 'center' });
       }
       const blob = doc.output('blob');
       triggerDownload(blob, 'Controle_Fornecedores.pdf');
@@ -183,7 +183,7 @@ export default function ControleFornecedores() {
         </Button>
       </div>
 
-      {/* Formul\u00e1rio */}
+      {/* Formulário */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-3">Novo Registro de Entrada</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -198,7 +198,7 @@ export default function ControleFornecedores() {
         </Button>
       </div>
 
-      {/* Ve\u00edculos em entrada */}
+      {/* Veículos em entrada */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-4">
           <Clock className="h-5 w-5 text-primary" />
@@ -207,7 +207,7 @@ export default function ControleFornecedores() {
         {loading ?
         <div className="text-center py-8 text-muted-foreground">Carregando...</div> :
         ativos.length === 0 ?
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhum ve\u00edculo em entrada</p> :
+        <p className="text-sm text-muted-foreground text-center py-8">Nenhum veículo em entrada</p> :
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {ativos.map((reg) =>
@@ -225,7 +225,7 @@ export default function ControleFornecedores() {
                 </div>
                 <Button size="sm" className="h-8 w-full rounded-xl mt-2" disabled={saindo === reg.id} onClick={() => abrirDialogSaida(reg)}>
                   {saindo === reg.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-                  Liberar Sa\u00edda
+                  Liberar Saída
                 </Button>
               </div>
           )}
@@ -233,18 +233,18 @@ export default function ControleFornecedores() {
         }
       </div>
 
-      {/* Registros conclu\u00eddos */}
+      {/* Registros concluídos */}
       {concluidos.length > 0 &&
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle className="h-5 w-5 text-primary" />
-            <h3 className="font-heading font-bold">Registros Conclu\u00eddos ({concluidos.length})</h3>
+            <h3 className="font-heading font-bold">Registros Concluídos ({concluidos.length})</h3>
           </div>
           <div className="overflow-auto max-h-[400px] border border-border rounded-xl">
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Sa\u00edda', 'Liberado por'].map((h) =>
+                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Saída', 'Liberado por'].map((h) =>
                 <th key={h} className="text-left px-3 py-2 border-b border-border bg-secondary font-medium text-xs whitespace-nowrap">{h}</th>
                 )}
                 </tr>
