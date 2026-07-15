@@ -241,20 +241,6 @@ export default function ControleFornecedoresReport() {
                   <Row reg={reg} />
                   <FieldRow label="MOTORISTA:" value={reg.motorista} />
                   <FieldRow label="RG/CPF:" value={reg.rg_cpf} />
-                  {/* Sub-headers */}
-                  <div className="flex border border-black border-t-0 bg-[#C0C0C0]">
-                    <div className="w-24 shrink-0 border-r border-black px-1.5 py-0.5"></div>
-                    <div className="w-36 shrink-0 border-r border-black px-1.5 py-0.5">
-                      <span className="text-[9px] font-bold text-black">DATA:</span>
-                    </div>
-                    <div className="w-24 shrink-0 bg-white border-r border-black px-1.5 py-0.5">
-                      <span className="text-[9px] font-bold text-black">HORÁRIO:</span>
-                    </div>
-                    <div className="w-32 shrink-0 border-r border-black px-1.5 py-0.5">
-                      <span className="text-[9px] font-bold text-black">LIBERADO POR:</span>
-                    </div>
-                    <div className="flex-1 px-1.5 py-0.5"></div>
-                  </div>
                   <EntradaSaidaRow
                     label="ENTRADA:"
                     data={reg.entrada_data}
