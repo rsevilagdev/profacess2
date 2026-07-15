@@ -83,7 +83,7 @@ export default function QuickNotifications() {
 
   // Operadores: apenas Fila de Liberação (sem gestão de base de dados)
   const items = isOperator ? allItems.filter(i => i.path === '/acessos') : allItems;
-  const total = items.reduce((sum, i) => sum + i.count, 0) + notifications.length;
+  const total = notifications.length;
 
   const markAsRead = async (id) => {
     try {
