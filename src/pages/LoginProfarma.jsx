@@ -22,7 +22,12 @@ export default function LoginProfarma() {
   const [filiaisLoading, setFiliaisLoading] = useState(true);
   const [filiaisError, setFiliaisError] = useState('');
   const navigate = useNavigate();
-  const { login } = useProfarmaAuth();
+  const { login, colaborador } = useProfarmaAuth();
+
+  // Redirect to dashboard if already authenticated (e.g., returning from WhatsApp OAuth)
+  useEffect(() => {
+    if (colaborador) navigate('/dashboard', { replace: true });
+  }, [colaborador, navigate]);
 
   const loadFiliais = useCallback(() => {
     setFiliaisLoading(true);
