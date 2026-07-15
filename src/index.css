@@ -150,4 +150,14 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .slide-up-fade { animation: slide-up-fade 0.4s ease-out; }
+  @keyframes slide-from-top {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .slide-from-top { animation: slide-from-top 0.4s ease-out; }
+  @keyframes slide-to-top {
+    from { transform: translateY(0); opacity: 1; }
+    to { transform: translateY(-100%); opacity: 0; }
+  }
+  .slide-to-top { animation: slide-to-top 0.3s ease-in forwards; }
 }

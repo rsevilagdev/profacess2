@@ -9,6 +9,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { getCuritibaHour, getCuritibaMinute } from '@/lib/curitiba-time.js';
 import { enforceSystemTimezone } from '@/lib/timezone-enforcer.js';
+import { storeUserContext } from '@/lib/push-manager.js';
 
 export default function AppLayout() {
   const { colaborador, loading, logout } = useProfarmaAuth();
@@ -22,7 +23,10 @@ export default function AppLayout() {
 
   // Enforce system timezone (America/Sao_Paulo) for all date/time operations
   useEffect(() => {
-    if (colaborador) enforceSystemTimezone();
+    if (colaborador) {
+      enforceSystemTimezone();
+      storeUserContext(colaborador);
+    }
   }, [colaborador]);
 
   // Forced logout at 07:00 and 19:00 for portaria users (operador)
