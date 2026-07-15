@@ -269,6 +269,13 @@ export default function Averbacao() {
       const colRota = findColumn(fileData.headers, ['ROTA', 'RUTA', 'ITINERÁRIO', 'ITINERARIO', 'ITINERARY', 'ITINER', 'ROUTE']);
       const colVlNf = fileData.processedMeta?.vlNfColumn || (fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null);
 
+      const colNumNfSave = findColumn(fileData.headers, ['NU-NF', 'NU NF', 'NUNF', 'NUMNF', 'NUM NF', 'NUM_NF', 'NF', 'NOTA FISCAL', 'NUMERO NF', 'NÚMERO NF', 'NUMERONF', 'NRO NF', 'Nº NF', 'NUMERO NOTA FISCAL', 'NUM NOTA', 'NUM. NF', 'NÚM. NF']);
+      const lastColSave = fileData.headers.length > 0 ? fileData.headers[fileData.headers.length - 1] : null;
+      const numNfIdxSave = colNumNfSave ? fileData.headers.indexOf(colNumNfSave) : -1;
+      const vlNfIndexSave = (numNfIdxSave >= 0 && numNfIdxSave + 1 < fileData.headers.length)
+        ? numNfIdxSave + 1
+        : (lastColSave ? fileData.headers.indexOf(lastColSave) : -1);
+
       const records = [];
       for (const item of fileData.processedRows) {
         const dadosJson = JSON.stringify({
@@ -299,7 +306,7 @@ export default function Averbacao() {
           );
         }
 
-        // Group matching rows by date and sum value column per date
+        // Group matching rows by date — store rows per date for per-date dados_json
         const dateGroups = {};
         for (const row of matchingRows) {
           const dateStr = colData ? String(row[colData] || '').trim() : '';
@@ -310,11 +317,9 @@ export default function Averbacao() {
             const dataRef = formatCuritiba(d, { day: '2-digit', month: '2-digit', year: 'numeric' });
             const key = `${mesNome}_${diaStr}`;
             if (!dateGroups[key]) {
-              dateGroups[key] = { mes: mesNome, dia: diaStr, dataRef, total: 0 };
+              dateGroups[key] = { mes: mesNome, dia: diaStr, dataRef, rows: [] };
             }
-            if (colVlNf) {
-              dateGroups[key].total += parseNumber(row[colVlNf]);
-            }
+            dateGroups[key].rows.push(row);
           }
         }
         const uniqueDates = Object.values(dateGroups);
@@ -332,14 +337,35 @@ export default function Averbacao() {
           });
         } else {
           for (const dt of uniqueDates) {
+            // Compute date-specific grouped row (same logic as groupByPriority but only for this date's rows)
+            const dateRows = dt.rows;
+            const dateGroupedRow = {};
+            const dateLists = {};
+            fileData.headers.forEach((h, idx) => {
+              if (vlNfIndexSave >= 0 && idx >= vlNfIndexSave) {
+                const sum = dateRows.reduce((acc, r) => acc + parseNumber(r[h]), 0);
+                dateGroupedRow[h] = formatNumber(sum);
+              } else {
+                const uniqueValues = [...new Set(dateRows.map(r => String(r[h] || '').trim()).filter(Boolean))];
+                dateGroupedRow[h] = uniqueValues.length > 1 ? `${uniqueValues[0]} +${uniqueValues.length - 1}` : (uniqueValues[0] || '');
+                dateLists[h] = uniqueValues;
+              }
+            });
+            const dateDadosJson = JSON.stringify({
+              row: dateGroupedRow,
+              lists: Object.fromEntries(Object.entries(dateLists).map(([k, v]) => [k, v.slice(0, 100)])),
+              count: dateRows.length
+            });
+            const dateTotal = colVlNf ? dateRows.reduce((acc, r) => acc + parseNumber(r[colVlNf]), 0) : 0;
+
             records.push({
               mes: dt.mes,
               dia: dt.dia,
               data_referencia: dt.dataRef,
               prioridade: prioridadeStr,
               arquivo_origem: fileData.fileName,
-              dados_json: dadosJson,
-              total_geral: dt.total,
+              dados_json: dateDadosJson,
+              total_geral: dateTotal,
               operador_nome: colaborador?.nome || '',
               filial_id: colaborador?.filial_id || '',
               filial_nome: colaborador?.filial_nome || '',
