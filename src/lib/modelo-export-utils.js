@@ -38,39 +38,39 @@ export function exportTableToPDF({ title, subtitle, headers, rows, columnWeights
 
   const drawHeader = () => {
     doc.setFillColor(0, 105, 92);
-    doc.rect(m, y - 4, availWidth, 6, 'F');
+    doc.rect(m, y - 3, availWidth, 5, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    doc.setFontSize(6);
     doc.setTextColor(255, 255, 255);
     let x = m;
     headers.forEach((h, i) => {
-      const lines = doc.splitTextToSize(String(h), scaledWidths[i] - 2);
-      doc.text(lines, x + 1, y);
+      const lines = doc.splitTextToSize(String(h), scaledWidths[i] - 1.5);
+      doc.text(lines, x + 0.8, y);
       x += scaledWidths[i];
     });
-    y += 6;
+    y += 5;
   };
 
   drawHeader();
 
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(40, 40, 40);
-  const lineH = 4;
+  const lineH = 3;
   rows.forEach((row, idx) => {
     const cellLines = headers.map((_, i) =>
-      doc.splitTextToSize(String(row[i] != null ? row[i] : ''), scaledWidths[i] - 2)
+      doc.splitTextToSize(String(row[i] != null ? row[i] : ''), scaledWidths[i] - 1.5)
     );
     const maxLines = Math.max(...cellLines.map(l => l.length), 1);
-    const thisRowH = lineH * maxLines + 2;
+    const thisRowH = lineH * maxLines + 1;
     if (y + thisRowH > ph - 12) { doc.addPage(); y = 16; drawHeader(); }
     if (idx % 2 === 0) {
       doc.setFillColor(240, 245, 244);
-      doc.rect(m, y - 4, availWidth, thisRowH, 'F');
+      doc.rect(m, y - 3, availWidth, thisRowH, 'F');
     }
     let x = m;
     cellLines.forEach((lines, i) => {
       lines.forEach((line, li) => {
-        doc.text(line, x + 1, y + li * lineH);
+        doc.text(line, x + 0.8, y + li * lineH);
       });
       x += scaledWidths[i];
     });

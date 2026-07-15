@@ -89,28 +89,28 @@ export default function ControleVeiculosExpedicao({ logs, loading }) {
         <p className="text-center py-8 text-sm text-muted-foreground">Nenhum registro encontrado no período selecionado</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse table-fixed">
+          <table className="w-full text-[10px] border-collapse table-fixed">
             <thead>
               <tr>
                 {HEADERS.map(h => (
-                  <th key={h} className="border border-black px-2 py-3 bg-primary text-primary-foreground font-medium text-left leading-tight">{h}</th>
+                  <th key={h} className="border border-black px-1.5 py-1.5 bg-primary text-primary-foreground font-medium text-left leading-tight">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {logs.map(log => (
                 <tr key={log.id}>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{formatData(log.created_date)}</td>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap font-medium align-top">{log.veiculo_placa}</td>
-                  <td className="border border-black px-2 py-2 break-words align-top">{log.motorista_nome || '—'}</td>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.motorista_cpf || '—'}</td>
-                  <td className="border border-black px-2 py-2 break-words align-top">{log.empresa || '—'}</td>
-                  <td className="border border-black px-2 py-2 break-words align-top">{log.ajudante_nome || '—'}</td>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.ajudante_cpf || '—'}</td>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{formatHora(log.created_date)}</td>
-                  <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{log.tipo === 'saida' ? formatHora(log.data_aprovacao) : ''}</td>
-                  <td className="border border-black px-2 py-2 align-top"></td>
-                  <td className="border border-black px-2 py-2 break-words align-top">{buildObservacao(log)}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{formatData(log.created_date)}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap font-medium align-top">{log.veiculo_placa}</td>
+                  <td className="border border-black px-1.5 py-1 break-words align-top">{log.motorista_nome || '—'}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{log.motorista_cpf || '—'}</td>
+                  <td className="border border-black px-1.5 py-1 break-words align-top">{log.empresa || '—'}</td>
+                  <td className="border border-black px-1.5 py-1 break-words align-top">{log.ajudante_nome || '—'}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{log.ajudante_cpf || '—'}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{formatHora(log.created_date)}</td>
+                  <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{log.tipo === 'saida' ? formatHora(log.data_aprovacao) : ''}</td>
+                  <td className="border border-black px-1.5 py-1 align-top"></td>
+                  <td className="border border-black px-1.5 py-1 break-words align-top">{buildObservacao(log)}</td>
                 </tr>
               ))}
             </tbody>

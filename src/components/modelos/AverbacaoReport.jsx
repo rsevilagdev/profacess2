@@ -273,26 +273,26 @@ export default function AverbacaoReport({ tipo, periodo }) {
 
       // Header row
       doc.setFillColor(0, 105, 92);
-      doc.rect(m, y - 4, availWidth, 6, 'F');
+      doc.rect(m, y - 3, availWidth, 5, 'F');
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(6);
       doc.setTextColor(255, 255, 255);
       let x = m;
       REPORT_COLUMNS.forEach((col, i) => {
-        doc.text(col, x + 1, y);
+        doc.text(col, x + 0.8, y);
         x += scaledWidths[i];
       });
-      y += 6;
+      y += 5;
 
       // Data rows
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(40, 40, 40);
-      const rowH = 5;
+      const rowH = 4;
       reportRows.forEach((r, idx) => {
         if (y > ph - 20) { doc.addPage(); y = 14; }
         if (idx % 2 === 0) {
           doc.setFillColor(240, 245, 244);
-          doc.rect(m, y - 4, availWidth, rowH, 'F');
+          doc.rect(m, y - 3, availWidth, rowH, 'F');
         }
         x = m;
         REPORT_COLUMNS.forEach((col, i) => {
@@ -415,7 +415,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
               <thead className="sticky top-0 z-10">
                 <tr>
                   {REPORT_COLUMNS.map(col => (
-                    <th key={col} className="border border-black px-2 py-3 bg-primary text-primary-foreground font-medium text-left leading-tight">
+                    <th key={col} className="border border-black px-1.5 py-1.5 bg-primary text-primary-foreground font-medium text-left leading-tight">
                       {col}
                     </th>
                   ))}
@@ -425,7 +425,7 @@ export default function AverbacaoReport({ tipo, periodo }) {
                 {reportRows.map((r, idx) => (
                   <tr key={idx} className={idx % 2 === 0 ? 'bg-muted/20' : ''}>
                     {REPORT_COLUMNS.map(col => (
-                      <td key={col} className="border border-black px-2 py-2 whitespace-nowrap align-top">
+                      <td key={col} className="border border-black px-1.5 py-1 whitespace-nowrap align-top">
                         {col === 'Valor de mercadoria'
                           ? formatCurrency(r[col])
                           : (r[col] || '—')}

@@ -244,11 +244,11 @@ export default function ControleVisitantesReport() {
             <p className="text-center py-8 text-sm text-muted-foreground">Nenhum registro encontrado com os filtros selecionados</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse table-fixed">
+              <table className="w-full text-[10px] border-collapse table-fixed">
                 <thead>
                   <tr>
                     {VIS_HEADERS.map(h => (
-                      <th key={h} className="border border-black px-2 py-3 bg-primary text-primary-foreground font-medium text-left leading-tight">
+                      <th key={h} className="border border-black px-1.5 py-1.5 bg-primary text-primary-foreground font-medium text-left leading-tight">
                         {h}
                       </th>
                     ))}
@@ -257,17 +257,17 @@ export default function ControleVisitantesReport() {
                 <tbody>
                   {filtered.map(reg => (
                     <tr key={reg.id} className="hover:bg-muted/20">
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.data || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.numero_cracha || '—'}</td>
-                      <td className="border border-black px-2 py-2 font-medium break-words align-top">{reg.nome || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.rg || '—'}</td>
-                      <td className="border border-black px-2 py-2 break-words align-top">{reg.empresa || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.placa || '—'}</td>
-                      <td className="border border-black px-2 py-2 break-words align-top">{reg.setor_visitado || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.horario_entrada || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap align-top">{reg.horario_saida || '—'}</td>
-                      <td className="border border-black px-2 py-2 whitespace-nowrap font-medium align-top">{crachaLabel(reg.cracha_devolvido)}</td>
-                      <td className="border border-black px-2 py-2 break-words align-top">{reg.vigilante || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.data || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.numero_cracha || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 font-medium break-words align-top">{reg.nome || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.rg || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 break-words align-top">{reg.empresa || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.placa || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 break-words align-top">{reg.setor_visitado || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.horario_entrada || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap align-top">{reg.horario_saida || '—'}</td>
+                      <td className="border border-black px-1.5 py-1 whitespace-nowrap font-medium align-top">{crachaLabel(reg.cracha_devolvido)}</td>
+                      <td className="border border-black px-1.5 py-1 break-words align-top">{reg.vigilante || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
