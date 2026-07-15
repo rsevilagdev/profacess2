@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Send, Trash2, Check, Loader2, X, Users, Building2, ClipboardList } from 'lucide-react';
+import { Bell, Send, Trash2, Check, Loader2, X, Users, Building2, ClipboardList, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
+import { formatCuritiba } from '@/lib/curitiba-time.js';
+import NotificationDetail from '@/components/notificacoes/NotificationDetail';
 
 export default function Notificacoes() {
   const { colaborador } = useProfarmaAuth();
@@ -15,6 +17,7 @@ export default function Notificacoes() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ title: '', message: '', type: 'admin_ops', targetUserIds: [], targetFilialId: '' });
   const [sending, setSending] = useState(false);
+  const [selectedNotif, setSelectedNotif] = useState(null);
 
   const isMine = (n) => {
     if (!colaborador) return false;
@@ -148,19 +151,16 @@ export default function Notificacoes() {
           ) : (
             <div className="space-y-2">
               {notifications.map(n => (
-                <div key={n.id} className={`flex items-start gap-3 p-3 rounded-xl ${n.read ? 'bg-muted/30' : 'bg-primary/5'}`}>
+                <div key={n.id} className={`flex items-start gap-3 p-3 rounded-xl cursor-pointer transition-colors hover:bg-accent/50 ${n.read ? 'bg-muted/30' : 'bg-primary/5'}`} onClick={() => { if (!n.read) markRead(n.id); setSelectedNotif(n); }}>
                   <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${n.read ? 'bg-muted' : 'bg-primary/10'}`}>
                     <Bell className={`h-5 w-5 ${n.read ? 'text-muted-foreground' : 'text-primary'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-muted-foreground">{n.message}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{new Date(n.created_date).toLocaleString('pt-BR')} · {n.sender_name}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{n.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{formatCuritiba(n.created_date, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · {n.sender_name}</p>
                   </div>
-                  <div className="flex gap-1">
-                    {!n.read && <button onClick={() => markRead(n.id)} className="h-8 w-8 rounded-lg hover:bg-accent flex items-center justify-center"><Check className="h-4 w-4" /></button>}
-                    <button onClick={() => remove(n.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/10 flex items-center justify-center text-destructive"><Trash2 className="h-4 w-4" /></button>
-                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-3" />
                 </div>
               ))}
             </div>
@@ -193,6 +193,15 @@ export default function Notificacoes() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Detail Modal */}
+      {selectedNotif && (
+        <NotificationDetail
+          notification={selectedNotif}
+          onClose={() => setSelectedNotif(null)}
+          onDelete={async (n) => { await remove(n.id); setSelectedNotif(null); }}
+        />
       )}
 
       {/* Send Form Modal */}
