@@ -70,6 +70,12 @@ export default function NovoAcesso() {
             filial_nome: colaborador.filial_nome
           });
         }
+        if (dados.veiculo_existente) {
+          await base44.entities.Vehicle.update(dados.veiculo_existente.id, { status: decision });
+        }
+        if (dados.motorista_existente) {
+          await base44.entities.Driver.update(dados.motorista_existente.id, { status: decision });
+        }
         await base44.entities.ReviewRequest.update(review.id, {
           status: 'aprovado',
           observacao: `Decisão: ${decision} — por ${colaborador.nome}`
@@ -183,7 +189,7 @@ export default function NovoAcesso() {
       const destinatariosIds = recipients.map(r => r.id).join(',');
       const destinatariosNomes = recipients.map(r => r.nome).join(', ');
 
-      const tipo = !veiculo && !motorista ? 'ambos' : (!veiculo ? 'veiculo' : 'motorista');
+      const tipo = !veiculo && !motorista ? 'ambos' : (!veiculo ? 'veiculo' : (!motorista ? 'motorista' : 'status'));
 
       await base44.entities.ReviewRequest.create({
         solicitante_nome: colaborador.nome,
@@ -191,7 +197,7 @@ export default function NovoAcesso() {
         tipo,
         target_nome: !veiculo ? placa.toUpperCase() : (motorista?.nome || cpfDigits),
         target_cpf: !veiculo ? placa.toUpperCase() : cpfDigits,
-        motivo: `Veículo não encontrado: ${!veiculo} | Motorista não encontrado: ${!motorista} | Placa: ${placa} | CPF: ${cpfDigits}`,
+        motivo: `Placa: ${placa} | CPF: ${cpfDigits} | Veículo: ${veiculo ? veiculo.status : 'não encontrado'} | Motorista: ${motorista ? motorista.status : 'não encontrado'}`,
         status: 'pendente',
         filial_id: colaborador.filial_id,
         destinatarios: destinatariosIds,
@@ -401,11 +407,9 @@ export default function NovoAcesso() {
             </div>
           </div>
 
-          {(!veiculo || !motorista) && (
-            <Button onClick={() => setShowCadastroDialog(true)} className="h-10 rounded-xl">
-              <Send className="h-4 w-4" /> Mandar para Revisão
-            </Button>
-          )}
+          <Button onClick={() => setShowCadastroDialog(true)} className="h-10 rounded-xl">
+            <Send className="h-4 w-4" /> Mandar para Revisão
+          </Button>
         </div>
       )}
 

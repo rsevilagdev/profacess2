@@ -20,31 +20,35 @@ export default function ReviewDialog({ review, onDecide, loading, onClose }) {
           </button>
         </div>
 
-        {/* Solicitante */}
         <div className="mb-4 p-3 rounded-xl bg-muted/50 border border-border">
           <p className="text-xs text-muted-foreground">Solicitante</p>
           <p className="text-sm font-medium">{review.solicitante_nome}</p>
           <p className="text-xs text-muted-foreground mt-1">{review.motivo}</p>
-          {review.observacao && <p className="text-xs text-muted-foreground mt-1 italic">{review.observacao}</p>}
         </div>
 
-        {/* Dados do Veículo */}
+        {/* Novo veículo */}
         {dados.veiculo && (
           <div className="mb-3 p-3 rounded-xl border border-border">
             <div className="flex items-center gap-2 mb-2">
               <Truck className="h-4 w-4 text-primary" />
               <p className="text-sm font-medium">Veículo — {dados.veiculo.placa}</p>
             </div>
-            <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-              <p><span className="text-foreground/60">Modelo:</span> {dados.veiculo.modelo || '—'}</p>
-              <p><span className="text-foreground/60">Cor:</span> {dados.veiculo.cor || '—'}</p>
-              <p><span className="text-foreground/60">Tipo:</span> {dados.veiculo.tipo || '—'}</p>
-              <p><span className="text-foreground/60">Transportadora:</span> {dados.veiculo.transportadora || '—'}</p>
-            </div>
+            <p className="text-xs text-muted-foreground">Modelo: {dados.veiculo.modelo || '—'}</p>
           </div>
         )}
 
-        {/* Dados do Motorista */}
+        {/* Veículo existente */}
+        {dados.veiculo_existente && (
+          <div className="mb-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
+            <div className="flex items-center gap-2 mb-1">
+              <Truck className="h-4 w-4 text-orange-500" />
+              <p className="text-sm font-medium">Veículo Existente — {dados.veiculo_existente.placa}</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Status atual: <span className="font-medium">{dados.veiculo_existente.status}</span></p>
+          </div>
+        )}
+
+        {/* Novo motorista */}
         {dados.motorista && (
           <div className="mb-3 p-3 rounded-xl border border-border">
             <div className="flex items-center gap-2 mb-2">
@@ -54,15 +58,23 @@ export default function ReviewDialog({ review, onDecide, loading, onClose }) {
             <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
               <p><span className="text-foreground/60">Nome:</span> {dados.motorista.nome || '—'}</p>
               <p><span className="text-foreground/60">CPF:</span> {formatCPF(dados.motorista.cpf) || '—'}</p>
-              <p><span className="text-foreground/60">CNH:</span> {dados.motorista.cnh || '—'}</p>
-              <p><span className="text-foreground/60">Validade CNH:</span> {dados.motorista.cnh_validade || '—'}</p>
-              <p><span className="text-foreground/60">Telefone:</span> {dados.motorista.telefone || '—'}</p>
-              <p><span className="text-foreground/60">Transportadora:</span> {dados.motorista.transportadora || '—'}</p>
             </div>
           </div>
         )}
 
-        {/* Ações */}
+        {/* Motorista existente */}
+        {dados.motorista_existente && (
+          <div className="mb-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
+            <div className="flex items-center gap-2 mb-1">
+              <User className="h-4 w-4 text-orange-500" />
+              <p className="text-sm font-medium">Motorista Existente</p>
+            </div>
+            <p className="text-xs text-muted-foreground">Nome: {dados.motorista_existente.nome}</p>
+            <p className="text-xs text-muted-foreground">CPF: {formatCPF(dados.motorista_existente.cpf)}</p>
+            <p className="text-xs text-muted-foreground">Status atual: <span className="font-medium">{dados.motorista_existente.status}</span></p>
+          </div>
+        )}
+
         <div className="space-y-2 mt-4">
           <p className="text-xs font-medium text-muted-foreground text-center mb-2">Escolha uma das opções abaixo:</p>
           <Button variant="secondary" className="h-11 rounded-xl w-full" disabled={loading} onClick={() => onDecide('pendente')}>
