@@ -1,0 +1,34 @@
+{
+  "name": "PushSubscription",
+  "type": "object",
+  "properties": {
+    "colaborador_id": {
+      "type": "string",
+      "description": "ID do colaborador"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "endpoint": {
+      "type": "string",
+      "description": "URL do push service endpoint"
+    },
+    "keys_p256dh": {
+      "type": "string",
+      "description": "Chave p256dh da subscription"
+    },
+    "keys_auth": {
+      "type": "string",
+      "description": "Chave auth da subscription"
+    },
+    "user_agent": {
+      "type": "string",
+      "description": "User agent do navegador/dispositivo"
+    }
+  },
+  "required": [
+    "colaborador_id",
+    "endpoint"
+  ]
+}

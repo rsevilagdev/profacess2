@@ -4,12 +4,13 @@ import GlobalSearch from './GlobalSearch.jsx';
 import QuickNotifications from './QuickNotifications.jsx';
 import TermsModal from '@/components/TermsModal.jsx';
 import NotificationBanner from '@/components/NotificationBanner.jsx';
+import PwaInstallPrompt from '@/components/PwaInstallPrompt.jsx';
 import { Loader2, LogOut } from 'lucide-react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState, useRef } from 'react';
 import { getCuritibaHour, getCuritibaMinute } from '@/lib/curitiba-time.js';
 import { enforceSystemTimezone } from '@/lib/timezone-enforcer.js';
-import { storeUserContext } from '@/lib/push-manager.js';
+import { storeUserContext, subscribeToPush } from '@/lib/push-manager.js';
 
 export default function AppLayout() {
   const { colaborador, loading, logout } = useProfarmaAuth();
@@ -21,11 +22,13 @@ export default function AppLayout() {
     if (!loading && !colaborador) navigate('/');
   }, [loading, colaborador, navigate]);
 
-  // Enforce system timezone (America/Sao_Paulo) for all date/time operations
+  // Enforce system timezone + push notification subscription
   useEffect(() => {
     if (colaborador) {
       enforceSystemTimezone();
       storeUserContext(colaborador);
+      // Subscribe to push (for users who already accepted terms)
+      subscribeToPush(colaborador);
     }
   }, [colaborador]);
 
@@ -73,6 +76,7 @@ export default function AppLayout() {
       <QuickNotifications />
       <NotificationBanner />
       <TermsModal />
+      <PwaInstallPrompt />
       {forceLogoutMsg && (
         <div className="fixed inset-0 z-[60] bg-foreground/80 flex items-center justify-center p-4">
           <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center">

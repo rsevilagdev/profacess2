@@ -1,0 +1,22 @@
+{
+  "name": "PushConfig",
+  "type": "object",
+  "properties": {
+    "vapid_public_key": {
+      "type": "string",
+      "description": "Chave p\u00fablica VAPID"
+    },
+    "vapid_private_key": {
+      "type": "string",
+      "description": "Chave privada VAPID"
+    },
+    "vapid_subject": {
+      "type": "string",
+      "description": "Subject VAPID (mailto: ou URL)"
+    }
+  },
+  "required": [
+    "vapid_public_key",
+    "vapid_private_key"
+  ]
+}

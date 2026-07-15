@@ -1,5 +1,5 @@
 // Push notification manager
-// Handles SW registration, permission requests, and system notification display
+// Handles SW registration, VAPID push subscription, permission requests, and system notification display
 
 const DB_NAME = 'profarma_sw';
 const STORE = 'config';
@@ -22,6 +22,18 @@ async function setConfig(key, value) {
     const tx = db.transaction(STORE, 'readwrite');
     tx.objectStore(STORE).put({ key, value });
   } catch { /* silent */ }
+}
+
+/** Convert base64url string to Uint8Array for Push API */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
 }
 
 /**
@@ -78,6 +90,66 @@ export async function registerServiceWorker() {
 }
 
 /**
+ * Subscribe to the Push API and register the subscription in the backend.
+ * This enables real push notifications even when the browser/app is closed
+ * (Windows desktop, Android, iOS via installed PWA).
+ */
+export async function subscribeToPush(colaborador) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+  if (!colaborador) return;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+
+    // Check if already subscribed
+    const existingSub = await reg.pushManager.getSubscription();
+    if (existingSub) {
+      // Already subscribed — ensure backend has it
+      await registerSubscriptionInBackend(colaborador, existingSub);
+      return;
+    }
+
+    // Get VAPID public key from backend
+    const serverUrl = import.meta.env.VITE_BASE44_BACKEND_URL;
+    const appId = import.meta.env.VITE_BASE44_APP_ID;
+    const response = await fetch(`${serverUrl}/apps/${appId}/functions/obterVapidPublicKey`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    const data = await response.json();
+    if (!data.publicKey) return;
+
+    const applicationServerKey = urlBase64ToUint8Array(data.publicKey);
+
+    // Subscribe to push service
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey,
+    });
+
+    // Store subscription in backend
+    await registerSubscriptionInBackend(colaborador, subscription);
+  } catch { /* silent */ }
+}
+
+async function registerSubscriptionInBackend(colaborador, subscription) {
+  try {
+    const serverUrl = import.meta.env.VITE_BASE44_BACKEND_URL;
+    const appId = import.meta.env.VITE_BASE44_APP_ID;
+    await fetch(`${serverUrl}/apps/${appId}/functions/registrarPushSubscription`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        colaborador_id: colaborador.id,
+        filial_id: colaborador.filial_id || '',
+        subscription: subscription.toJSON(),
+      }),
+    });
+  } catch { /* silent */ }
+}
+
+/**
  * Show a system notification (used when the app tab is in the background).
  * Auto-closes after 5 seconds.
  */
@@ -100,11 +172,15 @@ export async function showSystemNotification(title, body, tag) {
 }
 
 /**
- * Initialize push notifications: store context, register SW, request permission.
+ * Initialize push notifications: store context, register SW, request permission,
+ * and subscribe to push service.
  * Called after the user accepts terms or logs in.
  */
 export async function initPushNotifications(colaborador) {
   await storeUserContext(colaborador);
   await registerServiceWorker();
-  await requestNotificationPermission();
+  const permission = await requestNotificationPermission();
+  if (permission === 'granted') {
+    await subscribeToPush(colaborador);
+  }
 }

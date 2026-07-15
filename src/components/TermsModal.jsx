@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { base44 } from '@/api/base44Client';
 import { getCuritibaISO } from '@/lib/curitiba-time.js';
-import { requestNotificationPermission, storeUserContext } from '@/lib/push-manager.js';
+import { initPushNotifications } from '@/lib/push-manager.js';
 
 const TERMOS_TEXTO = `TERMOS DE USO E POLÍTICA DE PRIVACIDADE – PROFARMA LIBERAAUTO PRO
 
@@ -73,8 +73,7 @@ export default function TermsModal() {
     setOpen(false);
     // Initialize push notifications after terms acceptance
     try {
-      await storeUserContext({ ...colaborador, ...payload });
-      await requestNotificationPermission();
+      await initPushNotifications({ ...colaborador, ...payload });
     } catch (e) { /* silent */ }
   };
 
