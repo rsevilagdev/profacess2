@@ -16,7 +16,7 @@ export default function ControleVisitantes() {
   const [exportingPdf, setExportingPdf] = useState(false);
   const [search, setSearch] = useState('');
   const [saidaItem, setSaidaItem] = useState(null);
-  const [form, setForm] = useState({ numero_cracha: '', nome: '', rg: '', empresa: '', placa: '', setor_visitado: '' });
+  const [form, setForm] = useState({ numero_cracha: '', nome: '', rg: '', empresa: '', modo_acesso: 'pe', placa: '', setor_visitado: '' });
 
   const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
 
@@ -43,22 +43,26 @@ export default function ControleVisitantes() {
       const now = getCuritibaDateTime();
       const [data, horario] = now.split(' ');
       await base44.entities.ControleVisitantes.create({
-        ...form,
-        placa: form.placa.toUpperCase(),
+        numero_cracha: form.numero_cracha,
+        nome: form.nome,
+        rg: form.rg,
+        empresa: form.empresa,
+        placa: form.modo_acesso === 'veiculo' ? form.placa.toUpperCase() : '-',
+        setor_visitado: form.setor_visitado,
         data,
         horario_entrada: horario,
         vigilante: editorName,
         status: 'entrada',
-        cracha_devolvido: 'pendente',
+        cracha_devolvido: 'sim',
         filial_id: colaborador.filial_id,
         filial_nome: colaborador.filial_nome,
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
-        action: 'Entrada de visitante registrada', details: `Crach\u00e1: ${form.numero_cracha} | Nome: ${form.nome} | Empresa: ${form.empresa}`,
+        action: 'Entrada de visitante registrada', details: `Crachá: ${form.numero_cracha} | Nome: ${form.nome} | Empresa: ${form.empresa}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
-      setForm({ numero_cracha: '', nome: '', rg: '', empresa: '', placa: '', setor_visitado: '' });
+      setForm({ numero_cracha: '', nome: '', rg: '', empresa: '', modo_acesso: 'pe', placa: '', setor_visitado: '' });
       await loadRegistros();
     } catch (e) {}
     setSaving(false);
@@ -76,7 +80,7 @@ export default function ControleVisitantes() {
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
-        action: 'Sa\u00edda de visitante registrada', details: `Nome: ${item.nome} | Crach\u00e1: ${item.numero_cracha || '—'}`,
+        action: 'Saída de visitante registrada', details: `Nome: ${item.nome} | Crachá: ${item.numero_cracha || '—'}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
       setSaidaItem(null);
@@ -110,7 +114,7 @@ export default function ControleVisitantes() {
       y += 8;
 
       const colW = [22, 22, 45, 30, 35, 22, 35, 18, 18, 25, 30];
-      const headers = ['DATA', 'N\u00ba CRACH\u00c1', 'NOME', 'RG', 'EMPRESA', 'PLACA', 'SETOR VISITADO', 'ENTRADA', 'SA\u00cdDA', 'CRACH\u00c1 DEVOLVIDO?', 'VIGILANTE'];
+      const headers = ['DATA', 'Nº CRACHÁ', 'NOME', 'RG', 'EMPRESA', 'PLACA', 'SETOR VISITADO', 'ENTRADA', 'SAÍDA', 'CRACHÁ DEVOLVIDO?', 'VIGILANTE'];
 
       doc.setFillColor(220, 220, 220);
       doc.rect(m, y - 4, pw - m * 2, 6, 'F');
@@ -126,7 +130,7 @@ export default function ControleVisitantes() {
       for (const reg of filtered) {
         if (y > ph - 12) { doc.addPage(); y = 18; }
         x = m;
-        const row = [reg.data || '—', reg.numero_cracha || '—', reg.nome || '—', reg.rg || '—', reg.empresa || '—', reg.placa || '—', reg.setor_visitado || '—', reg.horario_entrada || '—', reg.horario_saida || '—', reg.cracha_devolvido === 'sim' ? 'Sim' : reg.cracha_devolvido === 'nao' ? 'N\u00e3o' : 'Pendente', reg.vigilante || '—'];
+        const row = [reg.data || '—', reg.numero_cracha || '—', reg.nome || '—', reg.rg || '—', reg.empresa || '—', reg.placa || '—', reg.setor_visitado || '—', reg.horario_entrada || '—', reg.horario_saida || '—', reg.cracha_devolvido === 'sim' ? 'Sim' : reg.cracha_devolvido === 'nao' ? 'Não' : 'Pendente', reg.vigilante || '—'];
         row.forEach((val, i) => { doc.text(String(val).substring(0, Math.floor(colW[i] / 1.8)), x + 1, y); x += colW[i]; });
         y += 5;
       }
@@ -136,7 +140,7 @@ export default function ControleVisitantes() {
         doc.setPage(i);
         doc.setFontSize(7);
         doc.setTextColor(150, 150, 150);
-        doc.text(`PROFARMA — Controle de Visitantes — P\u00e1gina ${i} de ${pc}`, pw / 2, ph - 6, { align: 'center' });
+        doc.text(`PROFARMA — Controle de Visitantes — Página ${i} de ${pc}`, pw / 2, ph - 6, { align: 'center' });
       }
       const blob = doc.output('blob');
       triggerDownload(blob, 'Controle_Visitantes.pdf');
@@ -158,7 +162,7 @@ export default function ControleVisitantes() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="brand-title text-2xl">Controle de Acesso de Visitantes</h1>
-          <p className="text-sm text-muted-foreground">Registro de entrada e sa\u00edda de visitantes e colaboradores terceiros</p>
+          <p className="text-sm text-muted-foreground">Registro de entrada e saída de visitantes e colaboradores terceiros</p>
         </div>
         <Button onClick={exportarPDF} disabled={exportingPdf || registros.length === 0} variant="secondary" className="h-12 rounded-2xl">
           {exportingPdf ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />} Exportar PDF
@@ -169,13 +173,31 @@ export default function ControleVisitantes() {
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-3">Novo Registro de Entrada</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <Field label="N\u00famero do Crach\u00e1" value={form.numero_cracha} onChange={v => setForm({...form, numero_cracha: v})} placeholder="N\u00ba do crach\u00e1" />
+          <Field label="Número do Crachá" value={form.numero_cracha} onChange={v => setForm({...form, numero_cracha: v})} placeholder="Nº do crachá" />
           <Field label="Nome *" value={form.nome} onChange={v => setForm({...form, nome: v})} placeholder="Nome do visitante" />
           <Field label="RG" value={form.rg} onChange={v => setForm({...form, rg: v})} placeholder="RG do visitante" />
           <Field label="Empresa" value={form.empresa} onChange={v => setForm({...form, empresa: v})} placeholder="Empresa" />
-          <Field label="Placa" value={form.placa} onChange={v => setForm({...form, placa: v.toUpperCase()})} placeholder="ABC1D23" />
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Modo de Acesso</label>
+            <select
+              value={form.modo_acesso}
+              onChange={e => setForm({...form, modo_acesso: e.target.value, placa: e.target.value === 'pe' ? '' : form.placa})}
+              className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="pe">A pé</option>
+              <option value="veiculo">De veículo</option>
+            </select>
+          </div>
+          {form.modo_acesso === 'veiculo' ? (
+            <Field label="Placa do Veículo *" value={form.placa} onChange={v => setForm({...form, placa: v.toUpperCase()})} placeholder="ABC1D23" />
+          ) : (
+            <div className="flex items-end">
+              <div className="w-full h-10 px-3 rounded-xl border border-input bg-muted/30 text-sm text-muted-foreground flex items-center">—</div>
+            </div>
+          )}
           <Field label="Setor Visitado" value={form.setor_visitado} onChange={v => setForm({...form, setor_visitado: v})} placeholder="Setor visitado" />
         </div>
+        <p className="text-xs text-muted-foreground mt-2">A data, horário de entrada e vigilante são preenchidos automaticamente. O crachá é marcado como devolvido ao registrar a entrada.</p>
         <Button onClick={registrarEntrada} disabled={saving || !form.nome} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />}
           Registrar Entrada
@@ -185,7 +207,7 @@ export default function ControleVisitantes() {
       {/* Busca */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, RG, empresa ou crach\u00e1..." className="w-full h-12 pl-10 pr-4 rounded-2xl border border-input bg-card text-base focus:outline-none focus:ring-2 focus:ring-ring" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, RG, empresa ou crachá..." className="w-full h-12 pl-10 pr-4 rounded-2xl border border-input bg-card text-base focus:outline-none focus:ring-2 focus:ring-ring" />
       </div>
 
       {/* Tabela */}
@@ -204,7 +226,7 @@ export default function ControleVisitantes() {
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Data', 'Crach\u00e1', 'Nome', 'RG', 'Empresa', 'Placa', 'Setor', 'Entrada', 'Sa\u00edda', 'Crach\u00e1 Devolvido?', 'Vigilante', ''].map(h => (
+                  {['Data', 'Crachá', 'Nome', 'RG', 'Empresa', 'Placa', 'Setor', 'Entrada', 'Saída', 'Crachá Devolvido?', 'Vigilante', ''].map(h => (
                     <th key={h} className="text-left px-3 py-2 border-b border-border bg-secondary font-medium text-xs whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -223,7 +245,7 @@ export default function ControleVisitantes() {
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.horario_saida || '—'}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded-full ${reg.cracha_devolvido === 'sim' ? 'bg-primary/10 text-primary' : reg.cracha_devolvido === 'nao' ? 'bg-destructive/10 text-destructive' : 'bg-orange-500/10 text-orange-600'}`}>
-                        {reg.cracha_devolvido === 'sim' ? 'Sim' : reg.cracha_devolvido === 'nao' ? 'N\u00e3o' : 'Pendente'}
+                        {reg.cracha_devolvido === 'sim' ? 'Sim' : reg.cracha_devolvido === 'nao' ? 'Não' : 'Pendente'}
                       </span>
                     </td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.vigilante || '—'}</td>
@@ -231,7 +253,7 @@ export default function ControleVisitantes() {
                       {reg.status === 'entrada' && (
                         <Button size="sm" className="h-7 rounded-lg text-xs" disabled={saindo === reg.id} onClick={() => setSaidaItem(reg)}>
                           {saindo === reg.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogOut className="h-3 w-3" />}
-                          Sa\u00edda
+                          Saída
                         </Button>
                       )}
                     </td>
@@ -250,20 +272,20 @@ export default function ControleVisitantes() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <LogOut className="h-5 w-5 text-primary" />
-                <h2 className="font-heading font-bold text-lg">Registrar Sa\u00edda</h2>
+                <h2 className="font-heading font-bold text-lg">Registrar Saída</h2>
               </div>
               <button onClick={() => setSaidaItem(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
                 <X className="h-4 w-4" />
               </button>
             </div>
             <p className="text-sm text-muted-foreground mb-3">
-              Confirmar a sa\u00edda de <span className="font-medium text-foreground">{saidaItem.nome}</span> e devolu\u00e7\u00e3o do crach\u00e1?
+              Confirmar a saída de <span className="font-medium text-foreground">{saidaItem.nome}</span> e devolução do crachá?
             </p>
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => setSaidaItem(null)}>Cancelar</Button>
               <Button className="flex-1 h-11 rounded-xl" disabled={saindo === saidaItem.id} onClick={() => registrarSaida(saidaItem)}>
                 {saindo === saidaItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                Confirmar Sa\u00edda
+                Confirmar Saída
               </Button>
             </div>
           </div>
