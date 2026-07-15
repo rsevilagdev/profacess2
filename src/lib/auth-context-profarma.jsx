@@ -22,21 +22,45 @@ export function ProfarmaAuthProvider({ children }) {
     setLoading(false);
   }, []);
 
+  // Re-fetch current user's record and update local session
+  const refreshPermissions = async () => {
+    if (!colaboradorIdRef.current) return;
+    try {
+      const updated = await base44.entities.Colaborador.get(colaboradorIdRef.current);
+      const current = JSON.parse(localStorage.getItem('profarma_colaborador') || '{}');
+      const merged = { ...current, ...updated, filial_id: current.filial_id, filial_nome: current.filial_nome, filiais_permitidas: current.filiais_permitidas };
+      localStorage.setItem('profarma_colaborador', JSON.stringify(merged));
+      setColaborador(merged);
+    } catch (e) { /* silent */ }
+  };
+
   // Realtime subscription: auto-sync permissions when admin changes this user's record
   useEffect(() => {
     const unsub = base44.entities.Colaborador.subscribe(async (event) => {
       if (!colaboradorIdRef.current) return;
       const changedId = event.data?.id;
       if (changedId !== colaboradorIdRef.current) return;
-      try {
-        const updated = await base44.entities.Colaborador.get(colaboradorIdRef.current);
-        const current = JSON.parse(localStorage.getItem('profarma_colaborador') || '{}');
-        const merged = { ...current, ...updated, filial_id: current.filial_id, filial_nome: current.filial_nome, filiais_permitidas: current.filiais_permitidas };
-        localStorage.setItem('profarma_colaborador', JSON.stringify(merged));
-        setColaborador(merged);
-      } catch (e) { /* silent */ }
+      refreshPermissions();
     });
     return unsub;
+  }, []);
+
+  // Polling: refresh permissions every 30 seconds (fallback for realtime)
+  useEffect(() => {
+    const interval = setInterval(refreshPermissions, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Refresh on window focus (user switches back to the app)
+  useEffect(() => {
+    const onFocus = () => refreshPermissions();
+    const onVisibility = () => { if (!document.hidden) refreshPermissions(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   const login = (colaboradorData) => {
