@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User, LogIn } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { getCuritibaISO, formatCuritiba } from '@/lib/curitiba-time.js';
@@ -11,7 +11,7 @@ const COLUMNS = [
   { id: 'bloqueado', title: 'Bloqueado', icon: AlertTriangle, color: 'text-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive' },
 ];
 
-export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberarSaida }) {
+export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, onLiberarSaida }) {
   const [moving, setMoving] = useState(null);
   const [blocking, setBlocking] = useState(null);
   const [motivo, setMotivo] = useState('');
@@ -19,8 +19,10 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   const [liberando, setLiberando] = useState(null);
   const [liberandoItem, setLiberandoItem] = useState(null);
   const [liberandoObs, setLiberandoObs] = useState('');
+  const [reEntering, setReEntering] = useState(null);
 
-  const canApprove = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
+  const canApproveBlock = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
+  const canLiberar = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
 
   // Itens liberados (tipo='saida') saem do kanban de fluxo
   const activeAcessos = acessos.filter(a => a.tipo !== 'saida');
@@ -31,7 +33,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
   }, {});
 
   const onDragEnd = async (result) => {
-    if (!canApprove) return;
+    if (!canApproveBlock) return;
     if (!result.destination) return;
     const { draggableId, destination } = result;
     const newStatus = destination.droppableId;
@@ -115,6 +117,24 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
     setBlocking(null); setMotivo(''); setMoving(null);
   };
 
+  const reEntry = async (item) => {
+    setReEntering(item.id);
+    try {
+      await base44.entities.AccessLog.create({
+        veiculo_placa: item.veiculo_placa, motorista_nome: item.motorista_nome || '', motorista_cpf: item.motorista_cpf || '',
+        filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome, tipo: 'entrada', status: 'validado',
+        empresa: item.empresa || '', operador_nome: colaborador.nome, operador_cpf: colaborador.cpf,
+      });
+      await base44.entities.AuditLog.create({
+        user_name: colaborador.nome, user_cpf: colaborador.cpf,
+        action: 'Re-entrada de veículo', details: `Placa: ${item.veiculo_placa} | Motorista: ${item.motorista_nome || '—'}`,
+        ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
+      });
+      onRefresh();
+    } catch (e) {}
+    setReEntering(null);
+  };
+
   const logApproval = async (id, newStatus, allAcessos, blockReason) => {
     const log = allAcessos.find(a => a.id === id);
     if (!log) return;
@@ -150,7 +170,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
     <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-heading font-bold">Kanban de Veículos — Fluxo de Aprovação</h3>
-        {!canApprove && (
+        {!canApproveBlock && (
           <span className="text-xs text-muted-foreground bg-muted px-3 py-1 rounded-full flex items-center gap-1">
             <ShieldCheck className="h-3 w-3" /> Apenas administradores podem autorizar/bloquear
           </span>
@@ -168,17 +188,17 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                   <span className="text-sm font-medium">{col.title}</span>
                   <span className="ml-auto text-xs bg-card px-2 py-0.5 rounded-full font-medium">{items.length}</span>
                 </div>
-                <Droppable droppableId={col.id} isDropDisabled={!canApprove}>
+                <Droppable droppableId={col.id} isDropDisabled={!canApproveBlock}>
                   {(provided) => (
                     <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2 min-h-[120px]">
                       {items.map((item, idx) => (
-                        <Draggable key={item.id} draggableId={item.id} index={idx} isDragDisabled={!canApprove}>
+                        <Draggable key={item.id} draggableId={item.id} index={idx} isDragDisabled={!canApproveBlock}>
                           {(prov) => (
                             <div
                               ref={prov.innerRef}
                               {...prov.draggableProps}
                               {...prov.dragHandleProps}
-                              className={`bg-card rounded-xl p-3 border border-border shadow-sm ${canApprove ? 'cursor-grab active:cursor-grabbing' : ''} ${moving === item.id ? 'opacity-50' : ''}`}
+                              className={`bg-card rounded-xl p-3 border border-border shadow-sm ${canApproveBlock ? 'cursor-grab active:cursor-grabbing' : ''} ${moving === item.id ? 'opacity-50' : ''}`}
                             >
                               <div className="flex items-center gap-2">
                                 <div className={`h-2 w-2 rounded-full ${col.dot}`} />
@@ -198,7 +218,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                               )}
 
                               {/* Approval actions on pending items */}
-                              {col.id === 'pendente_revisao' && canApprove && (
+                              {col.id === 'pendente_revisao' && canApproveBlock && (
                                 <div className="flex gap-1.5 mt-2">
                                   <Button
                                     size="sm"
@@ -238,7 +258,7 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
                               )}
 
                               {/* Liberar saída — pergunta se vazio ou carregado */}
-                              {col.id === 'validado' && canApprove && item.source !== 'vehicle' && (
+                              {col.id === 'validado' && canLiberar && item.source !== 'vehicle' && (
                                 <Button
                                   size="sm"
                                   className="h-7 w-full rounded-lg text-xs mt-2"
@@ -267,6 +287,38 @@ export default function KanbanBoard({ acessos, onRefresh, colaborador, onLiberar
           })}
         </div>
       </DragDropContext>
+
+      {/* Veículos que já deram saída — re-entrada */}
+      {saidas && saidas.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <LogIn className="h-4 w-4 text-muted-foreground" />
+            <h4 className="text-sm font-medium">Veículos que já deram saída — Re-entrada</h4>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {saidas.map(item => (
+              <div key={item.id} className="bg-muted/50 rounded-xl p-3 border border-border">
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-2 rounded-full bg-muted-foreground" />
+                  <p className="text-sm font-medium">{item.veiculo_placa}</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{item.motorista_nome || '—'}</p>
+                {item.empresa && <p className="text-xs text-muted-foreground">{item.empresa}</p>}
+                <p className="text-xs text-muted-foreground mt-1">Saída: {formatCuritiba(item.data_aprovacao || item.created_date, { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                <Button
+                  size="sm"
+                  className="h-8 w-full rounded-lg text-xs mt-2"
+                  disabled={reEntering === item.id}
+                  onClick={() => reEntry(item)}
+                >
+                  {reEntering === item.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <LogIn className="h-3 w-3" />}
+                  Dar Entrada
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Liberar saída — vazio ou carregado */}
       {liberandoItem && (

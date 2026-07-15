@@ -19,6 +19,7 @@ export default function NovoAcesso() {
   const [veiculo, setVeiculo] = useState(null);
   const [motorista, setMotorista] = useState(null);
   const [acessos, setAcessos] = useState([]);
+  const [saidas, setSaidas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
   const [showRevision, setShowRevision] = useState(false);
@@ -146,11 +147,13 @@ export default function NovoAcesso() {
 
   const loadAcessos = async () => {
     try {
-      const [logs, pendingVehicles, blockedVehicles] = await Promise.all([
+      const [logs, saidaLogs, pendingVehicles, blockedVehicles] = await Promise.all([
         base44.entities.AccessLog.filter({ tipo: 'entrada' }, '-created_date', 200).catch(() => []),
+        base44.entities.AccessLog.filter({ tipo: 'saida' }, '-created_date', 20).catch(() => []),
         base44.entities.Vehicle.filter({ status: 'pendente_revisao' }).catch(() => []),
         base44.entities.Vehicle.filter({ status: 'bloqueado' }).catch(() => []),
       ]);
+      setSaidas(saidaLogs);
 
       // Merge: vehicles without a corresponding AccessLog entry appear as Kanban items
       const logPlacas = new Set(logs.map(l => (l.veiculo_placa || '').toUpperCase().trim()));
@@ -527,7 +530,7 @@ export default function NovoAcesso() {
       )}
 
       {/* Kanban */}
-      <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} onLiberarSaida={liberarSaida} />
+      <KanbanBoard acessos={acessos} saidas={saidas} onRefresh={loadAcessos} colaborador={colaborador} onLiberarSaida={liberarSaida} />
 
       {/* Dialog: Cadastro (operador) */}
       {showCadastroDialog && (
