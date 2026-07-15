@@ -1,11 +1,40 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Truck, User, X, Clock, Ban, CheckCircle, Loader2, FileText } from 'lucide-react';
+import { Truck, User, X, Save, Loader2, FileText } from 'lucide-react';
 import { formatCPF } from '@/lib/cpf-utils.js';
 
 export default function ReviewDialog({ review, onDecide, loading, onClose }) {
+  const raw = review?.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
+
+  const [vPlaca, setVPlaca] = useState(raw.veiculo?.placa || raw.veiculo_existente?.placa || '');
+  const [vModelo, setVModelo] = useState(raw.veiculo?.modelo || '');
+  const [mNome, setMNome] = useState(raw.motorista?.nome || raw.motorista_existente?.nome || '');
+  const [mCpf, setMCpf] = useState(raw.motorista?.cpf || raw.motorista_existente?.cpf || '');
+  const [status, setStatus] = useState('validado');
+
+  const hasVeiculo = !!raw.veiculo;
+  const hasVeiculoExistente = !!raw.veiculo_existente;
+  const hasMotorista = !!raw.motorista;
+  const hasMotoristaExistente = !!raw.motorista_existente;
+
   if (!review) return null;
 
-  const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
+  const handleSave = () => {
+    const editedData = {};
+    if (hasVeiculo) {
+      editedData.veiculo = { placa: vPlaca.toUpperCase(), modelo: vModelo };
+    }
+    if (hasVeiculoExistente) {
+      editedData.veiculo_existente = { id: raw.veiculo_existente.id, placa: vPlaca.toUpperCase(), status: raw.veiculo_existente.status };
+    }
+    if (hasMotorista) {
+      editedData.motorista = { nome: mNome, cpf: mCpf.replace(/\D/g, '') };
+    }
+    if (hasMotoristaExistente) {
+      editedData.motorista_existente = { id: raw.motorista_existente.id, cpf: mCpf.replace(/\D/g, ''), nome: mNome, status: raw.motorista_existente.status };
+    }
+    onDecide(status, editedData);
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
@@ -26,65 +55,62 @@ export default function ReviewDialog({ review, onDecide, loading, onClose }) {
           <p className="text-xs text-muted-foreground mt-1">{review.motivo}</p>
         </div>
 
-        {/* Novo veículo */}
-        {dados.veiculo && (
+        {/* Veículo */}
+        {(hasVeiculo || hasVeiculoExistente) && (
           <div className="mb-3 p-3 rounded-xl border border-border">
             <div className="flex items-center gap-2 mb-2">
               <Truck className="h-4 w-4 text-primary" />
-              <p className="text-sm font-medium">Veículo — {dados.veiculo.placa}</p>
+              <p className="text-sm font-medium">{hasVeiculoExistente ? 'Veículo Existente' : 'Veículo'}</p>
+              {hasVeiculoExistente && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500">{raw.veiculo_existente.status}</span>}
             </div>
-            <p className="text-xs text-muted-foreground">Modelo: {dados.veiculo.modelo || '—'}</p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Placa</label>
+                <input value={vPlaca} onChange={e => setVPlaca(e.target.value.toUpperCase())} className="h-10 px-3 w-full rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Modelo</label>
+                <input value={vModelo} onChange={e => setVModelo(e.target.value)} placeholder="Modelo" className="h-10 px-3 w-full rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Veículo existente */}
-        {dados.veiculo_existente && (
-          <div className="mb-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
-            <div className="flex items-center gap-2 mb-1">
-              <Truck className="h-4 w-4 text-orange-500" />
-              <p className="text-sm font-medium">Veículo Existente — {dados.veiculo_existente.placa}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Status atual: <span className="font-medium">{dados.veiculo_existente.status}</span></p>
-          </div>
-        )}
-
-        {/* Novo motorista */}
-        {dados.motorista && (
+        {/* Motorista */}
+        {(hasMotorista || hasMotoristaExistente) && (
           <div className="mb-3 p-3 rounded-xl border border-border">
             <div className="flex items-center gap-2 mb-2">
               <User className="h-4 w-4 text-primary" />
-              <p className="text-sm font-medium">Motorista</p>
+              <p className="text-sm font-medium">{hasMotoristaExistente ? 'Motorista Existente' : 'Motorista'}</p>
+              {hasMotoristaExistente && <span className="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500">{raw.motorista_existente.status}</span>}
             </div>
-            <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-              <p><span className="text-foreground/60">Nome:</span> {dados.motorista.nome || '—'}</p>
-              <p><span className="text-foreground/60">CPF:</span> {formatCPF(dados.motorista.cpf) || '—'}</p>
+            <div className="grid sm:grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Nome</label>
+                <input value={mNome} onChange={e => setMNome(e.target.value)} className="h-10 px-3 w-full rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">CPF</label>
+                <input value={formatCPF(mCpf)} onChange={e => setMCpf(e.target.value)} maxLength={14} className="h-10 px-3 w-full rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
             </div>
           </div>
         )}
 
-        {/* Motorista existente */}
-        {dados.motorista_existente && (
-          <div className="mb-3 p-3 rounded-xl border border-orange-500/20 bg-orange-500/5">
-            <div className="flex items-center gap-2 mb-1">
-              <User className="h-4 w-4 text-orange-500" />
-              <p className="text-sm font-medium">Motorista Existente</p>
-            </div>
-            <p className="text-xs text-muted-foreground">Nome: {dados.motorista_existente.nome}</p>
-            <p className="text-xs text-muted-foreground">CPF: {formatCPF(dados.motorista_existente.cpf)}</p>
-            <p className="text-xs text-muted-foreground">Status atual: <span className="font-medium">{dados.motorista_existente.status}</span></p>
-          </div>
-        )}
+        {/* Status dropdown */}
+        <div className="mb-4">
+          <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
+          <select value={status} onChange={e => setStatus(e.target.value)} className="h-10 px-3 w-full rounded-lg border border-input bg-card text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+            <option value="validado">Validado</option>
+            <option value="bloqueado">Bloqueado</option>
+          </select>
+        </div>
 
-        <div className="space-y-2 mt-4">
-          <p className="text-xs font-medium text-muted-foreground text-center mb-2">Escolha uma das opções abaixo:</p>
-          <Button variant="secondary" className="h-11 rounded-xl w-full" disabled={loading} onClick={() => onDecide('pendente')}>
-            <Clock className="h-4 w-4" /> Manter Pendente
-          </Button>
-          <Button variant="destructive" className="h-11 rounded-xl w-full" disabled={loading} onClick={() => onDecide('bloqueado')}>
-            <Ban className="h-4 w-4" /> Bloquear
-          </Button>
-          <Button className="h-11 rounded-xl w-full" disabled={loading} onClick={() => onDecide('validado')}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />} Validar
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={onClose}>Cancelar</Button>
+          <Button className="flex-1 h-11 rounded-xl" disabled={loading} onClick={handleSave}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
           </Button>
         </div>
       </div>

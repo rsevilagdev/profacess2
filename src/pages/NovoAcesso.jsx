@@ -48,57 +48,51 @@ export default function NovoAcesso() {
     } catch (e) {}
   };
 
-  const decideReview = async (review, decision) => {
+  const decideReview = async (review, decision, editedData) => {
     setDecidingReview(true);
     try {
-      const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
+      const dados = editedData || {};
 
-      if (decision === 'validado' || decision === 'bloqueado') {
-        if (dados.veiculo) {
-          await base44.entities.Vehicle.create({
-            ...dados.veiculo,
-            status: decision,
-            filial_id: colaborador.filial_id,
-            filial_nome: colaborador.filial_nome
-          });
-        }
-        if (dados.motorista) {
-          await base44.entities.Driver.create({
-            ...dados.motorista,
-            status: decision,
-            filial_id: colaborador.filial_id,
-            filial_nome: colaborador.filial_nome
-          });
-        }
-        if (dados.veiculo_existente) {
-          await base44.entities.Vehicle.update(dados.veiculo_existente.id, { status: decision });
-        }
-        if (dados.motorista_existente) {
-          await base44.entities.Driver.update(dados.motorista_existente.id, { status: decision });
-        }
-        await base44.entities.ReviewRequest.update(review.id, {
-          status: 'aprovado',
-          observacao: `Decisão: ${decision} — por ${colaborador.nome}`
-        });
-        try {
-          const colab = await base44.entities.Colaborador.list();
-          const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
-          if (solicitante) {
-            await base44.entities.Notification.create({
-              title: decision === 'validado' ? 'Cadastro Validado' : 'Cadastro Bloqueado',
-              message: decision === 'validado'
-                ? `Sua solicitação foi VALIDADA. Busque novamente a placa/CPF para registrar o acesso.`
-                : `Sua solicitação foi BLOQUEADA pelo revisor.`,
-              type: 'driver_docs', sender_name: colaborador.nome,
-              target_user_id: solicitante.id, branch_id: review.filial_id
-            });
-          }
-        } catch (e) {}
-      } else {
-        await base44.entities.ReviewRequest.update(review.id, {
-          observacao: `Em revisão — visualizado por ${colaborador.nome}`
+      if (dados.veiculo) {
+        await base44.entities.Vehicle.create({
+          ...dados.veiculo,
+          status: decision,
+          filial_id: colaborador.filial_id,
+          filial_nome: colaborador.filial_nome
         });
       }
+      if (dados.motorista) {
+        await base44.entities.Driver.create({
+          ...dados.motorista,
+          status: decision,
+          filial_id: colaborador.filial_id,
+          filial_nome: colaborador.filial_nome
+        });
+      }
+      if (dados.veiculo_existente) {
+        await base44.entities.Vehicle.update(dados.veiculo_existente.id, { status: decision, placa: dados.veiculo_existente.placa });
+      }
+      if (dados.motorista_existente) {
+        await base44.entities.Driver.update(dados.motorista_existente.id, { status: decision, nome: dados.motorista_existente.nome, cpf: dados.motorista_existente.cpf });
+      }
+      await base44.entities.ReviewRequest.update(review.id, {
+        status: 'aprovado',
+        observacao: `Decisão: ${decision} — por ${colaborador.nome}`
+      });
+      try {
+        const colab = await base44.entities.Colaborador.list();
+        const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
+        if (solicitante) {
+          await base44.entities.Notification.create({
+            title: decision === 'validado' ? 'Cadastro Validado' : 'Cadastro Bloqueado',
+            message: decision === 'validado'
+              ? `Sua solicitação foi VALIDADA. Busque novamente a placa/CPF para registrar o acesso.`
+              : `Sua solicitação foi BLOQUEADA pelo revisor.`,
+            type: 'driver_docs', sender_name: colaborador.nome,
+            target_user_id: solicitante.id, branch_id: review.filial_id
+          });
+        }
+      } catch (e) {}
 
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
@@ -460,7 +454,7 @@ export default function NovoAcesso() {
 
       {/* Dialog: Revisão (admin/supervisor/gestor) */}
       {reviewDialogItem && (
-        <ReviewDialog review={reviewDialogItem} onDecide={(decision) => decideReview(reviewDialogItem, decision)} loading={decidingReview} onClose={() => setReviewDialogItem(null)} />
+        <ReviewDialog review={reviewDialogItem} onDecide={(decision, editedData) => decideReview(reviewDialogItem, decision, editedData)} loading={decidingReview} onClose={() => setReviewDialogItem(null)} />
       )}
     </div>
   );
