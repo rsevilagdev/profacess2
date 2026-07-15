@@ -1,6 +1,31 @@
 import { useState, useMemo } from 'react';
-import { Loader2, X, Check, ChevronDown } from 'lucide-react';
+import { Loader2, X, Check, ChevronDown, FileText, FileSpreadsheet, Printer } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { exportTableToPDF, exportTableToExcel } from '@/lib/modelo-export-utils';
+
+const FORN_HEADERS = [
+  'Transportadora', 'Placa', 'Motorista', 'RG/CPF',
+  'Entrada Data', 'Entrada Horário', 'Entrada Liberado por',
+  'Saída Data', 'Saída Horário', 'Saída Liberado por', 'Status'
+];
+
+const FORN_COL_WEIGHTS = [28, 14, 24, 22, 16, 16, 24, 16, 16, 24, 14];
+
+function buildFornRow(reg) {
+  return [
+    reg.transportadora || '',
+    reg.placa || '',
+    reg.motorista || '',
+    reg.rg_cpf || '',
+    reg.entrada_data || '',
+    reg.entrada_horario || '',
+    reg.entrada_liberado_por || '',
+    reg.saida_data || '',
+    reg.saida_horario || '',
+    reg.saida_liberado_por || '',
+    reg.status || '',
+  ];
+}
 
 const FILTER_FIELDS = [
   { key: 'transportadora', label: 'Transportadora' },
@@ -192,7 +217,7 @@ export default function ControleFornecedoresReport() {
             />
           ))}
         </div>
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3 items-center">
           <button
             onClick={loadAndGerar}
             disabled={loading}
@@ -202,9 +227,42 @@ export default function ControleFornecedoresReport() {
             {generated ? 'Atualizar Dados' : 'Gerar Relatório'}
           </button>
           {generated && !loading && (
-            <span className="text-xs text-muted-foreground self-center">
+            <span className="text-xs text-muted-foreground self-center mr-auto">
               {filtered.length} registro(s) exibido(s) de {registros.length} total
             </span>
+          )}
+          {generated && !loading && filtered.length > 0 && (
+            <div className="flex gap-2">
+              <button
+                onClick={() => exportTableToPDF({
+                  title: 'Controle de Entrada e Saída de Fornecedores',
+                  headers: FORN_HEADERS,
+                  rows: filtered.map(buildFornRow),
+                  columnWeights: FORN_COL_WEIGHTS,
+                  fileName: 'controle_fornecedores.pdf',
+                })}
+                className="h-10 px-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 flex items-center gap-1.5"
+              >
+                <FileText className="h-4 w-4" /> PDF
+              </button>
+              <button
+                onClick={() => exportTableToExcel({
+                  headers: FORN_HEADERS,
+                  rows: filtered.map(buildFornRow),
+                  fileName: 'controle_fornecedores.xlsx',
+                  sheetName: 'Fornecedores',
+                })}
+                className="h-10 px-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 flex items-center gap-1.5"
+              >
+                <FileSpreadsheet className="h-4 w-4" /> Excel
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="h-10 px-3 rounded-xl bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 flex items-center gap-1.5"
+              >
+                <Printer className="h-4 w-4" /> Imprimir
+              </button>
+            </div>
           )}
         </div>
       </div>
