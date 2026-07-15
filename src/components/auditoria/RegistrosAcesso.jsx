@@ -165,7 +165,7 @@ export default function RegistrosAcesso() {
                         {r.empresa && ` · ${r.empresa}`}
                       </p>
                       <div className="flex flex-wrap gap-3 mt-1 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(r.created_date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {new Date(r.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
                         {(tab === 'crdk' ? r.horario_entrada : r.tipo) && tab === 'crdk' && <span>Entrada: {r.horario_entrada}</span>}
                         {tab === 'crdk' && r.horario_saida && <span>Saída: {r.horario_saida}</span>}
                         {r.filial_nome && <span>{r.filial_nome}</span>}

@@ -42,7 +42,7 @@ export default function SmartDashboard() {
   const trendData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - (6 - i));
     const ds = d.toDateString();
-    return { day: d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''), acessos: logs.filter(l => new Date(l.created_date).toDateString() === ds).length };
+    return { day: d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).replace('.', ''), acessos: logs.filter(l => new Date(l.created_date).toDateString() === ds).length };
   });
   const statusData = ['validado', 'bloqueado', 'pendente_revisao'].map(s => ({
     name: s === 'validado' ? 'Validado' : s === 'bloqueado' ? 'Bloqueado' : 'Pendente',

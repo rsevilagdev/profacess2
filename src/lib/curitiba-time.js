@@ -15,7 +15,7 @@ export function getCuritibaNow() {
  * Use this for all database timestamp fields.
  */
 export function getCuritibaISO() {
-  return getCuritibaNow().toISOString();
+  return new Date().toISOString();
 }
 
 /**

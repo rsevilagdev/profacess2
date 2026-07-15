@@ -57,11 +57,11 @@ export default function PainelRelatorios() {
     for (let i = period - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const key = d.toLocaleDateString('pt-BR', { day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
+      const key = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
       days[key] = { dia: key, liberado: 0, bloqueado: 0 };
     }
     periodLogs.forEach(l => {
-      const key = new Date(l.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
+      const key = new Date(l.created_date).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: period <= 7 ? 'short' : '2-digit' });
       if (days[key]) {
         if (l.status === 'validado') days[key].liberado++;
         else if (l.status === 'bloqueado') days[key].bloqueado++;

@@ -95,7 +95,7 @@ export default function Modelos() {
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
       const period = `${dataInicio || 'Início'} a ${dataFim || 'Fim'}`;
-      doc.text(`Período: ${period} | Gerado em ${new Date().toLocaleString('pt-BR')}`, pw / 2, y, { align: 'center' });
+      doc.text(`Período: ${period} | Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`, pw / 2, y, { align: 'center' });
       y += 8;
 
       for (const log of logs) {

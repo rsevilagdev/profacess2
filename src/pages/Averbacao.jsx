@@ -306,7 +306,7 @@ export default function Averbacao() {
           if (d) {
             const mesNome = MESES[d.getMonth()];
             const diaStr = String(d.getDate()).padStart(2, '0');
-            const dataRef = d.toLocaleDateString('pt-BR');
+            const dataRef = d.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
             const key = `${mesNome}_${diaStr}`;
             if (!dateGroups[key]) {
               dateGroups[key] = { mes: mesNome, dia: diaStr, dataRef, total: 0 };

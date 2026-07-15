@@ -56,7 +56,7 @@ export default function TermsModal() {
 
   const handleAccept = async () => {
     if (!checked) return;
-    const data = new Date().toLocaleDateString('pt-BR');
+    const data = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
     updateColaborador({ termos_aceitos: true, termos_data: data });
     try {
       await base44.entities.Colaborador.update(colaborador.id, { termos_aceitos: true, termos_data: data });

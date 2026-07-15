@@ -7,7 +7,7 @@ const HEADERS = [
 
 function formatData(iso) {
   if (!iso) return '';
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return new Date(iso).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
 export default function ControleVeiculosRecebimento({ logs, loading }) {

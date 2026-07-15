@@ -143,7 +143,7 @@ export default function AcessoCRDK() {
         try {
           await base44.functions.invoke('enviarParaGoogleSheets', {
             spreadsheet_id: spreadsheetId,
-            dados: [placaCompleta, saidaItem.nome, saidaItem.empresa || '—', saidaItem.destino || '—', saidaItem.horario_entrada || '—', hora, saidaObs.trim(), new Date().toLocaleString('pt-BR')]
+            dados: [placaCompleta, saidaItem.nome, saidaItem.empresa || '—', saidaItem.destino || '—', saidaItem.horario_entrada || '—', hora, saidaObs.trim(), new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })]
           });
         } catch (e) {}
       }
@@ -184,7 +184,7 @@ export default function AcessoCRDK() {
       y += 5;
       doc.setFontSize(9);
       doc.setTextColor(100, 100, 100);
-      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR')} por ${colaborador.nome}`, pw / 2, y, { align: 'center' });
+      doc.text(`Gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} por ${colaborador.nome}`, pw / 2, y, { align: 'center' });
       y += 8;
 
       for (const reg of registros) {

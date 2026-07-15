@@ -116,7 +116,7 @@ export default function Dashboard() {
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-medium capitalize">{log.status}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(log.created_date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+                  <p className="text-xs text-muted-foreground">{new Date(log.created_date).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' })}</p>
                 </div>
               </div>
             ))}
