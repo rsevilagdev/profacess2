@@ -59,6 +59,15 @@
     @apply bg-background text-foreground font-body antialiased;
     font-size: var(--font-size-base);
   }
+
+  input[type="text"],
+  input[type="search"],
+  input[type="tel"],
+  input:not([type]),
+  textarea,
+  select {
+    text-transform: uppercase;
+  }
 }
 
 @layer utilities {
