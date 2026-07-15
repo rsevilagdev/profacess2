@@ -34,7 +34,7 @@ export function ProfarmaAuthProvider({ children }) {
     setColaborador(updated);
   };
 
-  const OPERATOR_ALWAYS_PAGES = ['/acessos', '/acesso-crdk', '/verificacao-rapida'];
+  const OPERATOR_ALWAYS_PAGES = ['/acessos', '/acesso-crdk', '/verificacao-rapida', '/notificacoes'];
 
   const canAccessPage = (pagePath) => {
     if (!colaborador) return false;
