@@ -6,6 +6,7 @@ import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpe
 import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
 import AverbacaoReport from '@/components/modelos/AverbacaoReport';
 import ControleFornecedoresReport from '@/components/modelos/ControleFornecedoresReport';
+import ControleVisitantesReport from '@/components/modelos/ControleVisitantesReport';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -40,6 +41,12 @@ const TEMPLATES = [
     icon: Users,
     description: 'Formulário de controle de entrada e saída de transportadoras com filtros de seleção múltipla',
   },
+  {
+    id: 'controle_visitantes',
+    name: 'Controle de Acesso de Visitantes',
+    icon: Users,
+    description: 'Relatório de controle de acesso de visitantes com filtros de seleção múltipla e exportação PDF/Excel',
+  },
 ];
 
 export default function Modelos() {
@@ -54,6 +61,7 @@ export default function Modelos() {
 
   const isAverbacao = selectedTemplate === 'averbacao_mensal' || selectedTemplate === 'averbacao_semestral';
   const isFornecedores = selectedTemplate === 'controle_fornecedores';
+  const isVisitantes = selectedTemplate === 'controle_visitantes';
 
   const gerar = async () => {
     setLoading(true);
@@ -122,6 +130,15 @@ export default function Modelos() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading font-bold text-sm">Controle de Fornecedores</h3>
+              <p className="text-xs text-muted-foreground">Os filtros e botões de exportação estão no relatório abaixo</p>
+            </div>
+          </div>
+        </div>
+      ) : isVisitantes ? (
+        <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading font-bold text-sm">Controle de Acesso de Visitantes</h3>
               <p className="text-xs text-muted-foreground">Os filtros e botões de exportação estão no relatório abaixo</p>
             </div>
           </div>
@@ -200,6 +217,9 @@ export default function Modelos() {
       )}
       {isFornecedores && (
         <ControleFornecedoresReport />
+      )}
+      {isVisitantes && (
+        <ControleVisitantesReport />
       )}
     </div>
   );
