@@ -36,6 +36,8 @@ import Modelos from '@/pages/Modelos';
 import AcessoCRDK from '@/pages/AcessoCRDK';
 import VerificacaoRapida from '@/pages/VerificacaoRapida';
 import Averbacao from '@/pages/Averbacao';
+import ControleFornecedores from '@/pages/ControleFornecedores';
+import ControleVisitantes from '@/pages/ControleVisitantes';
 import AppLayout from '@/components/layout/AppLayout';
 
 function App() {
@@ -75,6 +77,8 @@ function App() {
                 <Route path="/acesso-crdk" element={<AcessoCRDK />} />
                 <Route path="/verificacao-rapida" element={<VerificacaoRapida />} />
                 <Route path="/averbacao" element={<Averbacao />} />
+                <Route path="/controle-fornecedores" element={<ControleFornecedores />} />
+                <Route path="/controle-visitantes" element={<ControleVisitantes />} />
               </Route>
               <Route path="*" element={<PageNotFound />} />
             </Routes>

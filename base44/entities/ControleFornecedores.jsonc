@@ -1,0 +1,71 @@
+{
+  "name": "ControleFornecedores",
+  "type": "object",
+  "properties": {
+    "transportadora": {
+      "type": "string",
+      "description": "Nome da transportadora"
+    },
+    "placa": {
+      "type": "string",
+      "description": "Placa do ve\u00edculo"
+    },
+    "motorista": {
+      "type": "string",
+      "description": "Nome do motorista"
+    },
+    "rg_cpf": {
+      "type": "string",
+      "description": "RG ou CPF do motorista"
+    },
+    "entrada_data": {
+      "type": "string",
+      "description": "Data de entrada"
+    },
+    "entrada_horario": {
+      "type": "string",
+      "description": "Hor\u00e1rio de entrada"
+    },
+    "entrada_liberado_por": {
+      "type": "string",
+      "description": "Quem liberou a entrada"
+    },
+    "saida_data": {
+      "type": "string",
+      "description": "Data de sa\u00edda"
+    },
+    "saida_horario": {
+      "type": "string",
+      "description": "Hor\u00e1rio de sa\u00edda"
+    },
+    "saida_liberado_por": {
+      "type": "string",
+      "description": "Quem liberou a sa\u00edda"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "entrada",
+        "saida"
+      ],
+      "default": "entrada",
+      "description": "Status do registro"
+    },
+    "filial_id": {
+      "type": "string",
+      "description": "ID da filial"
+    },
+    "filial_nome": {
+      "type": "string",
+      "description": "Nome da filial"
+    },
+    "operador_nome": {
+      "type": "string",
+      "description": "Nome do operador"
+    }
+  },
+  "required": [
+    "transportadora",
+    "placa"
+  ]
+}
