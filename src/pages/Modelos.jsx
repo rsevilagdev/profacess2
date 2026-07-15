@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Printer, Loader2, LayoutGrid, Calendar, Truck, Download, FileSpreadsheet } from 'lucide-react';
+import { Printer, Loader2, LayoutGrid, Calendar, Truck, Download, FileSpreadsheet, Users } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { triggerDownload } from '@/lib/export-utils';
 import ControleVeiculosExpedicao from '@/components/modelos/ControleVeiculosExpedicao';
 import ControleVeiculosRecebimento from '@/components/modelos/ControleVeiculosRecebimento';
 import AverbacaoReport from '@/components/modelos/AverbacaoReport';
+import ControleFornecedoresReport from '@/components/modelos/ControleFornecedoresReport';
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -36,6 +37,12 @@ const TEMPLATES = [
     icon: FileSpreadsheet,
     description: 'Relatório de averbação agrupado por semestre com exportação PDF, Excel e e-mail',
   },
+  {
+    id: 'controle_fornecedores',
+    name: 'Controle de Entrada e Saída de Fornecedores',
+    icon: Users,
+    description: 'Formulário de controle de entrada e saída de transportadoras com filtros de seleção múltipla',
+  },
 ];
 
 export default function Modelos() {
@@ -50,6 +57,7 @@ export default function Modelos() {
   const [selectedSemestre, setSelectedSemestre] = useState(1);
 
   const isAverbacao = selectedTemplate === 'averbacao_mensal' || selectedTemplate === 'averbacao_semestral';
+  const isFornecedores = selectedTemplate === 'controle_fornecedores';
 
   const gerar = async () => {
     setLoading(true);
@@ -199,7 +207,21 @@ export default function Modelos() {
       </div>
 
       {/* Controls */}
-      {isAverbacao ? (
+      {isFornecedores ? (
+        <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading font-bold text-sm">Controle de Fornecedores</h3>
+              <p className="text-xs text-muted-foreground">Os filtros de seleção múltipla estão no relatório abaixo</p>
+            </div>
+            {generated && (
+              <Button onClick={() => window.print()} variant="secondary" className="h-10 rounded-xl">
+                <Printer className="h-4 w-4" /> Imprimir
+              </Button>
+            )}
+          </div>
+        </div>
+      ) : isAverbacao ? (
         <div className="no-print bg-card rounded-2xl border border-border p-5 shadow-sm">
           <div className="flex flex-wrap items-end gap-3">
             {selectedTemplate === 'averbacao_mensal' ? (
@@ -275,6 +297,9 @@ export default function Modelos() {
       )}
       {selectedTemplate === 'averbacao_semestral' && (
         <AverbacaoReport tipo="semestral" periodo={selectedSemestre} />
+      )}
+      {isFornecedores && (
+        <ControleFornecedoresReport />
       )}
     </div>
   );
