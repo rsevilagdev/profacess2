@@ -1,5 +1,6 @@
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import FloatingMenu from './FloatingMenu.jsx';
+import GlobalSearch from './GlobalSearch.jsx';
 import QuickNotifications from './QuickNotifications.jsx';
 import TermsModal from '@/components/TermsModal.jsx';
 import NotificationBanner from '@/components/NotificationBanner.jsx';
@@ -55,6 +56,10 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background" style={{ userSelect: 'none' }}>
       <FloatingMenu />
+      {/* Global search bar */}
+      <div className="fixed top-3 right-[72px] z-30 w-56 sm:w-72 md:w-96">
+        <GlobalSearch />
+      </div>
       <QuickNotifications />
       <NotificationBanner />
       <TermsModal />
