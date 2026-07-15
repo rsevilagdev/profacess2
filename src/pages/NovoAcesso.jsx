@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Truck, X, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Search, Truck, X, CheckCircle, AlertTriangle, Loader2, Send } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
 import CadastroForm from '@/components/novo-acesso/CadastroForm';
+import ReviewDialog from '@/components/novo-acesso/ReviewDialog';
 
 export default function NovoAcesso() {
   const { colaborador } = useProfarmaAuth();
@@ -23,6 +24,9 @@ export default function NovoAcesso() {
   const [showRevision, setShowRevision] = useState(false);
   const [requestingAuth, setRequestingAuth] = useState(false);
   const [reviewRequests, setReviewRequests] = useState([]);
+  const [showCadastroDialog, setShowCadastroDialog] = useState(false);
+  const [reviewDialogItem, setReviewDialogItem] = useState(null);
+  const [decidingReview, setDecidingReview] = useState(false);
 
   const canEditDB = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
@@ -44,77 +48,63 @@ export default function NovoAcesso() {
     } catch (e) {}
   };
 
-  const respondReview = async (review, approved) => {
-    await base44.entities.ReviewRequest.update(review.id, { status: approved ? 'aprovado' : 'rejeitado' });
-    if (approved) {
+  const decideReview = async (review, decision) => {
+    setDecidingReview(true);
+    try {
       const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
-      if (dados.veiculo) {
-        await base44.entities.Vehicle.create({
-          ...dados.veiculo,
-          status: 'validado',
-          filial_id: colaborador.filial_id,
-          filial_nome: colaborador.filial_nome
-        });
-      }
-      if (dados.motorista) {
-        await base44.entities.Driver.create({
-          ...dados.motorista,
-          status: 'validado',
-          filial_id: colaborador.filial_id,
-          filial_nome: colaborador.filial_nome
-        });
-      }
-      try {
-        const colab = await base44.entities.Colaborador.list();
-        const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
-        if (solicitante) {
-          await base44.entities.Notification.create({
-            title: 'Cadastro Aprovado',
-            message: `Sua solicitação de cadastro foi APROVADA. Busque novamente a placa/CPF para registrar o acesso.`,
-            type: 'driver_docs', sender_name: colaborador.nome,
-            target_user_id: solicitante.id, branch_id: review.filial_id
+
+      if (decision === 'validado' || decision === 'bloqueado') {
+        if (dados.veiculo) {
+          await base44.entities.Vehicle.create({
+            ...dados.veiculo,
+            status: decision,
+            filial_id: colaborador.filial_id,
+            filial_nome: colaborador.filial_nome
           });
         }
-      } catch (e) {}
-    }
-    await base44.entities.AuditLog.create({
-      user_name: colaborador.nome, user_cpf: colaborador.cpf,
-      action: approved ? 'Solicitação de cadastro aprovada — registro criado como validado' : 'Solicitação de cadastro rejeitada',
-      details: review.motivo, ip_address: 'local', domain: window.location.hostname,
-      category: 'user_management', branch_id: colaborador.filial_id
-    });
-    await loadReviewRequests();
-  };
+        if (dados.motorista) {
+          await base44.entities.Driver.create({
+            ...dados.motorista,
+            status: decision,
+            filial_id: colaborador.filial_id,
+            filial_nome: colaborador.filial_nome
+          });
+        }
+        await base44.entities.ReviewRequest.update(review.id, {
+          status: 'aprovado',
+          observacao: `Decisão: ${decision} — por ${colaborador.nome}`
+        });
+        try {
+          const colab = await base44.entities.Colaborador.list();
+          const solicitante = colab.find(c => c.cpf === review.solicitante_cpf);
+          if (solicitante) {
+            await base44.entities.Notification.create({
+              title: decision === 'validado' ? 'Cadastro Validado' : 'Cadastro Bloqueado',
+              message: decision === 'validado'
+                ? `Sua solicitação foi VALIDADA. Busque novamente a placa/CPF para registrar o acesso.`
+                : `Sua solicitação foi BLOQUEADA pelo revisor.`,
+              type: 'driver_docs', sender_name: colaborador.nome,
+              target_user_id: solicitante.id, branch_id: review.filial_id
+            });
+          }
+        } catch (e) {}
+      } else {
+        await base44.entities.ReviewRequest.update(review.id, {
+          observacao: `Em revisão — visualizado por ${colaborador.nome}`
+        });
+      }
 
-  const cadastrarBloqueado = async (review) => {
-    const dados = review.dados_json ? (() => { try { return JSON.parse(review.dados_json); } catch { return {}; } })() : {};
-    if (dados.veiculo) {
-      await base44.entities.Vehicle.create({
-        ...dados.veiculo,
-        status: 'bloqueado',
-        filial_id: colaborador.filial_id,
-        filial_nome: colaborador.filial_nome
+      await base44.entities.AuditLog.create({
+        user_name: colaborador.nome, user_cpf: colaborador.cpf,
+        action: `Revisão de cadastro: ${decision}`,
+        details: review.motivo, ip_address: 'local', domain: window.location.hostname,
+        category: 'user_management', branch_id: colaborador.filial_id
       });
-    }
-    if (dados.motorista) {
-      await base44.entities.Driver.create({
-        ...dados.motorista,
-        status: 'bloqueado',
-        filial_id: colaborador.filial_id,
-        filial_nome: colaborador.filial_nome
-      });
-    }
-    await base44.entities.ReviewRequest.update(review.id, {
-      status: 'aprovado',
-      observacao: 'Cadastrado como bloqueado por ' + colaborador.nome
-    });
-    await base44.entities.AuditLog.create({
-      user_name: colaborador.nome, user_cpf: colaborador.cpf,
-      action: 'Cadastro inserido como bloqueado (solicitação rejeitada)',
-      details: review.motivo, ip_address: 'local', domain: window.location.hostname,
-      category: 'user_management', branch_id: colaborador.filial_id
-    });
-    await loadReviewRequests();
+
+      await loadReviewRequests();
+      setReviewDialogItem(null);
+    } catch (e) {}
+    setDecidingReview(false);
   };
 
   const loadAcessos = async () => {
@@ -220,6 +210,7 @@ export default function NovoAcesso() {
       }
       await logAudit('Solicitação de cadastro enviada', `Placa: ${placa} | CPF: ${cpfDigits}`);
       setCheckResult('requested');
+      setShowCadastroDialog(false);
     } catch (e) {}
     setRequestingAuth(false);
   };
@@ -411,7 +402,9 @@ export default function NovoAcesso() {
           </div>
 
           {(!veiculo || !motorista) && (
-            <CadastroForm veiculo={veiculo} motorista={motorista} placa={placa} cpf={cpf} onSubmit={solicitarAutorizacao} loading={requestingAuth} />
+            <Button onClick={() => setShowCadastroDialog(true)} className="h-10 rounded-xl">
+              <Send className="h-4 w-4" /> Mandar para Revisão
+            </Button>
           )}
         </div>
       )}
@@ -443,14 +436,7 @@ export default function NovoAcesso() {
                       {rr.status === 'rejeitado' && <p className="text-xs text-destructive font-medium mt-1">Rejeitado — pode cadastrar como bloqueado</p>}
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      {rr.status === 'pendente' ? (
-                        <>
-                          <Button size="sm" className="h-8 rounded-xl bg-primary" onClick={() => respondReview(rr, true)}>Aprovar</Button>
-                          <Button size="sm" variant="destructive" className="h-8 rounded-xl" onClick={() => respondReview(rr, false)}>Rejeitar</Button>
-                        </>
-                      ) : rr.status === 'rejeitado' && (
-                        <Button size="sm" variant="secondary" className="h-8 rounded-xl" onClick={() => cadastrarBloqueado(rr)}>Cadastrar Bloqueado</Button>
-                      )}
+                      <Button size="sm" className="h-8 rounded-xl" onClick={() => setReviewDialogItem(rr)}>Revisar</Button>
                     </div>
                   </div>
                 </div>
@@ -462,6 +448,16 @@ export default function NovoAcesso() {
 
       {/* Kanban */}
       <KanbanBoard acessos={acessos} onRefresh={loadAcessos} colaborador={colaborador} onLiberarSaida={liberarSaida} />
+
+      {/* Dialog: Cadastro (operador) */}
+      {showCadastroDialog && (
+        <CadastroForm veiculo={veiculo} motorista={motorista} placa={placa} cpf={cpf} onSubmit={solicitarAutorizacao} loading={requestingAuth} onClose={() => setShowCadastroDialog(false)} />
+      )}
+
+      {/* Dialog: Revisão (admin/supervisor/gestor) */}
+      {reviewDialogItem && (
+        <ReviewDialog review={reviewDialogItem} onDecide={(decision) => decideReview(reviewDialogItem, decision)} loading={decidingReview} onClose={() => setReviewDialogItem(null)} />
+      )}
     </div>
   );
 }
