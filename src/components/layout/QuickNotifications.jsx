@@ -57,9 +57,9 @@ export default function QuickNotifications() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const total = data.tasks + data.vehicles + data.drivers + data.accessLogs + data.reviews + data.liberacoes + data.filaLiberacao;
+  const isOperator = colaborador?.cargo === 'operador';
 
-  const items = [
+  const allItems = [
     { label: 'Fila de Liberação', count: data.filaLiberacao, icon: PackageCheck, path: '/acessos', color: 'text-teal-600 bg-teal-500/10' },
     { label: 'Tarefas Pendentes', count: data.tasks, icon: ClipboardList, path: '/plano-trabalho', color: 'text-blue-600 bg-blue-500/10' },
     { label: 'Veículos p/ Liberação', count: data.vehicles, icon: Truck, path: '/editar-base', color: 'text-orange-600 bg-orange-500/10' },
@@ -68,6 +68,10 @@ export default function QuickNotifications() {
     { label: 'Solicitações de Revisão', count: data.reviews, icon: FileCheck, path: '/editar-base', color: 'text-primary bg-primary/10' },
     { label: 'Liberações Pendentes', count: data.liberacoes, icon: Car, path: '/painel-bloqueio', color: 'text-amber-600 bg-amber-500/10' },
   ].filter(i => i.count > 0);
+
+  // Operadores: apenas Fila de Liberação (sem gestão de base de dados)
+  const items = isOperator ? allItems.filter(i => i.path === '/acessos') : allItems;
+  const total = items.reduce((sum, i) => sum + i.count, 0);
 
   return (
     <div ref={ref} className="fixed top-4 right-4 z-50">

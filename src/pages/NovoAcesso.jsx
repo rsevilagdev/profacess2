@@ -52,29 +52,64 @@ export default function NovoAcesso() {
     setDecidingReview(true);
     try {
       const dados = editedData || {};
+      const editorName = colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : '');
 
-      if (dados.veiculo) {
-        await base44.entities.Vehicle.create({
-          ...dados.veiculo,
-          status: decision,
-          filial_id: colaborador.filial_id,
-          filial_nome: colaborador.filial_nome
-        });
+      // Veículo: buscar por placa e atualizar status; se não existe, criar
+      const placaVeiculo = dados.veiculo?.placa || dados.veiculo_existente?.placa || '';
+      if (placaVeiculo) {
+        const existingVehicles = await base44.entities.Vehicle.filter({ placa: placaVeiculo });
+        if (existingVehicles.length > 0) {
+          for (const v of existingVehicles) {
+            await base44.entities.Vehicle.update(v.id, {
+              status: decision,
+              ...(dados.veiculo?.modelo ? { modelo: dados.veiculo.modelo } : {})
+            });
+          }
+        } else if (dados.veiculo) {
+          await base44.entities.Vehicle.create({
+            ...dados.veiculo,
+            status: decision,
+            filial_id: colaborador.filial_id,
+            filial_nome: colaborador.filial_nome
+          });
+        }
       }
-      if (dados.motorista) {
-        await base44.entities.Driver.create({
-          ...dados.motorista,
-          status: decision,
-          filial_id: colaborador.filial_id,
-          filial_nome: colaborador.filial_nome
-        });
+
+      // Motorista: buscar por CPF e atualizar status; se não existe, criar
+      const cpfMotorista = dados.motorista?.cpf || dados.motorista_existente?.cpf || '';
+      if (cpfMotorista) {
+        const existingDrivers = await base44.entities.Driver.filter({ cpf: cpfMotorista });
+        if (existingDrivers.length > 0) {
+          for (const d of existingDrivers) {
+            await base44.entities.Driver.update(d.id, {
+              status: decision,
+              ...(dados.motorista?.nome ? { nome: dados.motorista.nome } : {})
+            });
+          }
+        } else if (dados.motorista) {
+          await base44.entities.Driver.create({
+            ...dados.motorista,
+            status: decision,
+            filial_id: colaborador.filial_id,
+            filial_nome: colaborador.filial_nome
+          });
+        }
       }
-      if (dados.veiculo_existente) {
-        await base44.entities.Vehicle.update(dados.veiculo_existente.id, { status: decision, placa: dados.veiculo_existente.placa });
+
+      // Atualizar AccessLog entries que correspondem à placa
+      if (placaVeiculo) {
+        const accessLogs = await base44.entities.AccessLog.filter({ veiculo_placa: placaVeiculo });
+        for (const log of accessLogs) {
+          if (log.tipo === 'saida') continue;
+          await base44.entities.AccessLog.update(log.id, {
+            status: decision,
+            aprovado_por: editorName,
+            aprovado_por_cpf: colaborador.cpf,
+            data_aprovacao: getCuritibaISO(),
+          });
+        }
       }
-      if (dados.motorista_existente) {
-        await base44.entities.Driver.update(dados.motorista_existente.id, { status: decision, nome: dados.motorista_existente.nome, cpf: dados.motorista_existente.cpf });
-      }
+
       await base44.entities.ReviewRequest.update(review.id, {
         status: 'aprovado',
         observacao: `Decisão: ${decision} — por ${colaborador.nome}`
@@ -102,6 +137,7 @@ export default function NovoAcesso() {
       });
 
       await loadReviewRequests();
+      await loadAcessos();
       setReviewDialogItem(null);
     } catch (e) {}
     setDecidingReview(false);
@@ -153,6 +189,21 @@ export default function NovoAcesso() {
         await loadAcessos();
         setTimeout(() => { setCheckResult(null); reset(); }, 2000);
       } else {
+        // Criar AccessLog com status pendente/bloqueado para aparecer no Kanban
+        const accessStatus = (v && v.status === 'bloqueado') || (m && m.status === 'bloqueado') ? 'bloqueado' : 'pendente_revisao';
+        const existingPending = acessos.find(a => a.veiculo_placa === placa.toUpperCase() && (a.status === 'pendente_revisao' || a.status === 'bloqueado'));
+        if (!existingPending) {
+          await base44.entities.AccessLog.create({
+            veiculo_placa: placa.toUpperCase(),
+            motorista_nome: m?.nome || '',
+            motorista_cpf: cpfDigits,
+            filial_id: colaborador.filial_id, filial_nome: colaborador.filial_nome,
+            tipo: 'entrada', status: accessStatus,
+            empresa: m?.transportadora || v?.transportadora || '',
+            operador_nome: colaborador.nome, operador_cpf: colaborador.cpf,
+          });
+          await loadAcessos();
+        }
         setCheckResult('revision');
         setShowRevision(true);
         // Criar tarefa de revisão para administradores, gestores e colaboradores
