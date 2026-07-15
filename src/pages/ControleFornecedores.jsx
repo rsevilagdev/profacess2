@@ -28,7 +28,7 @@ export default function ControleFornecedores() {
     setLoading(false);
   };
 
-  useEffect(() => { loadRegistros(); }, []);
+  useEffect(() => {loadRegistros();}, []);
 
   useEffect(() => {
     const unsub = base44.entities.ControleFornecedores.subscribe(() => loadRegistros());
@@ -50,7 +50,7 @@ export default function ControleFornecedores() {
         status: 'entrada',
         filial_id: colaborador.filial_id,
         filial_nome: colaborador.filial_nome,
-        operador_nome: colaborador.nome,
+        operador_nome: colaborador.nome
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
@@ -72,7 +72,7 @@ export default function ControleFornecedores() {
         saida_data: data,
         saida_horario: horario,
         saida_liberado_por: editorName,
-        status: 'saida',
+        status: 'saida'
       });
       await base44.entities.AuditLog.create({
         user_name: colaborador.nome, user_cpf: colaborador.cpf,
@@ -117,16 +117,16 @@ export default function ControleFornecedores() {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(30, 30, 30);
       let x = m;
-      headers.forEach((h, i) => { doc.text(h, x + 1, y); x += colW[i]; });
+      headers.forEach((h, i) => {doc.text(h, x + 1, y);x += colW[i];});
       y += 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
 
       for (const reg of registros) {
-        if (y > ph - 12) { doc.addPage(); y = 18; }
+        if (y > ph - 12) {doc.addPage();y = 18;}
         x = m;
         const row = [reg.transportadora || '—', reg.placa || '—', reg.motorista || '—', reg.rg_cpf || '—', reg.entrada_data || '—', reg.entrada_horario || '—', reg.entrada_liberado_por || '—', reg.saida_data || '—', reg.saida_horario || '—', reg.saida_liberado_por || '—', reg.status === 'saida' ? 'Saída' : 'Entrada'];
-        row.forEach((val, i) => { doc.text(String(val).substring(0, Math.floor(colW[i] / 1.8)), x + 1, y); x += colW[i]; });
+        row.forEach((val, i) => {doc.text(String(val).substring(0, Math.floor(colW[i] / 1.8)), x + 1, y);x += colW[i];});
         y += 5;
       }
 
@@ -143,14 +143,14 @@ export default function ControleFornecedores() {
     setExportingPdf(false);
   };
 
-  const ativos = registros.filter(r => r.status === 'entrada');
-  const concluidos = registros.filter(r => r.status === 'saida');
+  const ativos = registros.filter((r) => r.status === 'entrada');
+  const concluidos = registros.filter((r) => r.status === 'saida');
 
   return (
     <div className="space-y-6 fade-in">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="brand-title text-2xl">Controle de Entrada e Sa\u00edda de Fornecedores</h1>
+          <h1 className="brand-title text-2xl">Controle de Entrada e Saída de Fornecedores</h1>
           <p className="text-sm text-muted-foreground">Registro de entrada e sa\u00edda de ve\u00edculos de transportadoras</p>
         </div>
         <Button onClick={exportarPDF} disabled={exportingPdf || registros.length === 0} variant="secondary" className="h-12 rounded-2xl">
@@ -162,10 +162,10 @@ export default function ControleFornecedores() {
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-3">Novo Registro de Entrada</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <Field label="Transportadora *" value={form.transportadora} onChange={v => setForm({...form, transportadora: v})} placeholder="Nome da transportadora" />
-          <Field label="Placa *" value={form.placa} onChange={v => setForm({...form, placa: v.toUpperCase()})} placeholder="ABC1D23" />
-          <Field label="Motorista" value={form.motorista} onChange={v => setForm({...form, motorista: v})} placeholder="Nome do motorista" />
-          <Field label="RG / CPF" value={form.rg_cpf} onChange={v => setForm({...form, rg_cpf: formatCPF(v)})} placeholder="000.000.000-00" maxLength={14} />
+          <Field label="Transportadora *" value={form.transportadora} onChange={(v) => setForm({ ...form, transportadora: v })} placeholder="Nome da transportadora" />
+          <Field label="Placa *" value={form.placa} onChange={(v) => setForm({ ...form, placa: v.toUpperCase() })} placeholder="ABC1D23" />
+          <Field label="Motorista" value={form.motorista} onChange={(v) => setForm({ ...form, motorista: v })} placeholder="Nome do motorista" />
+          <Field label="RG / CPF" value={form.rg_cpf} onChange={(v) => setForm({ ...form, rg_cpf: formatCPF(v) })} placeholder="000.000.000-00" maxLength={14} />
         </div>
         <Button onClick={registrarEntrada} disabled={saving || !form.transportadora || !form.placa} className="h-12 rounded-2xl mt-3 w-full sm:w-auto">
           {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Truck className="h-5 w-5" />}
@@ -179,14 +179,14 @@ export default function ControleFornecedores() {
           <Clock className="h-5 w-5 text-primary" />
           <h3 className="font-heading font-bold">Em Entrada ({ativos.length})</h3>
         </div>
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Carregando...</div>
-        ) : ativos.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Nenhum ve\u00edculo em entrada</p>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {ativos.map(reg => (
-              <div key={reg.id} className="bg-primary/5 border border-primary/20 rounded-xl p-3">
+        {loading ?
+        <div className="text-center py-8 text-muted-foreground">Carregando...</div> :
+        ativos.length === 0 ?
+        <p className="text-sm text-muted-foreground text-center py-8">Nenhum ve\u00edculo em entrada</p> :
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {ativos.map((reg) =>
+          <div key={reg.id} className="bg-primary/5 border border-primary/20 rounded-xl p-3">
                 <div className="flex items-center gap-2 mb-1">
                   <div className="h-2 w-2 rounded-full bg-primary pulse-teal" />
                   <p className="text-sm font-medium">{reg.placa}</p>
@@ -203,14 +203,14 @@ export default function ControleFornecedores() {
                   Liberar Sa\u00edda
                 </Button>
               </div>
-            ))}
+          )}
           </div>
-        )}
+        }
       </div>
 
       {/* Registros conclu\u00eddos */}
-      {concluidos.length > 0 && (
-        <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+      {concluidos.length > 0 &&
+      <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle className="h-5 w-5 text-primary" />
             <h3 className="font-heading font-bold">Registros Conclu\u00eddos ({concluidos.length})</h3>
@@ -219,14 +219,14 @@ export default function ControleFornecedores() {
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Sa\u00edda', 'Liberado por'].map(h => (
-                    <th key={h} className="text-left px-3 py-2 border-b border-border bg-secondary font-medium text-xs whitespace-nowrap">{h}</th>
-                  ))}
+                  {['Transportadora', 'Placa', 'Motorista', 'RG/CPF', 'Entrada', 'Liberado por', 'Sa\u00edda', 'Liberado por'].map((h) =>
+                <th key={h} className="text-left px-3 py-2 border-b border-border bg-secondary font-medium text-xs whitespace-nowrap">{h}</th>
+                )}
                 </tr>
               </thead>
               <tbody>
-                {concluidos.map(reg => (
-                  <tr key={reg.id} className="hover:bg-muted/30">
+                {concluidos.map((reg) =>
+              <tr key={reg.id} className="hover:bg-muted/30">
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.transportadora}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs font-medium whitespace-nowrap">{reg.placa}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.motorista || '—'}</td>
@@ -236,21 +236,21 @@ export default function ControleFornecedores() {
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.saida_data} {reg.saida_horario}</td>
                     <td className="px-3 py-1.5 border-b border-border/50 text-xs whitespace-nowrap">{reg.saida_liberado_por || '—'}</td>
                   </tr>
-                ))}
+              )}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 function Field({ label, value, onChange, placeholder, maxLength }) {
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1 block">{label}</label>
-      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
-    </div>
-  );
+      <input className="w-full h-10 px-3 rounded-xl border border-input bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} maxLength={maxLength} />
+    </div>);
+
 }
