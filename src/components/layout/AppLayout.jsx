@@ -62,8 +62,8 @@ export default function AppLayout() {
   return (
     <div className="min-h-screen bg-background" style={{ userSelect: 'none' }}>
       <FloatingMenu />
-      {/* Global search bar */}
-      <div className="fixed top-3 right-[72px] z-30 w-56 sm:w-72 md:w-96">
+      {/* Global search bar — second row on mobile, inline on desktop */}
+      <div className="fixed top-[68px] left-4 right-4 z-30 sm:top-3 sm:right-[72px] sm:left-auto sm:w-72 md:w-96">
         <GlobalSearch />
       </div>
       <QuickNotifications />
@@ -78,7 +78,7 @@ export default function AppLayout() {
           </div>
         </div>
       )}
-      <main className="pt-20 px-4 md:px-8 pb-8 max-w-7xl mx-auto">
+      <main className="pt-32 sm:pt-20 px-4 md:px-8 pb-8 max-w-7xl mx-auto">
         <Outlet />
       </main>
     </div>
