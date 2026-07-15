@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Car, Loader2, Download, Search, Pencil, Trash2, X, ScanText, Camera } from 'lucide-react';
+import { Car, Loader2, Download, Search, Pencil, Trash2, X, ScanText, Camera, IdCard, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
 import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
+import CnhRequiredModal from '@/components/veiculos-colaboradores/CnhRequiredModal';
 
 export default function ControleVeiculosColaboradores() {
   const { colaborador } = useProfarmaAuth();
@@ -16,7 +17,9 @@ export default function ControleVeiculosColaboradores() {
   const [recognizeError, setRecognizeError] = useState('');
   const [recognizePreview, setRecognizePreview] = useState('');
   const [fotoCnhUrl, setFotoCnhUrl] = useState('');
+  const [showCnhModal, setShowCnhModal] = useState(false);
   const fileInputRef = useRef(null);
+  const cnhModalInputRef = useRef(null);
   const [form, setForm] = useState({
     placa: '', nome: '', matricula: '', setor: '',
     modelo_veiculo: '', cor: '', cnh: '', obs: ''
@@ -50,6 +53,10 @@ export default function ControleVeiculosColaboradores() {
 
   const salvar = async () => {
     if (!form.placa || !form.nome) return;
+    if (!fotoCnhUrl) {
+      setShowCnhModal(true);
+      return;
+    }
     setSaving(true);
     try {
       const now = getCuritibaDateTime();
@@ -185,9 +192,54 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-heading font-bold">{editId ? 'Editar Registro' : 'Novo Registro'}</h3>
-          {editId && (
-            <button onClick={resetForm} className="text-xs text-destructive hover:underline flex items-center gap-1">
-              <X className="h-3 w-3" /> Cancelar edição
+          <div className="flex items-center gap-2">
+            {fotoCnhUrl && (
+              <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                <CheckCircle2 className="h-3.5 w-3.5" /> CNH capturada
+              </span>
+            )}
+            {editId && (
+              <button onClick={resetForm} className="text-xs text-destructive hover:underline flex items-center gap-1">
+                <X className="h-3 w-3" /> Cancelar edição
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Ícone de captura de CNH no início do registro */}
+        <div className="mb-4 flex items-center gap-4 p-4 rounded-xl border-2 border-dashed border-primary/30 bg-primary/5">
+          <input ref={cnhModalInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileSelect} className="hidden" />
+          <button
+            type="button"
+            onClick={() => cnhModalInputRef.current?.click()}
+            disabled={recognizing}
+            className={`h-16 w-16 rounded-2xl flex items-center justify-center shrink-0 transition-all ${fotoCnhUrl ? 'bg-green-500/15 border-2 border-green-500/40' : 'bg-primary/10 border-2 border-primary/30 hover:bg-primary/20'}`}
+          >
+            {recognizing ? (
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+            ) : fotoCnhUrl ? (
+              <CheckCircle2 className="h-7 w-7 text-green-600" />
+            ) : (
+              <IdCard className="h-7 w-7 text-primary" />
+            )}
+          </button>
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              {fotoCnhUrl ? 'Foto da CNH capturada' : 'Capturar foto da CNH'}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {fotoCnhUrl
+                ? 'Os dados foram reconhecidos. Você pode salvar o registro.'
+                : 'Toque no ícone para fotografar a CNH. O registro não pode ser salvo sem a foto.'}
+            </p>
+          </div>
+          {fotoCnhUrl && (
+            <button
+              type="button"
+              onClick={() => cnhModalInputRef.current?.click()}
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              <Camera className="h-3.5 w-3.5" /> Nova foto
             </button>
           )}
         </div>
@@ -278,6 +330,18 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
       {/* Tabela */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">
         <h3 className="font-heading font-bold mb-4">Veículos Cadastrados ({filtered.length})</h3>
+        {/* Status de CNH dos colaboradores */}
+        <div className="mb-3 flex items-center gap-2 text-xs">
+          <span className="flex items-center gap-1 text-muted-foreground">
+            <IdCard className="h-3.5 w-3.5" />
+            {registros.filter(r => r.foto_cnh).length} com CNH
+          </span>
+          <span className="text-muted-foreground">•</span>
+          <span className="flex items-center gap-1 text-destructive">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            {registros.filter(r => !r.foto_cnh).length} sem CNH
+          </span>
+        </div>
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Carregando...</div>
         ) : filtered.length === 0 ? (
@@ -323,6 +387,18 @@ Retorne APENAS os dados no formato JSON especificado. Se algum campo não for le
           </div>
         )}
       </div>
+      {/* Modal de CNH obrigatória */}
+      <CnhRequiredModal
+        open={showCnhModal}
+        onClose={() => setShowCnhModal(false)}
+        onCaptured={({ foto_cnh, nome, cnh }) => {
+          setFotoCnhUrl(foto_cnh);
+          setRecognizePreview(foto_cnh);
+          if (nome) setForm(prev => ({ ...prev, nome }));
+          if (cnh) setForm(prev => ({ ...prev, cnh }));
+        }}
+        colaboradorNome={form.nome}
+      />
     </div>
   );
 }
