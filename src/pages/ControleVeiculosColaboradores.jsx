@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import CnhRequiredModal from '@/components/veiculos-colaboradores/CnhRequiredModal';
 import PlacaExistsModal from '@/components/veiculos-colaboradores/PlacaExistsModal';
+import { sendWhatsAppNotification } from '@/lib/whatsapp-notifier.js';
 
 export default function ControleVeiculosColaboradores() {
   const { colaborador } = useProfarmaAuth();
@@ -110,6 +111,11 @@ export default function ControleVeiculosColaboradores() {
         });
       }
 
+      sendWhatsAppNotification(
+        'Veículo de Colaborador Cadastrado',
+        `Placa: ${form.placa.toUpperCase()}\nColaborador: ${form.nome}\nMatrícula: ${form.matricula || '—'}\nSetor: ${form.setor || '—'}\nFilial: ${colaborador.filial_nome || '—'}\nOperador: ${editorName}`,
+        'colaborador'
+      );
       resetForm();
       await loadRegistros();
     } catch (e) {}

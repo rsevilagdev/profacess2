@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Bell, BellRing, Save, Loader2, Check, Truck, LogOut, FileText, Shield, Mail } from 'lucide-react';
+import WhatsAppNotifCard from '@/components/notificacoes/WhatsAppNotifCard';
 import { base44 } from '@/api/base44Client';
 import { useProfarmaAuth } from '@/lib/auth-context-profarma.jsx';
 import { Button } from '@/components/ui/button';
@@ -95,6 +96,9 @@ export default function ConfiguracoesNotificacoes() {
           {saving ? 'Salvando...' : saved ? 'Salvo!' : 'Salvar Tudo'}
         </Button>
       </div>
+
+      {/* WhatsApp Connection */}
+      <WhatsAppNotifCard />
 
       {/* Shift Summary Settings */}
       <div className="bg-card rounded-2xl border border-border p-5 shadow-sm">

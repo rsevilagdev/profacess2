@@ -8,6 +8,7 @@ import { getCuritibaISO, getCuritibaDateTime, getSixMonthsFromNow } from '@/lib/
 import KanbanBoard from '@/components/novo-acesso/KanbanBoard';
 import CadastroForm from '@/components/novo-acesso/CadastroForm';
 import ReviewDialog from '@/components/novo-acesso/ReviewDialog';
+import { sendWhatsAppNotification } from '@/lib/whatsapp-notifier.js';
 
 export default function NovoAcesso() {
   const { colaborador } = useProfarmaAuth();
@@ -240,6 +241,11 @@ export default function NovoAcesso() {
         });
         setCheckResult('success');
         await loadAcessos();
+        sendWhatsAppNotification(
+          'Entrada de Veículo',
+          `Placa: ${v.placa}\nMotorista: ${m.nome}\nEmpresa: ${m.transportadora || v.transportadora || '—'}\nFilial: ${colaborador.filial_nome || '—'}\nOperador: ${colaborador.nome}`,
+          'entrada'
+        );
         setTimeout(() => { setCheckResult(null); reset(); }, 2000);
       } else {
         // Criar AccessLog com status pendente/bloqueado para aparecer no Kanban
@@ -260,6 +266,11 @@ export default function NovoAcesso() {
         }
         setCheckResult('revision');
         setShowRevision(true);
+        sendWhatsAppNotification(
+          '⚠️ Problema no Acesso de Veículo',
+          `Placa: ${placa.toUpperCase()}\nCPF: ${cpfDigits}\nVeículo: ${v ? v.status : 'não encontrado'}\nMotorista: ${m ? m.status : 'não encontrado'}\nFilial: ${colaborador.filial_nome || '—'}\nOperador: ${colaborador.nome}`,
+          'problema'
+        );
         // Criar tarefa de revisão para administradores, gestores e colaboradores
         try {
           await base44.entities.Task.create({
@@ -379,6 +390,11 @@ export default function NovoAcesso() {
       });
     } catch (e) {}
 
+    sendWhatsAppNotification(
+      'Saída de Veículo',
+      `Placa: ${log.veiculo_placa}\nMotorista: ${log.motorista_nome || '—'}\nSaindo: ${log.carregado ? 'CARREGADO' : 'VAZIO'}\nFilial: ${colaborador.filial_nome || '—'}\nLiberado por: ${colaborador.nome}`,
+      'saida'
+    );
     await loadAcessos();
   };
 

@@ -8,6 +8,7 @@ import { imageUrlToBase64 } from '@/lib/pdf-utils';
 import { formatCPF } from '@/lib/cpf-utils.js';
 import { getCuritibaISO, getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import { compressImage } from '@/lib/image-compress.js';
+import { sendWhatsAppNotification } from '@/lib/whatsapp-notifier.js';
 
 export default function AcessoCRDK() {
   const { colaborador } = useProfarmaAuth();
@@ -67,6 +68,11 @@ export default function AcessoCRDK() {
         action: 'Acesso CRDK registrado', details: `Placa Carreta: ${form.placa_carreta.toUpperCase()} | Placa Cavalo: ${form.placa_cavalo.toUpperCase() || '—'} | Motorista: ${form.nome} | Destino: ${form.destino}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
+      sendWhatsAppNotification(
+        'Entrada CRDK',
+        `Placa Carreta: ${form.placa_carreta.toUpperCase()}\nPlaca Cavalo: ${form.placa_cavalo.toUpperCase() || '—'}\nMotorista: ${form.nome}\nEmpresa: ${form.empresa || '—'}\nDestino: ${form.destino}\nFilial: ${colaborador.filial_nome || '—'}\nOperador: ${colaborador.nome}`,
+        'entrada'
+      );
       setForm({ placa_carreta: '', placa_cavalo: '', nome: '', empresa: '', destino: 'PR', rg_cpf: '', cracha: '', autorizacao_contato: '' });
       await loadRegistros();
     } catch (e) {}
@@ -160,6 +166,11 @@ export default function AcessoCRDK() {
         });
       } catch (e) {}
 
+      sendWhatsAppNotification(
+        'Saída CRDK Liberada',
+        `Placas: ${saidaItem.placa_carreta}${saidaItem.placa_cavalo ? '/' + saidaItem.placa_cavalo : ''}\nMotorista: ${saidaItem.nome}\nEmpresa: ${saidaItem.empresa || '—'}\nDestino: ${saidaItem.destino || '—'}\nFilial: ${colaborador.filial_nome || '—'}\nLiberado por: ${colaborador.nome}`,
+        'saida'
+      );
       await loadRegistros();
     } catch (e) {}
     setLiberando(null);

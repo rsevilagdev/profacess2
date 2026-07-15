@@ -8,6 +8,7 @@ import { maskPlaca, maskCPF } from '@/lib/lgpd-utils.js';
 import PainelRelatorios from '@/components/dashboard/PainelRelatorios';
 import SmartDashboard from '@/components/dashboard/SmartDashboard';
 import ValidityAlerts from '@/components/dashboard/ValidityAlerts';
+import CnhExpiryAlert from '@/components/dashboard/CnhExpiryAlert';
 
 function StatCard({ icon: Icon, label, value, color, to }) {
   const card = (
@@ -69,6 +70,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6 fade-in">
       <ValidityAlerts />
+      <CnhExpiryAlert />
 
       {/* Header */}
       <div className="flex items-center justify-between">

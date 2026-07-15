@@ -9,6 +9,7 @@ import { getCuritibaDateTime } from '@/lib/curitiba-time.js';
 import { triggerDownload } from '@/lib/export-utils';
 import FotoLiberacaoModal from '@/components/fornecedores/FotoLiberacaoModal';
 import LazyPhoto from '@/components/LazyPhoto';
+import { sendWhatsAppNotification } from '@/lib/whatsapp-notifier.js';
 
 export default function ControleFornecedores() {
   const { colaborador } = useProfarmaAuth();
@@ -73,6 +74,11 @@ export default function ControleFornecedores() {
         action: 'Entrada de fornecedor registrada', details: `Transportadora: ${form.transportadora} | Placa: ${form.placa} | Motorista: ${form.motorista}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
+      sendWhatsAppNotification(
+        'Entrada de Fornecedor',
+        `Transportadora: ${form.transportadora}\nPlaca: ${form.placa.toUpperCase()}\nMotorista: ${form.motorista || '—'}\nFilial: ${colaborador.filial_nome || '—'}\nOperador: ${colaborador.nome}`,
+        'entrada'
+      );
       setForm({ transportadora: '', placa: '', motorista: '', rg_cpf: '' });
       setEntradaDialog(null);
       setResponsavel('');
@@ -112,6 +118,11 @@ export default function ControleFornecedores() {
         action: 'Saída de fornecedor liberada', details: `Transportadora: ${reg.transportadora} | Placa: ${reg.placa} | Foto: ${reg.foto_liberacao || '—'}`,
         ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
       });
+      sendWhatsAppNotification(
+        'Saída de Fornecedor',
+        `Transportadora: ${reg.transportadora}\nPlaca: ${reg.placa}\nMotorista: ${reg.motorista || '—'}\nFilial: ${colaborador.filial_nome || '—'}\nLiberado por: ${colaborador.nome}`,
+        'saida'
+      );
       await loadRegistros();
     } catch (e) {}
     setSaindo(null);
