@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User, LogIn } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, Truck, X, ShieldCheck, Ban, Loader2, User, LogIn, Trash2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { getCuritibaISO, getSixMonthsFromNow, formatCuritiba } from '@/lib/curitiba-time.js';
@@ -21,9 +21,12 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
   const [liberandoObs, setLiberandoObs] = useState('');
   const [reEntering, setReEntering] = useState(null);
   const [reEntryItem, setReEntryItem] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const canApproveBlock = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
   const canLiberar = ['administrador_master', 'administrador', 'encarregado', 'operador'].includes(colaborador?.cargo);
+  const canDelete = ['administrador_master', 'administrador', 'encarregado'].includes(colaborador?.cargo);
 
   // Itens liberados (tipo='saida') saem do kanban de fluxo
   const activeAcessos = acessos.filter(a => a.tipo !== 'saida');
@@ -141,6 +144,27 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
     setReEntering(null);
   };
 
+  const deleteItem = async (item) => {
+    setDeleting(item.id);
+    try {
+      if (item.source === 'vehicle' && item.vehicle_id) {
+        await base44.entities.Vehicle.delete(item.vehicle_id);
+      } else {
+        await base44.entities.AccessLog.delete(item.id);
+      }
+      await base44.entities.AuditLog.create({
+        user_name: colaborador.nome + (colaborador.sobrenome ? ' ' + colaborador.sobrenome : ''),
+        user_cpf: colaborador.cpf,
+        action: 'Registro excluído do Kanban',
+        details: `Placa: ${item.veiculo_placa} | Motorista: ${item.motorista_nome || '—'}`,
+        ip_address: 'local', domain: window.location.hostname, category: 'vehicle', branch_id: colaborador.filial_id
+      });
+      onRefresh();
+    } catch (e) {}
+    setDeleting(null);
+    setDeleteConfirm(null);
+  };
+
   const logApproval = async (id, newStatus, allAcessos, blockReason) => {
     const log = allAcessos.find(a => a.id === id);
     if (!log) return;
@@ -221,6 +245,22 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
                                 <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                                   <User className="h-3 w-3" /> {item.operador_nome}
                                 </p>
+                              )}
+
+                              {/* Delete button */}
+                              {canDelete && (
+                                <div className="mt-2">
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    className="h-7 w-full rounded-lg text-xs"
+                                    disabled={deleting === item.id}
+                                    onClick={(e) => { e.stopPropagation(); setDeleteConfirm(item); }}
+                                  >
+                                    {deleting === item.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                                    Apagar Registro
+                                  </Button>
+                                </div>
                               )}
 
                               {/* Approval actions on pending items */}
@@ -424,6 +464,35 @@ export default function KanbanBoard({ acessos, saidas, onRefresh, colaborador, o
               >
                 {reEntering === reEntryItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                 Confirmar Entrada
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-foreground/60 flex items-center justify-center p-4">
+          <div className="bg-card rounded-3xl shadow-2xl max-w-sm w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                <h2 className="font-heading font-bold text-lg">Apagar Registro</h2>
+              </div>
+              <button onClick={() => setDeleteConfirm(null)} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Tem certeza que deseja apagar permanentemente este registro?
+              <span className="block mt-2 font-medium text-foreground">{deleteConfirm.veiculo_placa} — {deleteConfirm.motorista_nome || '—'}</span>
+              <span className="block text-xs mt-1">Esta ação não pode ser desfeita.</span>
+            </p>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="flex-1 h-11 rounded-xl" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
+              <Button variant="destructive" className="flex-1 h-11 rounded-xl" disabled={deleting === deleteConfirm.id} onClick={() => deleteItem(deleteConfirm)}>
+                {deleting === deleteConfirm.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Apagar
               </Button>
             </div>
           </div>
